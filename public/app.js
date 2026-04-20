@@ -94,6 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const printHistTo = ref('');
       const printIncludeLeft = ref(false);
       const printIncludeRight = ref(true);
+      const printIncludeNotes = ref(true);
+      const printIncludeRecruit = ref(true);
+      const printIncludeAppointment = ref(true);
+      const printIncludeMemberInfo = ref(true);
+      const printIncludePointHistory = ref(true);
       const newRecruit = reactive({ name:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
       const focusRootId = ref(null);
       
@@ -753,56 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Check Score Thresholds (For both Recruit and Member updates)
       function onScoreChange(item, isRecruit = true) {
-          let r = isRecruit ? item : recruits.value.find(x => x.id === item.recruitId);
-          if (r) setTimeout(() => checkPromoteRecruit(r), 0); // Defer to avoid watch conflicts
-      }
-
-      async function checkPromoteRecruit(r){
-        await nextTick();
-        const existingMember = members.value.find(m => m.recruitId === r.id);
-
-        if(r.score >= 60) {
-          const targetStatus = r.score >= 75 ? 'Serious' : 'Potential';
-          if(!existingMember) {
-            const pId = focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
-            if(pId) {
-              const newMemberId = 'm' + Date.now() + Math.random().toString(36).substring(2,7);
-              const today = new Date();
-              const d = `${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}/${String(today.getFullYear()).slice(2)}`;
-              
-              if(!r.interactionHistory) r.interactionHistory = [];
-              r.interactionHistory.push({ id: 'ih' + Date.now(), date: d, content: `점수 ${r.score}점 달성 (${targetStatus} 자동 등록)` });
-              r.interactionHistory = [...r.interactionHistory];
-
-              members.value.push({
-                  id: newMemberId, recruitId: r.id, name: r.name, major: r.major || '', job: r.job || '', company: r.company || '', status: targetStatus, parentId: pId,
-                  history: [], interactionHistory: [...r.interactionHistory],
-                  issuePaid: 0, pending: 0,
-                  birthDate: r.birthDate || '', age: r.age || '', meetDate: r.meetDate || '', relation: r.relation || '', gender: r.gender || '남', score: r.score,
-                  disposition: r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition()
-              });
-              showToastMsg(`🎉 ${r.name}님이 ${r.score}점을 달성하여 ${targetStatus}로 등록되었습니다!`);
-            }
-          } else {
-            // Update status dynamically if crossing thresholds
-            if (existingMember.status === 'Potential' || existingMember.status === 'Serious') {
-                if (existingMember.status !== targetStatus) {
-                     existingMember.status = targetStatus;
-                     const today = new Date();
-                     const d = `${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}/${String(today.getFullYear()).slice(2)}`;
-                     existingMember.interactionHistory.push({ id: 'ih' + Date.now(), date: d, content: `점수 ${r.score}점 달성 (${targetStatus} 변경)` });
-                     existingMember.interactionHistory = [...existingMember.interactionHistory];
-                     r.interactionHistory = [...existingMember.interactionHistory];
-                }
-            }
-          }
-        } else {
-          // If score drops below 60 and they are automatically linked (Potential/Serious)
-          if(existingMember && (existingMember.status === 'Potential' || existingMember.status === 'Serious')) {
-            removeMember(existingMember.id);
-            showToastMsg(`📉 ${r.name}님의 점수가 60점 미만으로 하락하여 트리에서 제외되었습니다.`, 'error');
-          }
-        }
+          // 자동 이관 로직 제거 - 수동으로만 멤버 승급 가능
       }
 
       // Recruit CRUD -> Manual Promotion
@@ -855,7 +811,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!newRecruit.name.trim()) return;
         const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition()};
         recruits.value.push(newR);
-        setTimeout(() => checkPromoteRecruit(newR), 0); // Auto check score right after adding
         newRecruit.name=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age='';
       }
       function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }

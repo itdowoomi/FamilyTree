@@ -544,7 +544,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
-                    점수 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
+                    적합도 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
                   <template v-else>
                     Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
@@ -748,7 +748,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
-                    점수 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
+                    적합도 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
                   <template v-else>
                     Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
@@ -1054,7 +1054,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <th>생년월일/나이</th>
                 <th>만난 시기</th>
                 <th style="text-align:center">성별</th>
-                <th style="text-align:center">점수 / Total 수입</th>
+                <th style="text-align:center">적합도 / Total 수입</th>
                 <th style="text-align:center">기본성향</th>
                 <th style="text-align:center">상담 히스토리</th>
                 <th style="text-align:center">작업</th>
@@ -1127,7 +1127,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     <div class="history-panel-header">
                       <div>
                         <span class="history-panel-title">📊 {{ m.name }} — 기본성향 평가</span>
-                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 점수가 자동으로 계산되어 적용됩니다.</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 적합도가 자동으로 계산되어 적용됩니다.</span>
                       </div>
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
@@ -1220,7 +1220,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div><label class="form-label">성별</label><select v-model="nm.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
-          <div><label class="form-label">점수</label><input type="number" v-model.number="nm.score" class="form-input" placeholder="0" @change="onScoreChange(nm, false)"></div>
+          <div><label class="form-label">적합도</label><input type="number" v-model.number="nm.score" class="form-input" placeholder="0" @change="onScoreChange(nm, false)"></div>
         </div>
         <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
       </div>
@@ -1234,6 +1234,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="none"> 숨기기</label>
           <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="left"> 왼쪽</label>
           <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="right"> 오른쪽</label>
+          <div style="flex:1"></div>
+          <label class="pos-radio"><input type="checkbox" v-model="printIncludeRecruit"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
           <table class="member-table" style="font-size:12px;min-width:1150px;">
@@ -1262,7 +1264,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <th>생년월일/나이</th>
                 <th>만난 시기</th>
                 <th style="text-align:center">성별</th>
-                <th style="text-align:center">점수</th>
+                <th style="text-align:center">적합도</th>
                 <th style="text-align:center">기본성향</th>
                 <th style="text-align:center">상담 히스토리</th>
                 <th style="text-align:center">작업</th>
@@ -1326,7 +1328,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     <div class="history-panel-header">
                       <div>
                         <span class="history-panel-title">📊 {{ r.name }} — 기본성향 평가</span>
-                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 점수가 자동으로 계산되어 적용됩니다.</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 적합도가 자동으로 계산되어 적용됩니다.</span>
                       </div>
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
@@ -1367,7 +1369,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     <div class="history-panel-header">
                       <div>
                         <span class="history-panel-title">📝 {{ r.name }} — 상담/관리 기록</span>
-                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 점수가 올라 멤버(Potential 등)로 연동되면 양쪽에서 기록이 공유됩니다.</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 적합도가 올라 멤버(Potential 등)로 연동되면 양쪽에서 기록이 공유됩니다.</span>
                       </div>
                     </div>
                     <table class="history-table" v-if="r.interactionHistory&&r.interactionHistory.length">
@@ -1418,7 +1420,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div><label class="form-label">성별</label><select v-model="newRecruit.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
-          <div><label class="form-label">점수 (0~100)</label><input type="number" v-model.number="newRecruit.score" class="form-input" placeholder="0" min="0" max="100" @keyup.enter="addRecruit()"></div>
+          <div><label class="form-label">적합도 (0~100)</label><input type="number" v-model.number="newRecruit.score" class="form-input" placeholder="0" min="0" max="100" @keyup.enter="addRecruit()"></div>
         </div>
         <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
       </div>
@@ -1432,6 +1434,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="none"> 숨기기</label>
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="left"> 왼쪽</label>
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="right"> 오른쪽</label>
+          <div style="flex:1"></div>
+          <label class="pos-radio"><input type="checkbox" v-model="printIncludeAppointment"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
           <table class="member-table" style="font-size:12px;min-width:1050px;">
@@ -1460,6 +1464,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
                 <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
                 <td style="text-align:center">
+                  <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:4px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
                   <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
                   <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>
                 </td>
@@ -1637,6 +1642,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="notesPosition" value="none"> 숨기기</label>
           <label class="pos-radio"><input type="radio" v-model="notesPosition" value="left"> 왼쪽</label>
           <label class="pos-radio"><input type="radio" v-model="notesPosition" value="right"> 오른쪽</label>
+          <div style="flex:1"></div>
+          <label class="pos-radio"><input type="checkbox" v-model="printIncludeNotes"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
           <table class="member-table">
