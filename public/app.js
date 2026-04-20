@@ -92,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const printHistDays = ref(90);
       const printHistFrom = ref('');
       const printHistTo = ref('');
+      const printIncludeLeft = ref(false);
+      const printIncludeRight = ref(true);
       const newRecruit = reactive({ name:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
       const focusRootId = ref(null);
       
@@ -960,11 +962,36 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
-          checkPastAppointments();
       }
 
       function removeAppointment(id) {
+          if (!confirm('이 약속/이벤트를 삭제하시겠습니까?')) return;
           appointments.value = appointments.value.filter(a => a.id !== id);
+          showToastMsg('약속이 삭제되었습니다.');
+      }
+
+      function completeAppointment(apt) {
+          const aptDate = new Date(apt.date.replace(/[-./]/g, '/'));
+          const histDate = `${String(aptDate.getMonth()+1).padStart(2,'0')}/${String(aptDate.getDate()).padStart(2,'0')}/${String(aptDate.getFullYear()).slice(2)}`;
+          const typeLabel = apt.type || '약속/행사';
+          let extraBits = [];
+          if(apt.time) {
+              extraBits.push(apt.endTime ? apt.time + '~' + apt.endTime : apt.time);
+          }
+          if(apt.location) extraBits.push('@'+apt.location);
+          const extraStr = extraBits.length ? ' ('+extraBits.join(' ')+')' : '';
+          const descStr = apt.description ? ' — ' + apt.description : '';
+          const content = `[${typeLabel}] ${apt.title}${extraStr}${descStr}`;
+          
+          if(apt.targetName) {
+              addHistoryToPerson(apt.targetName, histDate, content);
+          }
+          apt.attendees.forEach(attName => {
+              addHistoryToPerson(attName, histDate, content);
+          });
+          
+          appointments.value = appointments.value.filter(a => a.id !== apt.id);
+          showToastMsg('✅ 완료 처리되어 참석자 히스토리에 기록되었습니다.');
       }
 
       function editAppointment(apt) {
@@ -1183,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data={header:newHeader,members:JSON.parse(JSON.stringify(subMemberList)),notes:JSON.parse(JSON.stringify(notes.value)),recruits:[],appointments:[],recruitPosition:recruitPosition.value,notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value,nodeBaseHeight:nodeBaseHeight.value,nodeFontSize:nodeFontSize.value,nodeLineGap:nodeLineGap.value,notePanelWidth:notePanelWidth.value,legendConfig:JSON.parse(JSON.stringify(legendConfig.value)),_subExportOf:originalRoot?originalRoot.name:'',_subExportFrom:subRoot.name,_exportedAt:new Date().toLocaleString('ko-KR')};
         const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${subRoot.name.replace(/\s+/g,'_')}_subtree_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); showToastMsg(`📤 ${subRoot.name} 서브 내보내기 완료`);
       }
-      function importJSON(e){ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const d=JSON.parse(ev.target.result); if(!d.header||!d.members)throw new Error(); if(!confirm('현재 작업을 덮어쓸까요?'))return; restore(d); isDirty.value=false; checkPastAppointments(); showToastMsg('📥 불러오기 완료'); }catch{ showToastMsg('❌ 파일 형식 오류','error'); } }; reader.readAsText(file); e.target.value=''; }
+      function importJSON(e){ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const d=JSON.parse(ev.target.result); if(!d.header||!d.members)throw new Error(); if(!confirm('현재 작업을 덮어쓸까요?'))return; restore(d); isDirty.value=false; showToastMsg('📥 불러오기 완료'); }catch{ showToastMsg('❌ 파일 형식 오류','error'); } }; reader.readAsText(file); e.target.value=''; }
 
       // ── Print ──
       function histInRange(h){
@@ -1340,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, checkPromoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
-        addAppointment, removeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
+        addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
         addNote, onNodeClick, getRecruitMeta,
         zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd,
         quickSave, exportJSON, exportSubJSON, importJSON,
