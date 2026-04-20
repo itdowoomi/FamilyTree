@@ -1320,7 +1320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateRootMemberName, setFocus, clearFocus, toggleFocus,
         nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
-        calcDisposition, addRecruit, removeRecruit, promoteRecruit, checkPromoteRecruit, onScoreChange,
+        calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
         addNote, onNodeClick, getRecruitMeta,
