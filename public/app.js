@@ -10,10 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let app, auth, db;
 
   if (isCanvas) {
-      // 캔버스 내장 파이어베이스 (미리보기 환경 전용)
       app = initializeApp(JSON.parse(__firebase_config));
   } else {
-      // ⚠️ [내 도메인 연동용] 여기에 본인의 Firebase 설정값을 붙여넣으세요!
       const firebaseConfig = {
           apiKey: "AIzaSyCqaelXcsffbrbkTN_Dq5vF4D7DZmVGdu8",
           authDomain: "myfamilytree-8d25f.firebaseapp.com",
@@ -23,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
           appId: "1:5519027679:web:3c5d4802a80b09d19d286a",
           measurementId: "G-4BQ0S8YRDD"
       };
-      app = initializeApp(firebaseConfig);
+      try {
+          app = initializeApp(firebaseConfig);
+      } catch(e) {
+          console.error("Firebase init error:", e);
+      }
   }
   
   auth = getAuth(app);
@@ -94,11 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const printHistTo = ref('');
       const printIncludeLeft = ref(false);
       const printIncludeRight = ref(true);
+      
+      // 인쇄 옵션 변수들
       const printIncludeNotes = ref(true);
       const printIncludeRecruit = ref(true);
       const printIncludeAppointment = ref(true);
       const printIncludeMemberInfo = ref(true);
       const printIncludePointHistory = ref(true);
+      
       const newRecruit = reactive({ name:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
       const focusRootId = ref(null);
       
@@ -262,14 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const memberNames = computed(() => members.value.map(m => m.name));
       const recruitNames = computed(() => recruits.value.map(r => r.name));
 
-      // 상위 멤버 (FD/SFD/DD/EFD) - 기본정보에 등록된 이름들
       const uplineMemberNames = computed(() => {
           const names = [header.fd, header.sfd, header.dd, header.efd].map(n => (n || '').trim()).filter(Boolean);
-          // 일반 멤버에 이미 있으면 제외 (중복 방지)
           return [...new Set(names)].filter(n => !memberNames.value.includes(n));
       });
 
-      // 약속/이벤트 참석자용 "멤버" 리스트 = 실제 멤버 + 상위 멤버
       const apptMemberNames = computed(() => {
           return [...new Set([...memberNames.value, ...uplineMemberNames.value])];
       });
@@ -365,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   });
               }
           });
-          nextTick(() => { syncLock = false; });
+          setTimeout(() => { syncLock = false; }, 100);
       }, { deep: true });
 
       watch(() => members.value, (newVals) => {
@@ -428,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   }
               }
           });
-          nextTick(() => { syncLock = false; });
+          setTimeout(() => { syncLock = false; }, 100);
       }, { deep: true });
       // ------------------------------------------------
 
@@ -541,16 +543,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.min(100, Math.max(0, (mTotal / tTotal) * 100));
       }
 
-      // Formats a stored appointment date (YYYY-MM-DD / MM-DD-YYYY / etc.) into a short "M/D" for display.
       function fmtApptDateShort(dStr){
         if(!dStr) return '';
         const parts = String(dStr).split(/[-./]/).map(s => s.trim()).filter(Boolean);
         if (parts.length < 2) return dStr;
         let m, d;
-        if (parts[0].length === 4) { // YYYY-MM-DD
+        if (parts[0].length === 4) { 
           m = parseInt(parts[1], 10);
           d = parseInt(parts[2] || '1', 10);
-        } else { // MM-DD-YYYY or MM/DD/YY
+        } else { 
           m = parseInt(parts[0], 10);
           d = parseInt(parts[1], 10);
         }
@@ -558,7 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${m}/${d}`;
       }
 
-      // Computes this history entry's share (%) of the member's visible amount or point totals.
       function getPointHistPct(m, h){
         if (!m || !h || !m.history) return 0;
         const visible = m.history.filter(x => x.show);
@@ -756,7 +756,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Check Score Thresholds (For both Recruit and Member updates)
       function onScoreChange(item, isRecruit = true) {
           // 자동 이관 로직 제거 - 수동으로만 멤버 승급 가능
       }
@@ -770,13 +769,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetMemberId = null;
 
         if (existingMemberIndex !== -1) {
-            // Already in tree due to >=60 score. Unlink and make independent.
             members.value[existingMemberIndex].recruitId = null; 
             members.value[existingMemberIndex].status = 'New(Code-in)'; 
             members.value[existingMemberIndex].interactionHistory.push({ id: 'ih' + Date.now(), date: d, content: '정식 멤버로 승급됨' });
             targetMemberId = members.value[existingMemberIndex].id;
         } else {
-            // Score was < 60, straight to member
             const pId = focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
             if(!pId) { showToastMsg('상위 멤버가 없습니다.', 'error'); return; }
 
@@ -797,11 +794,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Remove from recruits list entirely
         recruits.value = recruits.value.filter(x => x.id !== r.id);
         showToastMsg(`🎉 ${r.name}님이 정식 멤버로 승급되었습니다!`);
         
-        // Open info panel for new member
         selectedMemberId.value = targetMemberId;
         if(memberInfoPosition.value === 'none') memberInfoPosition.value = 'right';
         if(tab.value !== 'members' && tab.value !== 'memberInfo') tab.value = 'memberInfo';
@@ -821,18 +816,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!name) return '';
           const n = String(name).trim();
           if (!n) return '';
-          // Upline roles from header (FD/SFD/DD/EFD are treated as members)
           if ((header.fd || '').trim() === n) return 'FD';
           if ((header.sfd || '').trim() === n) return 'SFD';
           if ((header.dd || '').trim() === n) return 'DD';
           if ((header.efd || '').trim() === n) return 'EFD';
-          // Regular member
           const m = members.value.find(x => x.name === n);
           if (m) {
               if (m.status === 'root') return '본인';
               return m.status || '';
           }
-          // Non-members (recruits, 신규) get no title
           return '';
       }
 
@@ -864,18 +856,14 @@ document.addEventListener('DOMContentLoaded', () => {
               return showToastMsg('날짜와 내용은 필수 항목입니다.', 'error');
           }
 
-          // For 약속 mode: the title IS the target person's name.
-          // Sync targetName = title so auto-add-to-recruits still works.
           if ((newAppt.type || '이벤트') === '약속') {
               newAppt.targetName = (newAppt.title || '').trim();
           }
 
-          // Allow registration if there's either a target person OR an attendee
           if(!newAppt.targetName && newAppt.attendees.length === 0) {
               return showToastMsg('참석할 멤버나 만날 대상자를 최소 한 명 이상 지정해주세요.', 'error');
           }
 
-          // In case handleTargetNameChange didn't fire
           if(newAppt.targetName) {
             let exists = members.value.some(m => m.name === newAppt.targetName) || recruits.value.some(r => r.name === newAppt.targetName);
             if(!exists) {
@@ -968,7 +956,6 @@ document.addEventListener('DOMContentLoaded', () => {
           newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
       }
 
-      // 약속 모드: 함께 만날 사람 - 신규 이름 추가 (회원이 아니면 recruit에 자동 등록)
       function addAttendeeByName() {
           const name = (newAppt.newAttendeeInput || '').trim();
           if (!name) return;
@@ -1045,7 +1032,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       }
 
-      // Node Click Handler
       function onNodeClick(m){ 
         selectedMemberId.value = m.id;
         if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; }
@@ -1172,17 +1158,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!h.date) return true;
         const hTime = parseDateForSort(h.date);
         if(!hTime) return true;
-
         const startStr = header.periodStart;
         const endStr = header.periodEnd;
-
         if(!startStr && !endStr) return true;
-
         const startTime = startStr ? parseDateForSort(startStr) : 0;
         const endTime = endStr ? parseDateForSort(endStr) : Infinity;
-
         return hTime >= startTime && hTime <= endTime;
       }
+      
       async function buildPrintDoc(){
         await nextTick();
         const orient=printLandscape.value?'landscape':'portrait';
@@ -1201,25 +1184,69 @@ document.addEventListener('DOMContentLoaded', () => {
         const sc={}; subMembers.forEach(m=>{sc[m.status]=(sc[m.status]||0)+1;});
         const rm=rootMember.value, h=header;
         const uplines=[]; if(h.fd)uplines.push(`<strong>FD</strong> ${h.fd}`); if(h.sfd)uplines.push(`<strong>SFD</strong> ${h.sfd}`); if(h.dd)uplines.push(`<strong>DD</strong> ${h.dd}`); if(h.efd)uplines.push(`<strong>EFD</strong> ${h.efd}`);
-        const memberRows=subMembers.map(m=>{
-          const vis=(m.history||[]).filter(hh=>hh.show&&histInRange(hh)); if(!vis.length)return '';
-          const rows=vis.sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).map(hh=>{
-            let val=hh.content || ''; 
-            let extras=[];
-            if(Number(hh.amount)) extras.push(`$${fmt(hh.amount)}`);
-            if(Number(hh.point)) extras.push(`${fmt(hh.point)} Pts`);
-            
-            let extraStr = extras.length ? `<div style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#1c2b4a;margin-top:2px;">${extras.join(' | ')}</div>` : '';
-            return `<tr><td style="width:110px;white-space:nowrap;color:#555;font-family:'JetBrains Mono',monospace;font-size:9px">${hh.date||'—'}</td><td style="font-size:10px;padding-bottom:4px;"><div>${val}</div>${extraStr}</td></tr>`;
-          }).join('');
-          let mName=m.name; const pts=mPtsSum(m); if(pts>0) mName+=` <span style="font-size:8px;color:#b8943a;font-family:'JetBrains Mono',monospace;">(Pts:${fmt(pts)})</span>`;
-          return `<div class="pd-hist-member"><div class="pd-hist-name">${mName}</div><table class="pd-hist-table">${rows}</table></div>`;
-        }).filter(Boolean).join('');
-        const notesHTML=notes.value.map((n,i)=>`<div class="pd-note-item"><span class="pd-note-num">${i+1}</span>${n.text}</div>`).join('');
-        let filterLabel=''; 
-        if(h.periodStart || h.periodEnd) {
-          filterLabel = `${h.periodStart||'시작'} ~ ${h.periodEnd||'계속'}`;
+        
+        let memberRows = '';
+        if (printIncludeMemberInfo.value) {
+            memberRows=subMembers.map(m=>{
+              const vis=(m.history||[]).filter(hh=>hh.show&&histInRange(hh)); if(!vis.length)return '';
+              const rows=vis.sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).map(hh=>{
+                let val=hh.content || ''; 
+                let extras=[];
+                if(Number(hh.amount)) extras.push(`$${fmt(hh.amount)}`);
+                if(Number(hh.point)) extras.push(`${fmt(hh.point)} Pts`);
+                
+                let extraStr = extras.length ? `<div style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#1c2b4a;margin-top:2px;">${extras.join(' | ')}</div>` : '';
+                return `<tr><td style="width:110px;white-space:nowrap;color:#555;font-family:'JetBrains Mono',monospace;font-size:9px">${hh.date||'—'}</td><td style="font-size:10px;padding-bottom:4px;"><div>${val}</div>${extraStr}</td></tr>`;
+              }).join('');
+              let mName=m.name; const pts=mPtsSum(m); if(pts>0) mName+=` <span style="font-size:8px;color:#b8943a;font-family:'JetBrains Mono',monospace;">(Pts:${fmt(pts)})</span>`;
+              return `<div class="pd-hist-member"><div class="pd-hist-name">${mName}</div><table class="pd-hist-table">${rows}</table></div>`;
+            }).filter(Boolean).join('');
         }
+
+        let recruitsHTML = '';
+        if (printIncludeRecruit.value && visibleRecruits.value.length) {
+            recruitsHTML = visibleRecruits.value.map(r => {
+                let rInfo = `<div class="pd-hist-member"><div class="pd-hist-name">${r.name} <span style="font-size:8px;color:#b8943a;">(적합도:${r.score})</span></div>`;
+                if (r.interactionHistory && r.interactionHistory.length) {
+                    const rows = [...r.interactionHistory].sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).map(ih => {
+                        return `<tr><td style="width:80px;white-space:nowrap;color:#555;font-family:'JetBrains Mono',monospace;font-size:9px">${ih.date||'—'}</td><td style="font-size:10px;padding-bottom:4px;">${ih.content}</td></tr>`;
+                    }).join('');
+                    rInfo += `<table class="pd-hist-table">${rows}</table>`;
+                } else {
+                    rInfo += `<div style="font-size:9px;color:#888;padding:2px 0;">상담 기록 없음</div>`;
+                }
+                rInfo += `</div>`;
+                return rInfo;
+            }).join('');
+        }
+
+        let appointmentsHTML = '';
+        if (printIncludeAppointment.value && upcomingAppointments.value.length) {
+            appointmentsHTML = upcomingAppointments.value.map(apt => {
+                const dateStr = fmtApptDateShort(apt.date);
+                const timeStr = apt.time ? (apt.endTime ? apt.time + '~' + apt.endTime : apt.time) : '';
+                let titleStr = apt.title;
+                if ((apt.type||'이벤트') === '약속') { titleStr = apptPeopleList(apt).join(', '); }
+                return `<div class="pd-note-item" style="display:flex; flex-direction:column; gap:2px; padding:4px 0;">
+                    <div style="display:flex; gap:6px; align-items:baseline;">
+                      <span class="pd-note-num" style="color:#d35400; background:#fdf6ee; padding:1px 4px; border-radius:4px; border:none; font-size:8.5px;">${apt.type||'이벤트'}</span>
+                      <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#1c2b4a; font-size:10px;">${dateStr} ${timeStr}</span>
+                      <span style="font-weight:700; color:#1c2b4a; font-size:11px;">${titleStr}</span>
+                    </div>
+                    ${apt.location ? `<div style="font-size:9px; color:#555; padding-left:4px;">📍 ${apt.location}</div>` : ''}
+                    ${apt.description ? `<div style="font-size:10px; color:#333; padding-left:4px; border-left:2px solid #ddd; margin-left:2px;">${apt.description}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        let notesHTML='';
+        if (printIncludeNotes.value && notes.value.length) {
+            notesHTML=notes.value.map((n,i)=>`<div class="pd-note-item"><span class="pd-note-num">${i+1}</span>${n.text}</div>`).join('');
+        }
+
+        let filterLabel=''; 
+        if(h.periodStart || h.periodEnd) { filterLabel = `${h.periodStart||'시작'} ~ ${h.periodEnd||'계속'}`; }
+        
         let legendHTML='';
         if(legendConfig.value.show){
           legendHTML=ALL_STATUSES.filter(s=>legendConfig.value.items[s].show && sc[s] > 0).map(s=>`<div class="pd-leg-item"><span class="pd-leg-box" style="background:${COLORS[s]}!important;border:1px solid ${STROKES[s]}!important"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${legendConfig.value.items[s].label}</span><span style="transform:scale(0.8);flex-shrink:0;">(${sc[s]})</span></div>`).join('');
@@ -1228,27 +1255,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if(h.rank)headerHTML+=`<div style="display:inline-block;margin:1px 0 2px 0;background:#1c2b4a;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;letter-spacing:1px">${h.rank}</div>`;
         if(uplines.length)headerHTML+=`<div class="pd-upline">${uplines.join('&nbsp;|&nbsp;')}</div>`;
         headerHTML+=`<div style="margin-top:3px;font-size:8px;color:#555;"><strong>PERIOD:</strong> ${h.periodStart} – ${h.periodEnd}</div></div><div class="pd-header-right"><div class="pd-date">As of ${h.asOf}</div><div class="pd-fin-row"><span class="pd-fin-label">Issue Paid</span><span class="pd-fin-val">${fmt(tt.paid)}</span></div><div class="pd-fin-row"><span class="pd-fin-label">Pending</span><span class="pd-fin-val">${fmt(tt.pending)}</span></div><div class="pd-fin-row pd-fin-total"><span>Total</span><span class="pd-fin-val">${fmt(tt.total)}</span></div></div></div>`;
+        
+        let sideColHTML = '';
+        if (memberRows || recruitsHTML || appointmentsHTML || notesHTML) {
+            sideColHTML += `<div class="pd-side-col">`;
+            if(memberRows) sideColHTML += `<div class="pd-hist-section"><div class="pd-hist-section-title">📋 멤버 히스토리<span class="pd-hist-filter-label">${filterLabel}</span></div><div class="pd-hist-grid">${memberRows}</div></div>`;
+            if(recruitsHTML) sideColHTML += `<div class="pd-hist-section" style="margin-top:12px;"><div class="pd-hist-section-title" style="color:#b8943a; border-bottom:1.5px solid #b8943a;">🎯 Recruit 리스트</div><div class="pd-hist-grid">${recruitsHTML}</div></div>`;
+            if(appointmentsHTML) sideColHTML += `<div style="margin-top:12px"><div class="pd-notes-title" style="color:#d35400; border-bottom:1.5px solid #d35400;">📅 예정된 약속/이벤트</div><div style="display:flex; flex-direction:column; gap:4px;">${appointmentsHTML}</div></div>`;
+            if(notesHTML) sideColHTML += `<div style="margin-top:12px"><div class="pd-notes-title">📝 메모 / 액션 아이템</div><div class="pd-notes-grid">${notesHTML}</div></div>`;
+            sideColHTML += `</div>`;
+        }
+
         let inner='';
         if(printLandscape.value){
           inner+=`<div class="pd-body-landscape"><div class="pd-main-col">`;
           if(h.title)inner+=`<div class="pd-doc-title">${h.title}</div>`;
           inner+=headerHTML+`<div class="pd-tree-wrap">${svgHTML}</div></div>`;
-          if(memberRows||notes.value.length){
-            inner+=`<div class="pd-side-col">`;
-            if(memberRows)inner+=`<div class="pd-hist-section"><div class="pd-hist-section-title">📋 멤버 히스토리<span class="pd-hist-filter-label">${filterLabel}</span></div><div class="pd-hist-grid">${memberRows}</div></div>`;
-            if(notes.value.length)inner+=`<div style="margin-top:12px"><div class="pd-notes-title">📝 메모 / 액션 아이템</div><div class="pd-notes-grid">${notesHTML}</div></div>`;
-            inner+=`</div>`;
-          }
+          inner += sideColHTML;
           inner+=`</div>`;
         } else {
           if(h.title)inner+=`<div class="pd-doc-title">${h.title}</div>`;
           inner+=headerHTML+`<div class="pd-body-portrait"><div class="pd-main-col"><div class="pd-tree-wrap">${svgHTML}</div></div>`;
-          if(memberRows||notes.value.length){
-            inner+=`<div class="pd-side-col">`;
-            if(memberRows)inner+=`<div class="pd-hist-section"><div class="pd-hist-section-title">📋 멤버 히스토리<span class="pd-hist-filter-label">${filterLabel}</span></div><div class="pd-hist-grid">${memberRows}</div></div>`;
-            if(notes.value.length)inner+=`<div style="margin-top:12px"><div class="pd-notes-title">📝 메모 / 액션 아이템</div><div class="pd-notes-grid">${notesHTML}</div></div>`;
-            inner+=`</div>`;
-          }
+          inner += sideColHTML;
           inner+=`</div>`;
         }
         let html='<!DOCTYPE html><html><head><meta charset="UTF-8">';
@@ -1328,6 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quickSave, exportJSON, exportSubJSON, importJSON,
         doPrint, confirmPrint,
         getToastClass, getSaveStatusClass, getSaveStatusText,
+        printIncludeNotes, printIncludeRecruit, printIncludeAppointment, printIncludeMemberInfo, printIncludePointHistory, printIncludeLeft, printIncludeRight,
         getEdgeClass:(e)=>['Potential', 'Serious'].includes(e.status)?'edge-dash':'edge-line',
         getNodeTransform:(m)=>`translate(${m.pos.x-nodeWidth.value/2},${m.pos.y-nodeH(m)/2})`,
         getRectStrokeWidth:(m)=>['Potential', 'Serious'].includes(m.status)?1.5:1,

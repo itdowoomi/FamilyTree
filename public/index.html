@@ -5,364 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Network Tree Manager (Cloud)</title>
   <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --navy:#1c2b4a;--navy-light:#2d3f66;
-  --gold:#b8943a;--gold-light:#d4ae5a;
-  --cream:#f7f5f0;--white:#ffffff;
-  --border:#d6d2c8;--muted:#8a8680;
-  --text:#1a1917;--danger:#c0392b;
-}
-html,body{height:100%;overflow:hidden;background:var(--cream);}
-#app{display:flex;flex-direction:column;height:100vh;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
-
-/* ─── OVERLAYS (LOGIN & DASHBOARD) ─── */
-.full-overlay { position: fixed; inset: 0; background: var(--cream); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-.login-box { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-.login-box h1 { font-family: 'Libre Baskerville', serif; color: var(--navy); margin-bottom: 10px; font-size: 24px; }
-.login-box p { color: var(--muted); font-size: 13px; margin-bottom: 30px; line-height: 1.5; }
-.btn-google { background: #fff; border: 1px solid #ddd; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.2s; }
-.btn-google:hover { background: #f8f9fa; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.btn-google img { width: 18px; height: 18px; }
-
-.dashboard-header { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-.dashboard-header h1 { font-family: 'Libre Baskerville', serif; color: var(--navy); font-size: 26px; }
-.user-profile { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 500; }
-.btn-logout { background: transparent; border: 1px solid var(--border); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 12px; transition: all 0.2s; }
-.btn-logout:hover { background: #eee; }
-
-.tree-grid { width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; align-items: stretch; }
-.tree-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; cursor: pointer; transition: all 0.2s; position: relative; }
-.tree-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--gold-light); }
-.tree-card-new { border: 2px dashed var(--gold-light); background: rgba(184,148,58,0.03); align-items: center; justify-content: center; gap: 10px; color: var(--gold); }
-.tree-card-new:hover { background: rgba(184,148,58,0.08); border-color: var(--gold); }
-.tree-card-new-icon { font-size: 32px; }
-.tree-card-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
-.tree-card-meta { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', monospace; }
-.btn-delete-tree { position: absolute; top: 12px; right: 12px; background: rgba(192, 57, 43, 0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: all 0.2s; }
-.tree-card:hover .btn-delete-tree { opacity: 1; }
-.btn-delete-tree:hover { background: var(--danger); color: #fff; }
-
-/* ─── TREE PANEL ─── */
-.tree-panel{flex:1 1 0;display:flex;flex-direction:column;overflow:hidden;min-height:0;background:var(--white);border-bottom:3px solid var(--navy);}
-
-.doc-header{display:grid;grid-template-columns:220px 1fr 220px;align-items:center;padding:9px 18px 8px;background:var(--navy);color:var(--white);gap:10px;flex-shrink:0;}
-.doc-header-left{font-size:11px;opacity:.8;line-height:1.9; display: flex; flex-direction: column; align-items: flex-start;}
-.btn-back-dashboard { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; margin-bottom: 6px;}
-.btn-back-dashboard:hover { background: rgba(255,255,255,0.25); }
-.doc-header-center{text-align:center;}
-.doc-header-title-sub{font-size:9px; text-transform:uppercase; letter-spacing:1.2px; opacity:0.6; margin-bottom:1px; font-weight:500;}
-.doc-title{font-family:'Libre Baskerville',serif;font-size:19px;letter-spacing:.4px;}
-.doc-rank{display:inline-block;margin-top:2px;background:var(--gold);color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 10px;border-radius:10px;text-transform:uppercase;}
-.upline-row{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:4px;}
-.upline-chip{font-size:10px;opacity:.75;display:flex;align-items:center;gap:3px;}
-.upline-label{font-weight:700;opacity:1;color:var(--gold-light);}
-.doc-header-right{text-align:right;font-size:11px;opacity:.8;line-height:1.9;display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
-.save-status{display:flex;align-items:center;gap:5px;font-size:10px;padding:2px 8px;border-radius:10px;transition:all .3s;}
-.save-status.saved{background:rgba(22,101,52,.25);color:#86efac;}
-.save-status.unsaved{background:rgba(184,148,58,.25);color:var(--gold-light);}
-.save-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.save-status.saved .save-dot{background:#86efac;}
-.save-status.unsaved .save-dot{background:var(--gold-light);animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-.tree-body{display:flex;flex:1;overflow:hidden;min-height:0;}
-
-/* Notes & Common Side Panels */
-.side-panel{flex-shrink:0;overflow:auto;padding:10px 9px;background:var(--cream);display:flex;flex-direction:column;}
-.side-panel.left{border-right:1px solid var(--border);}
-.side-panel.right{border-left:1px solid var(--border);}
-.panel-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;flex-shrink:0;}
-.panel-title.gold{color:var(--gold);}
-.panel-title.navy{color:var(--navy);}
-.panel-title.orange{color:#d35400;}
-
-.note-card{display:flex;align-items:flex-start;gap:5px;padding:4px 1px;border-bottom:1px solid #e5e2dc;}
-.note-card:last-child{border-bottom:none;}
-.note-idx{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--gold);font-weight:700;flex-shrink:0;line-height:1.6;min-width:14px;}
-.note-text-disp{font-size:11px;line-height:1.55;color:var(--text);word-break:break-all;}
-
-/* Appointments Side Panel — Box-less Recruit-style Layout */
-.appointment-panel{background:#fdf6ee;}
-.appt-item{margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid #f0e4cf;}
-.appt-item:last-child{border-bottom:none;margin-bottom:0;}
-.appt-top-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:1px;flex-wrap:nowrap;}
-.appt-date-block{display:flex;align-items:baseline;gap:6px;min-width:0;flex-shrink:1;}
-.appt-type-chip{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:#fff;background:#d35400;border-radius:10px;padding:1px 7px;font-weight:700;flex-shrink:0;letter-spacing:.3px;line-height:1.4;transform:translateY(-2px);}
-.appt-type-chip.meet{background:var(--navy);}
-.appt-date-big{font-family:'Libre Baskerville',serif;font-size:16px;font-weight:700;color:#d35400;line-height:1.15;letter-spacing:.4px;white-space:nowrap;}
-.appt-type-chip.meet ~ .appt-date-big, .appt-item.meet .appt-date-big{color:var(--navy);}
-.appt-time-big{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.2px;white-space:nowrap;flex-shrink:0;}
-.appt-title-big{font-size:16px;font-weight:700;color:var(--navy);line-height:1.25;margin:4px 0 3px 0;letter-spacing:.2px;}
-.appt-people-big{font-size:16px;font-weight:700;color:var(--navy);line-height:1.35;margin:4px 0 3px 0;letter-spacing:.2px;word-break:keep-all;}
-.appt-people-big .ppl-title{font-size:11px;font-weight:600;color:var(--muted);margin-left:2px;letter-spacing:.2px;}
-.appt-desc{font-size:11px;color:var(--text);line-height:1.45;margin:0 0 4px 0;padding:3px 0 3px 2px;border-left:2px solid #e8dfc8;padding-left:7px;}
-.appt-item.meet .appt-desc{border-left-color:#d2d9e6;}
-.appt-location-big{font-size:11px;color:var(--navy-light);margin-bottom:4px;font-weight:500;}
-.appt-location-big::before{content:"📍 ";opacity:.7;}
-.appt-attendee-row{display:flex;gap:5px;align-items:baseline;font-size:10px;line-height:1.45;padding:1px 0 1px 2px;}
-.appt-attendee-tag{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--navy);text-transform:uppercase;flex-shrink:0;min-width:54px;}
-.appt-attendee-tag.new{color:#d35400;}
-.appt-attendee-names{color:var(--text);word-break:keep-all;flex:1;}
-.appt-empty{font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;text-align:center;}
-
-/* SVG container */
-.tree-svg-wrap{flex:1;overflow:hidden;position:relative;cursor:grab;}
-.tree-svg-wrap.panning{cursor:grabbing;}
-.tree-svg-pan-layer{position:absolute;top:0;left:0;will-change:transform;}
-.tree-svg-scale-layer{transform-origin:0 0;will-change:transform;}
-.tree-svg{display:block;}
-.node-name{pointer-events:none;font-family:'Noto Sans KR',sans-serif;font-weight:700;}
-.node-fin{pointer-events:none;font-family:'JetBrains Mono',monospace;}
-.node-memo{pointer-events:none;font-family:'Noto Sans KR',sans-serif;}
-.edge-line{stroke:#6b7280;stroke-width:1.5;fill:none;}
-.edge-dash{stroke:#9ca3af;stroke-width:1.2;stroke-dasharray:5,3;fill:none;}
-.sa-badge-svg{font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;}
-
-/* Sidebar */
-.sidebar{width:150px;border-left:1px solid var(--border);padding:11px 10px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column;gap:11px;background:var(--cream);}
-.legend-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
-.legend-items{display:flex;flex-direction:column;gap:4px;}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;overflow:hidden;}
-.legend-box{width:18px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid #aaa;}
-.financials{margin-top:auto;}
-.fin-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;}
-.fin-row:last-child{border-bottom:none;}
-.fin-label{color:var(--muted);}
-.fin-value{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:11px;}
-.fin-total{font-weight:700;font-size:12px;color:var(--navy);}
-
-/* ─── FORM PANEL ─── */
-.form-panel{flex-shrink:0;height:44%;min-height:220px;max-height:420px;display:flex;flex-direction:column;background:var(--cream);}
-
-.toolbar-wrap{display:flex;flex-direction:column;background:var(--navy);flex-shrink:0;}
-.toolbar-row{display:flex;align-items:center;flex-wrap:nowrap;}
-.toolbar-row-1{border-bottom:1px solid rgba(255,255,255,.1);padding:0;overflow-x:auto;scrollbar-width:none;}
-.toolbar-row-1::-webkit-scrollbar{display:none;}
-.toolbar-row-2{padding:4px 8px;gap:5px;flex-wrap:wrap;}
-
-.tab-btn{padding:7px 13px;background:transparent;border:none;color:rgba(255,255,255,.5);font-size:12px;font-family:inherit;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
-.tab-btn:hover{color:rgba(255,255,255,.85);}
-.tab-btn.active{color:var(--gold-light);border-bottom-color:var(--gold-light);}
-
-.zoom-overlay{position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:3px;z-index:10;}
-.zoom-btn{width:28px;height:28px;background:rgba(28,43,74,.85);border:1px solid rgba(255,255,255,.25);border-radius:5px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;backdrop-filter:blur(4px);}
-.zoom-btn:hover{background:rgba(28,43,74,1);}
-.zoom-pct{width:28px;height:20px;background:rgba(28,43,74,.7);border:1px solid rgba(255,255,255,.15);border-radius:3px;color:rgba(255,255,255,.7);font-size:9px;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;}
-
-.tab-actions{margin-left:auto;display:flex;align-items:center;gap:5px;padding-right:8px;flex-shrink:0;}
-.tbar-btn{padding:4px 9px;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;border:1px solid transparent;transition:all .15s;display:flex;align-items:center;gap:3px;white-space:nowrap;}
-.tbar-save{background:var(--gold);color:#fff;border-color:var(--gold);}
-.tbar-save:hover{background:var(--gold-light);}
-.tbar-print{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3);}
-.tbar-print:hover{background:rgba(255,255,255,.22);}
-.tbar-other{background:transparent;color:rgba(255,255,255,.65);border-color:rgba(255,255,255,.25);}
-.tbar-other:hover{color:#fff;border-color:rgba(255,255,255,.6);}
-
-.width-ctrl{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:3px 8px;transition:all .2s;}
-.width-ctrl.locked{background:rgba(184,148,58,.15);border-color:var(--gold);}
-.width-ctrl-label{font-size:10px;color:rgba(255,255,255,.55);white-space:nowrap;letter-spacing:.3px;}
-.width-slider{-webkit-appearance:none;width:80px;height:3px;border-radius:2px;background:rgba(255,255,255,.25);outline:none;cursor:pointer;}
-.width-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold-light);cursor:pointer;}
-.width-slider:disabled{opacity:.4;cursor:not-allowed;}
-.width-num{width:42px;padding:2px 4px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:center;}
-.width-num:disabled{opacity:.4;cursor:not-allowed;}
-.width-num:focus{outline:none;border-color:var(--gold-light);}
-.lock-btn{background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,.6);padding:2px;display:flex;align-items:center;transition:color .15s;}
-.lock-btn:hover{color:var(--gold-light);}
-.width-ctrl.locked .lock-btn{color:var(--gold-light);}
-.tab-actions-sep{width:1px;height:18px;background:rgba(255,255,255,.18);margin:0;margin-right:2px;}
-
-.tab-content{flex:1;overflow:auto;padding:8px 10px;display:flex;gap:9px;}
-
-.member-list{flex:1;overflow:auto;min-width:0;}
-.member-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
-.member-table th{text-align:left;padding:4px 5px;font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--white);position:sticky;top:0;white-space:nowrap;overflow:hidden;z-index:2;}
-.member-table td{padding:3px 5px;border-bottom:1px solid #eae8e3;vertical-align:middle;}
-.member-table tr:hover td{background:rgba(0,0,0,.015);}
-.btn-sm-danger{white-space:nowrap;background:transparent;color:var(--danger);border:1px solid var(--danger);padding:2px 7px;font-size:11px;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .15s;}
-.btn-sm-danger:hover{background:var(--danger);color:#fff;}
-.btn-sm-primary{white-space:nowrap;background:transparent;color:var(--navy);border:1px solid var(--navy);padding:2px 7px;font-size:11px;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .15s;}
-.btn-sm-primary:hover{background:var(--navy);color:#fff;}
-.member-table input.form-input,.member-table select.form-select{width:100%;padding:2px 4px;}
-
-/* ─── ADD FORM ─── */
-.add-form{width:220px;flex-shrink:0;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);height:fit-content;}
-.add-form h4{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;margin-bottom:9px;}
-.form-row{margin-bottom:7px;}
-.form-label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.4px;text-transform:uppercase;}
-.form-input,.form-select,.form-textarea{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--white);color:var(--text);transition:border-color .2s;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--navy-light);}
-.form-textarea{resize:vertical;min-height:42px;}
-.btn{padding:5px 12px;border:none;border-radius:4px;font-family:inherit;font-size:12px;cursor:pointer;transition:all .15s;font-weight:500;}
-.btn-primary{background:var(--navy);color:#fff;}
-.btn-primary:hover{background:var(--navy-light);}
-.btn-gold{background:var(--gold);color:#fff;}
-.btn-gold:hover{background:var(--gold-light);}
-
-.info-col{flex:1;min-width:260px;display:flex;flex-direction:column;gap:9px;}
-.info-box{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:11px 13px;}
-.info-box-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;}
-.grid2-full{grid-column:1/-1;}
-.ref-list{font-size:11px;color:var(--muted);line-height:1.9;margin-top:7px;}
-
-.notes-pos-bar{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.notes-pos-label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
-.pos-radio{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;}
-
-.focus-banner{display:flex;align-items:center;gap:10px;background:#2d4a2d;color:#fff;padding:6px 18px;flex-shrink:0;}
-.focus-banner-icon{font-size:14px;}
-.focus-banner-text{font-size:12px;font-weight:500;flex:1;}
-.focus-back-btn{padding:4px 12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);border-radius:4px;color:#fff;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s;}
-.focus-back-btn:hover{background:rgba(255,255,255,.28);}
-.focus-sub-export-btn{padding:4px 12px;background:var(--gold);border:1px solid var(--gold-light);border-radius:4px;color:#fff;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;font-weight:600;transition:all .15s;}
-.focus-sub-export-btn:hover{background:var(--gold-light);}
-.focus-node-btn{padding:2px 8px;border-radius:3px;font-size:12px;font-family:inherit;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .15s;white-space:nowrap;}
-.focus-node-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
-.focus-node-btn.active{background:#2d4a2d;color:#fff;border-color:#2d4a2d;}
-
-/* Recruit Panel Styles */
-.recruit-panel{background:#fdf8f0;}
-.recruit-card{margin-bottom:8px;border-bottom:1px solid #e8dfc8;padding-bottom:7px;}
-.recruit-card:last-child{border-bottom:none;margin-bottom:0;}
-.recruit-card-header{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
-.recruit-rank{font-size:9px;font-family:'JetBrains Mono',monospace;color:#fff;background:var(--gold);border-radius:10px;padding:1px 6px;font-weight:700;flex-shrink:0;}
-.recruit-name-score{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;}
-.recruit-score-badge{color:var(--gold);font-weight:700;}
-.recruit-hist-item{display:flex;gap:5px;padding:2px 0 2px 10px;font-size:10px;line-height:1.5;border-left:2px solid #e8dfc8;margin-left:4px;}
-.recruit-hist-date{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px;flex-shrink:0;white-space:nowrap;}
-.recruit-hist-content{color:var(--text);word-break:break-all;}
-.recruit-score-input{width:64px;padding:2px 5px;font-size:12px;border:1px solid var(--border);border-radius:3px;font-family:'JetBrains Mono',monospace;background:var(--white);text-align:center;}
-.recruit-score-input:focus{outline:none;border-color:var(--gold);}
-
-/* Score Dots Visualizer */
-.score-dots-wrap{width:50px;height:8px;background:#e5e2dc;display:inline-block;vertical-align:middle;margin-left:6px;-webkit-mask-image:repeating-linear-gradient(to right,#000 0,#000 4px,transparent 4px,transparent 5px);mask-image:repeating-linear-gradient(to right,#000 0,#000 4px,transparent 4px,transparent 5px);}
-.score-dots-fill{height:100%;background:linear-gradient(90deg,#fcd34d,#b8943a);transition:width .3s ease;}
-.score-dots-fill-blue{height:100%;background:linear-gradient(90deg,#93c5fd,var(--navy-light));transition:width .3s ease;}
-
-/* ─── HISTORY TABLES ─── */
-.history-panel{background:var(--cream);border-top:1px solid var(--border);padding:8px 10px;}
-.history-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.history-panel-title{font-size:10px;font-weight:700;letter-spacing:.7px;color:var(--navy);text-transform:uppercase;}
-.history-table{width:100%;border-collapse:collapse;font-size:11px;}
-.history-table th{padding:3px 6px;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--white);white-space:nowrap;}
-.history-table td{padding:3px 6px;border-bottom:1px solid #eee;vertical-align:middle;}
-.history-table tr:last-child td{border-bottom:none;}
-.history-date-input{width:150px;padding:2px 5px;font-size:11px;border:1px solid var(--border);border-radius:3px;font-family:inherit;background:var(--white);}
-.history-content-input{width:100%;padding:2px 5px;font-size:11px;border:1px solid var(--border);border-radius:3px;font-family:inherit;background:var(--white);}
-.history-empty{padding:10px;text-align:center;color:var(--muted);font-size:11px;font-style:italic;}
-.hist-add-row{display:flex;gap:6px;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid var(--border);flex-wrap:nowrap;}
-.btn-hist-toggle{padding:2px 9px;border-radius:3px;font-size:11px;font-family:inherit;cursor:pointer;border:1px solid var(--navy);background:transparent;color:var(--navy);transition:all .15s;white-space:nowrap;}
-.btn-hist-toggle.active{background:var(--navy);color:#fff;}
-.btn-hist-toggle:hover{background:var(--navy);color:#fff;}
-.show-check{width:16px;height:16px;cursor:pointer;accent-color:var(--navy);}
-
-/* ─── MEMBER INFO PANEL (Recruit-style, box-less) ─── */
-.mem-info-wrapper{display:flex;flex-direction:column;gap:10px;}
-.mem-info-header{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;padding-bottom:4px;border-bottom:1px solid #dbe0ea;}
-.mem-info-name{font-size:15px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
-.mem-info-badge{font-size:8.5px;background:var(--navy-light);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;}
-.mem-info-inline{font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:-1px;word-break:keep-all;}
-.mem-info-inline .mem-info-dot{color:#c8c3b7;margin:0 4px;}
-.mem-info-inline .mem-total-val{color:var(--navy);font-family:'JetBrains Mono',monospace;font-weight:700;}
-.mem-info-inline .mem-score-val{color:var(--gold);font-weight:700;}
-.mem-hist-section-title{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid #dbe0ea;margin-bottom:4px;}
-.mem-hist-list{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
-
-.del-x-btn { background: none; border: none; color: #ccc; cursor: pointer; padding: 0 4px; font-size: 11px; opacity: 0; transition: opacity 0.2s, color 0.15s; flex-shrink:0; }
-.del-x-btn:hover { color: var(--danger); opacity: 1; }
-
-/* Point history — blue horizontal bar graph (per-entry share) */
-.point-bar-item{padding:4px 0 5px;border-bottom:1px dotted #e5e2dc;}
-.point-bar-item:last-child{border-bottom:none;}
-.point-bar-row-1{display:flex;align-items:baseline;gap:6px;font-size:10.5px;line-height:1.3;}
-.point-bar-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
-.point-bar-content{flex:1;color:var(--text);word-break:break-all;}
-.point-bar-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:10px;flex-shrink:0;}
-.point-bar-track{height:5px;background:#e7edf6;border-radius:3px;overflow:hidden;margin-top:4px;position:relative;}
-.point-bar-fill{height:100%;background:linear-gradient(90deg,#60a5fa 0%,#3b82f6 55%,var(--navy) 100%);border-radius:3px;transition:width .4s ease;}
-.point-bar-pct{font-size:8.5px;color:var(--navy-light);font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:1px;text-align:right;letter-spacing:.3px;}
-.mem-hist-empty{font-size:10px;color:var(--muted);text-align:center;padding:6px;font-style:italic;}
-
-/* Interaction / Consultation history — navy-toned (recruit feel) */
-.mem-int-item{display:flex;gap:6px;align-items:baseline;padding:2px 0 2px 10px;font-size:10.5px;line-height:1.5;border-left:2px solid #d2d9e6;margin-left:2px;position:relative;}
-.mem-int-item:hover{border-left-color:var(--navy-light);background:rgba(28,43,74,0.02);}
-.mem-int-item:hover .del-x-btn{opacity:1;}
-.mem-int-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
-.mem-int-content{flex:1;color:var(--text);word-break:break-all;}
-
-.print-hist-ctrl{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:3px 7px;}
-.print-hist-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:11px;font-family:inherit;padding:2px 4px;cursor:pointer;}
-.print-hist-select option{background:#1c2b4a;color:#fff;}
-.print-date-input{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:10px;padding:2px 4px;width:100px;}
-.print-date-input:focus{outline:none;border-color:var(--gold-light);}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(0);background:var(--navy);color:#fff;padding:7px 18px;border-radius:20px;font-size:12px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.25);transition:opacity .3s,transform .3s;pointer-events:none;}
-.toast.success{background:#166534;}
-.toast.error{background:var(--danger);}
-.toast.hidden{opacity:0;transform:translateX(-50%) translateY(10px);}
-
-.sbadge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap;}
-.s-root{background:#1c2b4a;color:#fff;}
-.s-SA{background:#2d4a2d;color:#fff;}
-.s-Agent{background:#3d4a2d;color:#fff;}
-.s-Licensed{background:#4a2d1c;color:#fff;}
-.s-Serious{background:#e9e7e2;color:#333;border:1px solid #ccc;}
-.s-Potential{background:#f8f9fa;color:#555;border:1.5px dashed #999;}
-.s-New-Code-in{background:#ffffff;color:#333;border:1px solid #ccc;}
-
-/* ─── PRINT PREVIEW MODAL ─── */
-.preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:8000;display:flex;flex-direction:column;align-items:center;}
-.preview-toolbar{width:100%;background:#1c2b4a;display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 20px;flex-shrink:0;}
-.preview-toolbar-title{color:rgba(255,255,255,.7);font-size:12px;}
-.preview-body{flex:1;overflow:auto;display:flex;justify-content:center;padding:20px;width:100%;}
-.preview-page{background:#fff;box-shadow:0 4px 32px rgba(0,0,0,.5);position:relative;flex-shrink:0;}
-.preview-page iframe{border:none;display:block;}
-
-/* disabled field style */
-input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-allowed !important;}
-
-/* Appointment Registration Form — Right-side 40% panel with 3 columns */
-.apt-form { width: 40%; min-width: 520px; max-width: 820px; flex-shrink: 0; background: var(--white); border-radius: 6px; padding: 12px 14px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
-.apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 10px; flex-shrink:0;}
-.apt-form-3col { flex:1; display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 12px; min-height: 0; }
-.apt-col { display: flex; flex-direction: column; min-height: 0; gap: 7px; overflow-y: auto; padding-right: 2px;}
-.apt-col.basic { gap: 7px; }
-.apt-type-switch{display:flex;gap:6px;align-items:center;padding:1px 0;}
-.apt-type-switch label{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);transition:all .15s;}
-.apt-type-switch label.active-ev{background:#fff1e6;border-color:#d35400;color:#d35400;font-weight:700;}
-.apt-type-switch label.active-meet{background:#e8edf7;border-color:var(--navy);color:var(--navy);font-weight:700;}
-.apt-type-switch input{margin:0;}
-.apt-textarea{font-size:11px !important;min-height:44px;resize:vertical;line-height:1.45;}
-.apt-form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px;display:block;}
-.apt-form-label.ev{color:#d35400;}
-.apt-form-label.meet{color:var(--navy);}
-
-.apt-attendee-wrap { flex:1; min-height:0; overflow-y: auto; border: 1px solid var(--border); padding: 7px 8px; border-radius: 4px; background: #fafaf7; font-size: 11px; }
-.apt-attendee-group { margin-bottom: 8px; }
-.apt-attendee-group:last-child { margin-bottom: 0; }
-.apt-attendee-group-title { font-weight: 700; color: var(--navy); margin-bottom: 4px; padding-bottom: 3px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size:11px;}
-.apt-attendee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
-.apt-attendee-label { display: flex; align-items: center; cursor: pointer; padding: 2px; font-size:11px;}
-.apt-attendee-label:hover { background: rgba(0,0,0,0.02); }
-.apt-form-btn{width:100%;padding:8px 12px;border:none;border-radius:5px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;margin-top:4px;letter-spacing:.3px;}
-.apt-form-btn.ev{background:#d35400;}
-.apt-form-btn.ev:hover{background:#b34700;}
-.apt-form-btn.meet{background:var(--navy);}
-.apt-form-btn.meet:hover{background:var(--navy-light);}
-.apt-form-cancel{width:100%;padding:6px 12px;background:transparent;border:1px solid var(--border);border-radius:5px;font-size:12px;color:var(--text);cursor:pointer;margin-top:4px;}
-.apt-form-cancel:hover{background:#f1f3f5;}
-
-@page{margin:0;size:A4;}
-@media print{html,body{height:auto;overflow:visible;background:#fff;}}
-  </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ─── LOGIN OVERLAY ─── -->
   <div v-if="!currentUser" class="full-overlay">
     <div class="login-box">
       <h1>Family Tree Manager</h1>
@@ -374,7 +22,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
     </div>
   </div>
 
-  <!-- ─── DASHBOARD OVERLAY ─── -->
   <div v-if="currentUser && isDashboard" class="full-overlay" style="background:#f1f3f5; justify-content: flex-start; padding-top: 60px;">
     <div class="dashboard-header">
       <h1>내 트리 목록 (Dashboard)</h1>
@@ -385,13 +32,11 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
     </div>
 
     <div class="tree-grid">
-      <!-- Create New Tree Button -->
       <div class="tree-card tree-card-new" @click="createNewTree">
         <div class="tree-card-new-icon">＋</div>
         <div style="font-weight: 700; font-size: 14px;">새로운 트리 만들기</div>
       </div>
 
-      <!-- Saved Trees -->
       <div v-for="tree in savedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)">
         <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
         <div class="tree-card-meta">
@@ -407,7 +52,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
     </div>
   </div>
 
-  <!-- ─── PRINT PREVIEW MODAL ─── -->
   <div v-if="showPreview" class="preview-overlay">
     <div class="preview-toolbar">
       <span class="preview-toolbar-title">🖨 인쇄 미리보기</span>
@@ -423,10 +67,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 
   <div class="toast" :class="getToastClass()">{{ toast.msg }}</div>
 
-  <!-- ══════ TOP TREE ══════ -->
   <div class="tree-panel" v-if="currentUser && !isDashboard">
 
-    <!-- 포커스 모드 배너 -->
     <div v-if="focusRootId" class="focus-banner">
       <span class="focus-banner-icon">🔍</span>
       <span class="focus-banner-text">
@@ -468,7 +110,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 
     <div class="tree-body">
 
-      <!-- Left Panels Container -->
       <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title">📝 메모 / 액션</div>
         <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
@@ -583,7 +224,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         <div v-else style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0; text-align:center;">멤버를 클릭하여 선택하세요.</div>
       </div>
 
-      <!-- SVG container -->
       <div class="tree-svg-wrap" id="tree-svg-container"
            @wheel.prevent="onWheel"
            @mousedown="onPanStart"
@@ -650,7 +290,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
       </div>
 
-      <!-- Sidebar -->
       <div class="sidebar">
         <div v-if="legendConfig.show">
           <div class="legend-title">Legend</div>
@@ -672,7 +311,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
       </div>
 
-      <!-- Right Panels Container -->
       <div v-if="notesPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
         <div class="panel-title">📝 메모 / 액션</div>
         <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
@@ -790,7 +428,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
     </div>
   </div>
 
-  <!-- ══════ BOTTOM FORM ══════ -->
   <div class="form-panel" v-if="currentUser && !isDashboard">
     <div class="toolbar-wrap">
       <div class="toolbar-row toolbar-row-1">
@@ -862,7 +499,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
     </div>
 
-    <!-- ══ 👥 멤버 관리 탭 ══ -->
     <div v-if="tab==='members'" class="tab-content">
       <div class="member-list">
         <table class="member-table">
@@ -925,7 +561,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
               </td>
               <td></td>
             </tr>
-            <!-- Point History Expansion -->
             <tr v-if="expandedMemberId===m.id">
               <td colspan="10" style="padding:0;background:var(--cream);">
                 <div class="history-panel">
@@ -969,7 +604,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     </tbody>
                   </table>
                   <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-                  <!-- Add new entry row -->
                   <div class="hist-add-row">
                     <input class="history-date-input" style="width:160px;" v-model="newHist.date" placeholder="날짜(MM/DD/YY)">
                     <select v-model="newHist.type" style="width:180px;flex-shrink:0;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:3px;">
@@ -1016,7 +650,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
     </div>
 
-    <!-- ══ 👤 멤버 정보 탭 ══ -->
     <div v-if="tab==='memberInfo'" class="tab-content">
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
@@ -1024,6 +657,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="none"> 숨기기</label>
           <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="left"> 왼쪽</label>
           <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="right"> 오른쪽</label>
+          <div style="flex:1"></div>
+          <label class="pos-radio"><input type="checkbox" v-model="printIncludeMemberInfo"> 인쇄 포함 (멤버 히스토리)</label>
         </div>
         <div style="flex:1;overflow:auto;">
           <table class="member-table" style="font-size:12px;min-width:1150px;">
@@ -1120,7 +755,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 </td>
                 <td></td>
               </tr>
-              <!-- Disposition Panel Expansion -->
               <tr v-if="expandedDispositionId===m.id">
                 <td colspan="14" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
@@ -1161,7 +795,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   </div>
                 </td>
               </tr>
-              <!-- Interaction History Expansion -->
               <tr v-if="expandedInteractionId===m.id">
                 <td colspan="14" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
@@ -1188,7 +821,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                       </tbody>
                     </table>
                     <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-                    <!-- Add new entry row -->
                     <div class="hist-add-row">
                       <input class="history-date-input" style="width:160px;" v-model="newInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addInteractionItem(m.id)">
                       <input class="history-content-input" v-model="newInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addInteractionItem(m.id)">
@@ -1226,7 +858,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
     </div>
 
-    <!-- ══ 🎯 Recruit 탭 ══ -->
     <div v-if="tab==='recruit'" class="tab-content">
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
@@ -1315,13 +946,11 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   </button>
                 </td>
                 <td style="text-align:center">
-                  <!-- 승급(멤버 전환) 및 삭제 버튼 -->
                   <button class="btn-sm-primary" @click="promoteRecruit(r)" style="margin-right:4px;" title="트리에 정식 멤버로 승급시킵니다">멤버</button>
                   <button class="btn-sm-danger" @click="removeRecruit(r.id)">삭제</button>
                 </td>
                 <td></td>
               </tr>
-              <!-- Recruit Disposition Expansion -->
               <tr v-if="expandedRecruitDispositionId===r.id">
                 <td colspan="13" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
@@ -1362,7 +991,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   </div>
                 </td>
               </tr>
-              <!-- Recruit Interaction History Expansion -->
               <tr v-if="expandedRecruitInteractionId===r.id">
                 <td colspan="13" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
@@ -1389,7 +1017,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                       </tbody>
                     </table>
                     <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-                    <!-- Add new entry row -->
                     <div class="hist-add-row">
                       <input class="history-date-input" style="width:160px;" v-model="newRecruitInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addRecruitInteractionItem(r.id)">
                       <input class="history-content-input" v-model="newRecruitInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addRecruitInteractionItem(r.id)">
@@ -1426,7 +1053,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
     </div>
 
-    <!-- ══ 📅 약속 관리 탭 (NEW) ══ -->
     <div v-if="tab==='appointments'" class="tab-content">
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
@@ -1438,7 +1064,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeAppointment"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1050px;">
+          <table class="member-table" style="font-size:12px;min-width:1080px;">
             <thead>
               <tr>
                 <th style="width:65px">구분</th>
@@ -1448,7 +1074,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <th style="width:200px">내용</th>
                 <th style="width:130px">장소</th>
                 <th style="width:180px">함께 참석</th>
-                <th style="width:110px;text-align:center">작업</th>
+                <th style="width:145px;text-align:center;white-space:nowrap;">작업</th>
                 <th></th>
               </tr>
             </thead>
@@ -1463,7 +1089,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <td style="font-size:11px;color:var(--text);">{{ apt.description || '-' }}</td>
                 <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
                 <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
-                <td style="text-align:center">
+                <td style="text-align:center; white-space:nowrap;">
                   <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:4px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
                   <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
                   <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>
@@ -1480,7 +1106,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         <h4>{{ editingApptId ? '✏️ ' + (newAppt.type==='약속' ? '약속' : '이벤트') + ' 수정' : '+ ' + (newAppt.type==='약속' ? '약속' : '이벤트') + ' 등록' }}</h4>
         <div class="apt-form-3col">
 
-            <!-- 1단: 기본 입력 -->
             <div class="apt-col basic">
                 <div>
                     <label class="apt-form-label">구분</label>
@@ -1542,7 +1167,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 </div>
             </div>
 
-            <!-- 2단: 멤버 참석자 (상위 포함) -->
             <div class="apt-col">
                 <div class="apt-attendee-group-title" style="flex-shrink:0;">
                     <span>👥 멤버 <span style="font-weight:400;opacity:.6;font-size:9px;">(상위 포함)</span></span>
@@ -1560,7 +1184,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 </div>
             </div>
 
-            <!-- 3단: Recruit 참석자 + 신규 이름 추가 -->
             <div class="apt-col">
                 <div class="apt-attendee-group-title" style="color:var(--gold);flex-shrink:0;">🎯 Recruit / 신규</div>
                 <div class="apt-attendee-wrap">
@@ -1582,9 +1205,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
     </div>
 
-    <!-- 기본 정보 탭 -->
     <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
-      <!-- 본인 정보 (50%) -->
       <div class="info-col" style="flex: 2; min-width: 400px;">
         <div class="info-box" style="height:100%;">
           <div class="info-box-title">👤 본인 정보</div>
@@ -1600,7 +1221,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
       </div>
 
-      <!-- 상위 직책 (25%) -->
       <div class="info-col" style="flex: 1; min-width: 220px;">
         <div class="info-box" style="height:100%;">
           <div class="info-box-title">🔝 상위 직책 (Upline)</div>
@@ -1614,7 +1234,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         </div>
       </div>
 
-      <!-- 범례 옵션 (25%) -->
       <div class="info-col" style="flex: 1; min-width: 220px;">
         <div class="info-box" style="height:100%; display:flex; flex-direction:column;">
           <div class="info-box-title">🎨 범례(Legend) 옵션</div>
@@ -1669,9 +1288,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
   </div>
 </div>
 
-<!-- Vue 3 글로벌 빌드 (window.Vue 노출) -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<!-- 앱 진입점 (Firebase ES 모듈 import 때문에 type="module" 필수) -->
 <script type="module" src="app.js"></script>
 </body>
 </html>
