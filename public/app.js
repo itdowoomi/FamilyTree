@@ -66,7 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const header = reactive(defaultHeader());
       const members = ref([
         defaultRoot(),
-        { id:'m1', recruitId: null, name:'김은숙', major:'', job:'', company:'', status:'SA', parentId:'root',
+        { id:'m1', recruitId: null, name:'김은숙', major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
+      ]);
+      const notes = ref([]);
+      const appointments = ref([]);
       const recruits = ref([]);
       
       const notesPosition = ref('none');
