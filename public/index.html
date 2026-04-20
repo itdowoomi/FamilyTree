@@ -1,89 +1,1209 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Tree Manager (Cloud)</title>
+  <link rel="icon" href="data:,">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- 분리된 CSS 파일 연결 -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.12.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.12.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.12.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
-
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+  <!-- ─── LOGIN OVERLAY ─── -->
+  <div v-if="!currentUser" class="full-overlay">
+    <div class="login-box">
+      <h1>Network Tree Manager</h1>
+      <p>클라우드 환경에서 당신만의 패밀리 트리를<br>안전하게 무제한으로 저장하고 관리하세요.</p>
+      <button class="btn-google" @click="loginWithGoogle">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+        Google 계정으로 로그인
+      </button>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+  </div>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+  <!-- ─── DASHBOARD OVERLAY ─── -->
+  <div v-if="currentUser && isDashboard" class="full-overlay" style="background:#f1f3f5; justify-content: flex-start; padding-top: 60px;">
+    <div class="dashboard-header">
+      <h1>내 트리 목록 (Dashboard)</h1>
+      <div class="user-profile">
+        <span>{{ currentUser.displayName }} 님</span>
+        <button class="btn-logout" @click="logout">로그아웃</button>
+      </div>
+    </div>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
-      });
-    </script>
-  </body>
+    <div class="tree-grid">
+      <!-- Create New Tree Button -->
+      <div class="tree-card tree-card-new" @click="createNewTree">
+        <div class="tree-card-new-icon">＋</div>
+        <div style="font-weight: 700; font-size: 14px;">새로운 트리 만들기</div>
+      </div>
+
+      <!-- Saved Trees -->
+      <div v-for="tree in savedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)">
+        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
+        <div class="tree-card-meta">
+          <span>마지막 수정: {{ tree.updatedAt }}</span>
+          <span>총 멤버 수: {{ tree.memberCount }}명</span>
+        </div>
+        <button class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
+      </div>
+    </div>
+    
+    <div v-if="savedTrees.length === 0" style="margin-top: 40px; color: var(--muted); font-size: 14px;">
+      저장된 트리가 없습니다. 새로운 트리를 만들어 보세요!
+    </div>
+  </div>
+
+  <!-- ─── PRINT PREVIEW MODAL ─── -->
+  <div v-if="showPreview" class="preview-overlay">
+    <div class="preview-toolbar">
+      <span class="preview-toolbar-title">🖨 인쇄 미리보기</span>
+      <button class="tbar-btn tbar-print" @click="confirmPrint()" style="padding:5px 16px;font-size:12px">인쇄</button>
+      <button class="tbar-btn tbar-other" @click="showPreview=false" style="padding:5px 14px;font-size:12px">✕ 닫기</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-page" :style="previewPageStyle">
+        <iframe id="preview-frame" :style="previewFrameStyle" scrolling="no"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" :class="getToastClass()">{{ toast.msg }}</div>
+
+  <!-- ══════ TOP TREE ══════ -->
+  <div class="tree-panel" v-if="currentUser && !isDashboard">
+
+    <!-- 포커스 모드 배너 -->
+    <div v-if="focusRootId" class="focus-banner">
+      <span class="focus-banner-icon">🔍</span>
+      <span class="focus-banner-text">
+        <strong>{{ rootMemberName }}</strong> 기준 보기 중
+        <span style="opacity:.7;font-size:11px;margin-left:6px">— 하위 {{ focusedList.length - 1 }}명</span>
+      </span>
+      <button class="focus-sub-export-btn" @click="exportSubJSON()" title="이 하위 그룹만 독립 JSON으로 내보내기">📤 서브 내보내기</button>
+      <button class="focus-back-btn" @click="clearFocus()">← 전체 트리로 돌아가기</button>
+    </div>
+
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <button class="btn-back-dashboard" @click="goToDashboard">⬅️ 트리 목록으로</button>
+        <div>FD RUNNING PERIOD</div>
+        <div>{{ header.periodStart }} – {{ header.periodEnd }}</div>
+        <div v-if="header.dd">DD <strong style="color:#fff">{{ header.dd }}</strong></div>
+      </div>
+      <div class="doc-header-center">
+        <div v-if="header.title" class="doc-header-title-sub">{{ header.title }}</div>
+        <div class="doc-title">
+          {{ rootMemberName || 'Tree Manager' }}
+          <span style="font-size:13px;font-weight:400;opacity:.55">({{ header.id }})</span>
+        </div>
+        <div v-if="header.rank" class="doc-rank">{{ header.rank }}</div>
+        <div class="upline-row" style="margin-top:4px">
+          <div v-if="header.fd"  class="upline-chip"><span class="upline-label">FD</span> {{ header.fd }}</div>
+          <div v-if="header.sfd" class="upline-chip"><span class="upline-label">SFD</span> {{ header.sfd }}</div>
+          <div v-if="header.efd" class="upline-chip"><span class="upline-label">EFD</span> {{ header.efd }}</div>
+        </div>
+      </div>
+      <div class="doc-header-right">
+        <div>As of {{ header.asOf }}</div>
+        <div class="save-status" :class="getSaveStatusClass()">
+          <div class="save-dot"></div>
+          <span>{{ getSaveStatusText() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tree-body">
+
+      <!-- Left Panels Container -->
+      <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
+        <div class="panel-title">📝 메모 / 액션</div>
+        <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
+        <div v-for="(n,i) in notes" :key="i" class="note-card">
+          <span class="note-idx">{{ i+1 }}</span>
+          <span class="note-text-disp">{{ n.text }}</span>
+        </div>
+      </div>
+
+      <div v-if="recruitPosition==='left'" class="side-panel left recruit-panel" :style="{ width: notePanelWidth + 'px' }">
+        <div class="panel-title gold">🎯 Recruit 리스트</div>
+        <div v-if="visibleRecruits.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
+        <div v-for="(r,i) in visibleRecruits" :key="r.id" class="recruit-card">
+          <div class="recruit-card-header">
+              <span class="recruit-rank">{{ i+1 }}</span>
+              <span class="recruit-name-score">{{ r.name }} <span class="recruit-score-badge">({{ r.score }})</span><div class="score-dots-wrap"><div class="score-dots-fill" :style="{width:r.score+'%'}"></div></div></span>
+          </div>
+          <div v-if="r.major||r.job||r.company||r.relation||r.meetDate||r.period||r.gender||r.age" style="font-size:9.5px;color:var(--muted);margin:-2px 0 4px 20px;line-height:1.2;">{{ getRecruitMeta(r) }}</div>
+          
+          <div v-if="r.interactionHistory && r.interactionHistory.length" style="margin-top:4px;">
+            <div v-for="ih in sortedInteractionHistory(r)" :key="ih.id" class="recruit-hist-item">
+              <span class="recruit-hist-date">{{ ih.date||'—' }}</span>
+              <span class="recruit-hist-content">{{ ih.content }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="appointmentPosition==='left'" class="side-panel left appointment-panel" :style="{ width: notePanelWidth + 'px' }">
+        <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
+        <div v-if="upcomingAppointments.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">예정된 약속 없음</div>
+        <div v-for="apt in upcomingAppointments" :key="apt.id" class="apt-card">
+            <div class="apt-card-date">{{ apt.date }}</div>
+            <div class="apt-card-title">{{ apt.title }}</div>
+            <div class="apt-card-meta" v-if="apt.targetName">대상: <strong style="color:var(--text)">{{ apt.targetName }}</strong></div>
+            <div v-if="apt.attendees && apt.attendees.length" class="apt-card-meta">참석: {{ apt.attendees.join(', ') }}</div>
+        </div>
+      </div>
+
+      <div v-if="memberInfoPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
+        <div class="panel-title navy">👤 멤버 정보 관리</div>
+        <div v-if="selectedMember" class="mem-info-wrapper">
+            <div>
+              <div class="mem-info-header">
+                  <span>{{ selectedMember.name }}</span>
+                  <span class="mem-info-badge">{{ selectedMember.status==='root'?'최상위(Root)':selectedMember.status }}</span>
+              </div>
+              <div class="mem-info-detail">
+                  전공: {{ selectedMember.major || '-' }} | 직업: {{ selectedMember.job || '-' }} | 직장: {{ selectedMember.company || '-' }}<br>
+                  관계: {{ selectedMember.relation || '-' }} | 나이: {{ selectedMember.age ? selectedMember.age+'세' : '-' }}<br>
+                  만남: {{ selectedMember.meetDate || '-' }} | 성별: {{ selectedMember.gender }}<br>
+                  <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
+                    점수: <strong>{{ selectedMember.score || 0 }}</strong>
+                  </template>
+                  <template v-else>
+                    Total 수입: <strong style="color:var(--navy);font-family:'JetBrains Mono',monospace;">${{ getMemberTotal(selectedMember) }}</strong>
+                  </template>
+              </div>
+            </div>
+            <div>
+              <div class="mem-hist-section-title">💰 포인트/실적 기록 (조회용)</div>
+              <div class="mem-hist-list">
+                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-hist-readonly">
+                  <div class="point-hist-top">
+                    <span style="font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;">{{ h.date || '-' }}</span>
+                    <span style="flex:1;word-break:break-all;">{{ h.content }}</span>
+                  </div>
+                  <div v-if="h.amount||h.point" class="point-hist-bottom">
+                    {{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' | ' : '' }}{{ h.point ? h.point+'P' : '' }}
+                  </div>
+                </div>
+                <div v-if="!selectedMember.history || selectedMember.history.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+              </div>
+            </div>
+            <div>
+              <div class="mem-hist-section-title">📝 상담/관리 기록 (조회용)</div>
+              <div class="mem-hist-list">
+                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-hist-item">
+                      <span class="mem-hist-date">{{ ih.date }}</span>
+                      <div class="mem-hist-text">{{ ih.content }}</div>
+                  </div>
+                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+              </div>
+            </div>
+        </div>
+        <div v-else style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0; text-align:center;">멤버를 클릭하여 선택하세요.</div>
+      </div>
+
+      <!-- SVG container -->
+      <div class="tree-svg-wrap" id="tree-svg-container"
+           @wheel.prevent="onWheel"
+           @mousedown="onPanStart"
+           @mousemove="onPanMove"
+           @mouseup="onPanEnd"
+           @mouseleave="onPanEnd">
+
+        <div class="zoom-overlay">
+          <button class="zoom-btn" @click.stop="zoomIn()" title="확대 (+)">＋</button>
+          <div class="zoom-pct">{{ Math.round(zoomLevel*100) }}%</div>
+          <button class="zoom-btn" @click.stop="zoomOut()" title="축소 (-)">－</button>
+          <button class="zoom-btn" @click.stop="zoomReset()" title="원래 크기" style="font-size:10px">⊙</button>
+        </div>
+
+        <div class="tree-svg-pan-layer" :style="{ transform: panTransform }">
+          <div class="tree-svg-scale-layer" :style="{ transform: `scale(${zoomLevel})` }">
+            <svg class="tree-svg" id="main-tree-svg"
+                 :width="layout.totalWidth"
+                 :height="layout.totalHeight"
+                 style="overflow:visible;display:block;shape-rendering:geometricPrecision;text-rendering:geometricPrecision">
+              <g v-for="e in layout.edges" :key="'e-'+e.id">
+                <line :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2" :class="getEdgeClass(e)"/>
+              </g>
+              <g v-for="m in layout.membersWithPos" :key="m.id"
+                 :transform="getNodeTransform(m)" style="cursor:pointer" @click="onNodeClick(m)">
+                <rect :width="nodeWidth" :height="nodeH(m)" rx="5" ry="5"
+                  :fill="nColor(m.status)" :stroke="selectedMemberId===m.id ? '#e74c3c' : nStroke(m.status)"
+                  :stroke-width="selectedMemberId===m.id ? 3 : getRectStrokeWidth(m)"
+                  :stroke-dasharray="getRectDash(m)"/>
+                <text class="node-name" :font-size="nodeFontSize+2"
+                  :x="nodeWidth/2" :y="nodeFontSize+8"
+                  text-anchor="middle" :fill="nTextColor(m.status)">{{ m.name }}</text>
+                <text v-if="m.status&&m.status!=='root'" class="sa-badge-svg"
+                  :x="nodeWidth-5" :y="nodeFontSize+7" text-anchor="end"
+                  :fill="nTextColor(m.status)" opacity="0.9" :font-size="nodeFontSize-1">{{ statusBadge(m.status) }}</text>
+                <line :x1="6" :y1="nodeFontSize+14" :x2="nodeWidth-6" :y2="nodeFontSize+14"
+                  :stroke="nDivider(m.status)" stroke-width="0.8"/>
+                <text class="node-fin" :font-size="nodeFontSize-2"
+                  :x="7" :y="nodeFontSize+14+nodeLineGap"
+                  :fill="nTextColor(m.status)" opacity="0.85">
+                  Paid: {{ fmtS(getMemberIssuePaid(m)) }}  /  Pend: {{ fmtS(getMemberPending(m)) }}
+                </text>
+                <text class="node-fin" :font-size="nodeFontSize-1" font-weight="700"
+                  :x="7" :y="nodeFontSize+14+nodeLineGap*2"
+                  :fill="nTextColor(m.status)">
+                  Total: {{ getMemberTotal(m) }}
+                  <tspan v-if="mPtsSum(m)>0" fill="var(--gold-light)"> | Pts: {{ fmt(mPtsSum(m)) }}</tspan>
+                </text>
+                <line v-if="nodeNoteLines(m).length"
+                  :x1="6" :y1="nodeFontSize + 14 + nodeLineGap * 2 + 6" 
+                  :x2="nodeWidth-6" :y2="nodeFontSize + 14 + nodeLineGap * 2 + 6"
+                  :stroke="nDivider(m.status)" stroke-width="0.6" opacity="0.5"/>
+                <text v-for="(lineObj,li) in nodeNoteLines(m)" :key="li"
+                  class="node-memo" :font-size="nodeFontSize-2"
+                  :x="lineObj.isExtra ? nodeWidth - 7 : 7"
+                  :text-anchor="lineObj.isExtra ? 'end' : 'start'"
+                  :y="nodeFontSize + 14 + nodeLineGap * 2 + 6 + 12 + li*nodeLineGap"
+                  :fill="lineObj.isExtra ? 'var(--navy)' : nTextColor(m.status)" 
+                  :font-weight="lineObj.isExtra ? '700' : 'normal'"
+                  opacity="0.85">{{ lineObj.text }}</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div v-if="legendConfig.show">
+          <div class="legend-title">Legend</div>
+          <div class="legend-items">
+            <template v-for="s in allStatuses" :key="s">
+              <div class="legend-item" v-if="legendConfig.items[s]&&legendConfig.items[s].show && statusCounts[s] > 0">
+                <div class="legend-box" :style="{background:nColor(s),borderColor:nStroke(s)}"></div>
+                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ legendConfig.items[s].label }}</span>
+                <span style="color:var(--gold);font-size:10px;margin-left:2px;flex-shrink:0;">({{ statusCounts[s] || 0 }})</span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="financials" :style="{marginTop:getLegendMargin()}">
+          <div class="legend-title">전체 합계</div>
+          <div class="fin-row"><span class="fin-label">Issue Paid</span><span class="fin-value">{{ fmt(teamTotal.paid) }}</span></div>
+          <div class="fin-row"><span class="fin-label">Pending</span><span class="fin-value">{{ fmt(teamTotal.pending) }}</span></div>
+          <div class="fin-row"><span class="fin-label fin-total">Total</span><span class="fin-value fin-total">{{ fmt(teamTotal.total) }}</span></div>
+        </div>
+      </div>
+
+      <!-- Right Panels Container -->
+      <div v-if="notesPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
+        <div class="panel-title">📝 메모 / 액션</div>
+        <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
+        <div v-for="(n,i) in notes" :key="i" class="note-card">
+          <span class="note-idx">{{ i+1 }}</span>
+          <span class="note-text-disp">{{ n.text }}</span>
+        </div>
+      </div>
+
+      <div v-if="recruitPosition==='right'" class="side-panel right recruit-panel" :style="{width:notePanelWidth+'px'}">
+        <div class="panel-title gold">🎯 Recruit 리스트</div>
+        <div v-if="visibleRecruits.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
+        <div v-for="(r,i) in visibleRecruits" :key="r.id" class="recruit-card">
+          <div class="recruit-card-header">
+              <span class="recruit-rank">{{ i+1 }}</span>
+              <span class="recruit-name-score">{{ r.name }} <span class="recruit-score-badge">({{ r.score }})</span><div class="score-dots-wrap"><div class="score-dots-fill" :style="{width:r.score+'%'}"></div></div></span>
+          </div>
+          <div v-if="r.major||r.job||r.company||r.relation||r.meetDate||r.period||r.gender||r.age" style="font-size:9.5px;color:var(--muted);margin:-2px 0 4px 20px;line-height:1.2;">{{ getRecruitMeta(r) }}</div>
+          
+          <div v-if="r.interactionHistory && r.interactionHistory.length" style="margin-top:4px;">
+            <div v-for="ih in sortedInteractionHistory(r)" :key="ih.id" class="recruit-hist-item">
+              <span class="recruit-hist-date">{{ ih.date||'—' }}</span>
+              <span class="recruit-hist-content">{{ ih.content }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="appointmentPosition==='right'" class="side-panel right appointment-panel" :style="{ width: notePanelWidth + 'px' }">
+        <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
+        <div v-if="upcomingAppointments.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">예정된 약속 없음</div>
+        <div v-for="apt in upcomingAppointments" :key="apt.id" class="apt-card">
+            <div class="apt-card-date">{{ apt.date }}</div>
+            <div class="apt-card-title">{{ apt.title }}</div>
+            <div class="apt-card-meta" v-if="apt.targetName">대상: <strong style="color:var(--text)">{{ apt.targetName }}</strong></div>
+            <div v-if="apt.attendees && apt.attendees.length" class="apt-card-meta">참석: {{ apt.attendees.join(', ') }}</div>
+        </div>
+      </div>
+
+      <div v-if="memberInfoPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
+        <div class="panel-title navy">👤 멤버 정보 관리</div>
+        <div v-if="selectedMember" class="mem-info-wrapper">
+            <div>
+              <div class="mem-info-header">
+                  <span>{{ selectedMember.name }}</span>
+                  <span class="mem-info-badge">{{ selectedMember.status==='root'?'최상위(Root)':selectedMember.status }}</span>
+              </div>
+              <div class="mem-info-detail">
+                  전공: {{ selectedMember.major || '-' }} | 직업: {{ selectedMember.job || '-' }} | 직장: {{ selectedMember.company || '-' }}<br>
+                  관계: {{ selectedMember.relation || '-' }} | 나이: {{ selectedMember.age ? selectedMember.age+'세' : '-' }}<br>
+                  만남: {{ selectedMember.meetDate || '-' }} | 성별: {{ selectedMember.gender }}<br>
+                  <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
+                    점수: <strong>{{ selectedMember.score || 0 }}</strong>
+                  </template>
+                  <template v-else>
+                    Total 수입: <strong style="color:var(--navy);font-family:'JetBrains Mono',monospace;">${{ getMemberTotal(selectedMember) }}</strong>
+                  </template>
+              </div>
+            </div>
+            <div>
+              <div class="mem-hist-section-title">💰 포인트/실적 기록 (조회용)</div>
+              <div class="mem-hist-list">
+                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-hist-readonly">
+                  <div class="point-hist-top">
+                    <span style="font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;">{{ h.date || '-' }}</span>
+                    <span style="flex:1;word-break:break-all;">{{ h.content }}</span>
+                  </div>
+                  <div v-if="h.amount||h.point" class="point-hist-bottom">
+                    {{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' | ' : '' }}{{ h.point ? h.point+'P' : '' }}
+                  </div>
+                </div>
+                <div v-if="!selectedMember.history || selectedMember.history.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+              </div>
+            </div>
+            <div>
+              <div class="mem-hist-section-title">📝 상담/관리 기록 (조회용)</div>
+              <div class="mem-hist-list">
+                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-hist-item">
+                      <span class="mem-hist-date">{{ ih.date }}</span>
+                      <div class="mem-hist-text">{{ ih.content }}</div>
+                  </div>
+                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+              </div>
+            </div>
+        </div>
+        <div v-else style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0; text-align:center;">멤버를 클릭하여 선택하세요.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════ BOTTOM FORM ══════ -->
+  <div class="form-panel" v-if="currentUser && !isDashboard">
+    <div class="toolbar-wrap">
+      <div class="toolbar-row toolbar-row-1">
+        <button class="tab-btn" :class="{active:tab==='members'}" @click="tab='members'">👥 멤버 관리</button>
+        <button class="tab-btn" :class="{active:tab==='memberInfo'}" @click="tab='memberInfo'">👤 멤버 정보</button>
+        <button class="tab-btn" :class="{active:tab==='recruit'}" @click="tab='recruit'">🎯 Recruit</button>
+        <button class="tab-btn" :class="{active:tab==='appointments'}" @click="tab='appointments'">📅 약속 관리</button>
+        <button class="tab-btn" :class="{active:tab==='notes'}"   @click="tab='notes'">📝 메모/액션</button>
+        <button class="tab-btn" :class="{active:tab==='header'}"  @click="tab='header'">📋 기본 정보</button>
+        <div class="tab-actions">
+          <button class="tbar-btn" :class="getTbarClass(showSizePanel)" @click="showSizePanel=!showSizePanel" title="폰트 및 크기 설정">
+            크기설정 <span style="font-size:9px;opacity:.7">{{ showSizePanel ? '▲' : '▼' }}</span>
+          </button>
+          <div class="tab-actions-sep"></div>
+          <button class="tbar-btn tbar-save" @click="saveToCloud()">☁️ 클라우드 저장</button>
+          <div class="tab-actions-sep"></div>
+          <button class="tbar-btn" :class="getTbarClass(printLandscape)" @click="printLandscape=!printLandscape">
+            {{ printLandscape ? '가로' : '세로' }}
+          </button>
+          <button class="tbar-btn tbar-print" @click="doPrint()">인쇄</button>
+          <div class="tab-actions-sep"></div>
+          <div class="print-hist-ctrl" title="내보내기 기준 멤버">
+            <span class="width-ctrl-label">내보내기 기준</span>
+            <select v-model="printRootId" class="print-hist-select" style="max-width:130px">
+              <option value="__actual_root__">전체 트리</option>
+              <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </div>
+          <button class="tbar-btn tbar-other" @click="exportJSON()">📤 내보내기</button>
+          <label class="tbar-btn tbar-other" style="cursor:pointer">📥 불러오기<input type="file" accept=".json" style="display:none" @change="importJSON($event)"></label>
+        </div>
+      </div>
+
+      <div class="toolbar-row toolbar-row-2" v-show="showSizePanel">
+        <div class="width-ctrl" :class="{locked:widthLocked}">
+          <span class="width-ctrl-label">노드 폭</span>
+          <input type="range" class="width-slider" v-model.number="nodeWidth" min="120" max="340" step="5" :disabled="widthLocked">
+          <input type="number" class="width-num" v-model.number="nodeWidth" min="120" max="340" :disabled="widthLocked">
+          <button class="lock-btn" @click="widthLocked=!widthLocked">L</button>
+        </div>
+        <div class="tab-actions-sep"></div>
+        <div class="width-ctrl" :class="{locked:heightLocked}">
+          <span class="width-ctrl-label">높이</span>
+          <input type="range" class="width-slider" v-model.number="nodeBaseHeight" min="40" max="160" step="5" :disabled="heightLocked">
+          <input type="number" class="width-num" v-model.number="nodeBaseHeight" min="40" max="160" :disabled="heightLocked">
+          <button class="lock-btn" @click="heightLocked=!heightLocked">L</button>
+        </div>
+        <div class="tab-actions-sep"></div>
+        <div class="width-ctrl" :class="{locked:fontLocked}">
+          <span class="width-ctrl-label">폰트</span>
+          <input type="range" class="width-slider" v-model.number="nodeFontSize" min="7" max="18" step="1" :disabled="fontLocked">
+          <input type="number" class="width-num" v-model.number="nodeFontSize" min="7" max="18" :disabled="fontLocked">
+          <button class="lock-btn" @click="fontLocked=!fontLocked">L</button>
+        </div>
+        <div class="tab-actions-sep"></div>
+        <div class="width-ctrl" :class="{locked:lineGapLocked}">
+          <span class="width-ctrl-label">줄간격</span>
+          <input type="range" class="width-slider" v-model.number="nodeLineGap" min="7" max="24" step="1" :disabled="lineGapLocked">
+          <input type="number" class="width-num" v-model.number="nodeLineGap" min="7" max="24" :disabled="lineGapLocked">
+          <button class="lock-btn" @click="lineGapLocked=!lineGapLocked">L</button>
+        </div>
+        <div class="tab-actions-sep"></div>
+        <div class="width-ctrl" :class="{locked:notePanelLocked}">
+          <span class="width-ctrl-label">패널 폭</span>
+          <input type="range" class="width-slider" v-model.number="notePanelWidth" min="120" max="400" step="5" :disabled="notePanelLocked">
+          <input type="number" class="width-num" v-model.number="notePanelWidth" min="120" max="400" :disabled="notePanelLocked">
+          <button class="lock-btn" @click="notePanelLocked=!notePanelLocked">L</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 👥 멤버 관리 탭 ══ -->
+    <div v-if="tab==='members'" class="tab-content">
+      <div class="member-list">
+        <table class="member-table">
+          <colgroup>
+            <col style="width:240px">
+            <col style="width:160px">
+            <col style="width:160px">
+            <col style="width:124px">
+            <col style="width:148px">
+            <col style="width:136px">
+            <col style="width:128px">
+            <col style="width:104px">
+            <col style="width:88px">
+            <col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>상태</th>
+              <th>상위</th>
+              <th style="text-align:right;padding-right:8px">Pts 🔒</th>
+              <th style="text-align:right;padding-right:8px">Issue Paid 🔒</th>
+              <th style="text-align:right;padding-right:8px">Pending 🔒</th>
+              <th style="text-align:center">히스토리(포인트/실적)</th>
+              <th style="text-align:center">포커스</th>
+              <th style="text-align:center">삭제</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody v-for="m in currentMembers" :key="m.id">
+            <tr>
+              <td><input v-model.lazy="m.name" class="form-input"></td>
+              <td>
+                <select v-if="m.parentId!==null" v-model="m.status" class="form-select">
+                  <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+                </select>
+                <span v-else class="sbadge s-root">Root</span>
+              </td>
+              <td>
+                <select v-if="m.parentId!==null" v-model="m.parentId" class="form-select">
+                  <option v-for="p in parentOpts(m.id)" :key="p.id" :value="p.id">{{ p.name }}</option>
+                </select>
+                <span v-else style="color:var(--muted);font-size:10px">최상위</span>
+              </td>
+              <td><input type="text" :value="fmt(mPtsSum(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+              <td><input type="text" :value="fmt(getMemberIssuePaid(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+              <td><input type="text" :value="fmt(getMemberPending(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+              <td style="text-align:center">
+                <button class="btn-hist-toggle" :class="{active:expandedMemberId===m.id}" @click="toggleHistoryPanel(m.id)">
+                  📋 {{ m.history ? m.history.length : 0 }}
+                </button>
+              </td>
+              <td style="text-align:center">
+                <button class="focus-node-btn" :class="{active:focusRootId===m.id}" @click="toggleFocus(m.id)" :title="getFocusTitle(m)">
+                  {{ getFocusIcon(m) }}
+                </button>
+              </td>
+              <td style="text-align:center">
+                <button v-if="m.parentId!==null" class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+              </td>
+              <td></td>
+            </tr>
+            <!-- Point History Expansion -->
+            <tr v-if="expandedMemberId===m.id">
+              <td colspan="10" style="padding:0;background:var(--cream);">
+                <div class="history-panel">
+                  <div class="history-panel-header">
+                    <div>
+                      <span class="history-panel-title">💰 {{ m.name }} — 포인트 및 실적 히스토리</span>
+                      <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 체크된 항목이 노드에 최근 5개까지 표시됩니다</span>
+                    </div>
+                  </div>
+                  <table class="history-table" v-if="m.history&&m.history.length">
+                    <thead>
+                      <tr>
+                        <th style="width:46px;text-align:center">표시</th>
+                        <th style="width:160px">날짜</th>
+                        <th style="width:180px">구분</th>
+                        <th style="width:130px;text-align:right">포인트</th>
+                        <th style="width:160px">금액</th>
+                        <th>내용</th>
+                        <th style="width:80px;text-align:center">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="h in m.history" :key="h.id">
+                        <td style="text-align:center"><input type="checkbox" class="show-check" v-model="h.show"></td>
+                        <td><input class="history-date-input" v-model.lazy="h.date" placeholder="MM/DD/YY" @change="m.history=[...m.history]"></td>
+                        <td>
+                          <select v-model="h.type" class="form-select" style="padding:2px;font-size:10px;">
+                            <option value="History">히스토리</option>
+                            <option value="Issue Paid">Issue Paid</option>
+                            <option value="Pending">Pending</option>
+                          </select>
+                        </td>
+                        <td><input type="number" class="history-content-input" style="text-align:right;font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.point" placeholder="Pts"></td>
+                        <td>
+                          <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
+                            :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
+                        </td>
+                        <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
+                        <td style="text-align:center"><button class="btn-sm-danger" @click="removeHistoryItem(m.id,h.id)">✕</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
+                  <!-- Add new entry row -->
+                  <div class="hist-add-row">
+                    <input class="history-date-input" style="width:160px;" v-model="newHist.date" placeholder="날짜(MM/DD/YY)">
+                    <select v-model="newHist.type" style="width:180px;flex-shrink:0;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:3px;">
+                      <option value="History">히스토리</option>
+                      <option value="Issue Paid">Issue Paid</option>
+                      <option value="Pending">Pending</option>
+                    </select>
+                    <input type="number" style="width:128px;flex-shrink:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
+                      v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(m.id)">
+                    <input type="number" style="width:160px;flex-shrink:0;font-family:'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
+                      v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : newHist.type" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(m.id)">
+                    <input class="history-content-input" v-model="newHist.content" placeholder="내용 입력" @keyup.enter="addHistoryItem(m.id)">
+                    <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0" @click="addHistoryItem(m.id)">+ 추가</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="add-form">
+        <h4>+ 멤버 추가</h4>
+        <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+        <div class="form-row"><label class="form-label">상태</label>
+          <select v-model="nm.status" class="form-select">
+            <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+        <div class="form-row"><label class="form-label">상위 멤버</label>
+          <select v-model="nm.parentId" class="form-select">
+            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">전공</label><input v-model="nm.major" class="form-input" placeholder="예: 경영학"></div>
+          <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성"></div>
+          <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:2px" @click="addMember()">추가</button>
+      </div>
+    </div>
+
+    <!-- ══ 👤 멤버 정보 탭 ══ -->
+    <div v-if="tab==='memberInfo'" class="tab-content">
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
+        <div class="notes-pos-bar" style="flex-shrink:0;">
+          <span class="notes-pos-label">패널 표시 위치</span>
+          <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="none"> 숨기기</label>
+          <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="left"> 왼쪽</label>
+          <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="right"> 오른쪽</label>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table class="member-table" style="font-size:12px;min-width:1150px;">
+            <colgroup>
+              <col style="width:110px">
+              <col style="width:100px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:165px">
+              <col style="width:120px">
+              <col style="width:65px">
+              <col style="width:140px">
+              <col style="width:75px">
+              <col style="width:95px">
+              <col style="width:60px">
+              <col>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>이름</th>
+                <th>상태</th>
+                <th>전공</th>
+                <th>직업</th>
+                <th>직장</th>
+                <th>관계</th>
+                <th>생년월일/나이</th>
+                <th>만난 시기</th>
+                <th style="text-align:center">성별</th>
+                <th style="text-align:center">점수 / Total 수입</th>
+                <th style="text-align:center">기본성향</th>
+                <th style="text-align:center">상담 히스토리</th>
+                <th style="text-align:center">작업</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody v-for="m in currentMembers" :key="m.id">
+              <tr>
+                <td style="cursor:pointer;" @click="onNodeClick(m)">
+                    <span style="font-weight:600; color:var(--navy); text-decoration:underline;" title="클릭하여 정보 패널 열기">{{m.name}}</span>
+                </td>
+                <td>{{m.status==='root' ? '최상위(Root)' : m.status}}</td>
+                <td><input v-model.lazy="m.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
+                <td><input v-model.lazy="m.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
+                <td><input v-model.lazy="m.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
+                <td><input v-model.lazy="m.relation" class="form-input" style="padding:2px 5px" placeholder="관계"></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="text" v-model.lazy="m.birthDate" @change="m.age=calcAge($event.target.value)" class="form-input" style="padding:2px 5px;width:95px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM-DD">
+                    <div style="display:flex;align-items:center;gap:2px;">
+                      <input type="number" v-model.lazy="m.age" class="form-input" style="padding:2px 4px;width:45px;" placeholder="나이">
+                      <span style="font-size:10px;color:var(--muted)">세</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 5px;width:75px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM">
+                    <span v-if="calcPeriod(m.meetDate)" style="font-size:10px;color:var(--muted);white-space:nowrap;">{{ calcPeriod(m.meetDate) }}</span>
+                  </div>
+                </td>
+                <td style="text-align:center"><select v-model="m.gender" class="form-select" style="padding:2px 5px"><option value="남">남</option><option value="여">여</option></select></td>
+                <td style="padding-right:15px;">
+                  <div style="display:grid; grid-template-columns: 1fr 50px; gap:8px; align-items:center;">
+                    <div style="text-align:right;">
+                      <template v-if="['Serious', 'Potential'].includes(m.status)">
+                        <input type="number" v-model.number.lazy="m.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(m, false)" style="width:44px;padding:2px;margin:0;text-align:right;">
+                      </template>
+                      <template v-else>
+                        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);">
+                          ${{ getMemberTotal(m) }}
+                        </span>
+                      </template>
+                    </div>
+                    <div class="score-dots-wrap" style="margin-left:0;">
+                      <div v-if="['Serious', 'Potential'].includes(m.status)" class="score-dots-fill" :style="{width:m.score+'%'}"></div>
+                      <div v-else class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align:center">
+                  <button class="btn-hist-toggle" :class="{active:expandedDispositionId===m.id}" @click="toggleDispositionPanel(m.id)">
+                    📊 평가
+                  </button>
+                </td>
+                <td style="text-align:center">
+                  <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)">
+                    📋 {{ m.interactionHistory ? m.interactionHistory.length : 0 }}
+                  </button>
+                </td>
+                <td style="text-align:center">
+                  <button v-if="m.parentId!==null" class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                </td>
+                <td></td>
+              </tr>
+              <!-- Disposition Panel Expansion -->
+              <tr v-if="expandedDispositionId===m.id">
+                <td colspan="14" style="padding:0;background:var(--cream);">
+                  <div class="history-panel">
+                    <div class="history-panel-header">
+                      <div>
+                        <span class="history-panel-title">📊 {{ m.name }} — 기본성향 평가</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 점수가 자동으로 계산되어 적용됩니다.</span>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
+                       <div style="width:100px;">
+                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
+                          <input type="number" v-model.number="m.disposition.relationScore" min="1" max="10" class="form-input" @change="calcDisposition(m, false)">
+                       </div>
+                       <div style="width:100px;">
+                          <label class="form-label" style="margin-bottom:4px;">Market</label>
+                          <select v-model="m.disposition.market" class="form-select" @change="calcDisposition(m, false)">
+                             <option value="">선택</option>
+                             <option value="L">L (10점)</option>
+                             <option value="M">M (8점)</option>
+                             <option value="S">S (6점)</option>
+                          </select>
+                       </div>
+                       <div style="flex:1;">
+                          <label class="form-label" style="margin-bottom:6px;">체크리스트 (각 10점)</label>
+                          <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; padding-bottom:3px;">
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.married" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 결혼</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.child" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 자녀</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.house" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 주택</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.income" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 인컴</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.ambition" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 야심</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.dissatisfied" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 불만족</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.pma" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> PMA</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.entrepreneur" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 기업가형</label>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <!-- Interaction History Expansion -->
+              <tr v-if="expandedInteractionId===m.id">
+                <td colspan="14" style="padding:0;background:var(--cream);">
+                  <div class="history-panel">
+                    <div class="history-panel-header">
+                      <div>
+                        <span class="history-panel-title">📝 {{ m.name }} — 상담/관리 기록</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 멤버 정보 패널에서 조회할 수 있습니다.</span>
+                      </div>
+                    </div>
+                    <table class="history-table" v-if="m.interactionHistory&&m.interactionHistory.length">
+                      <thead>
+                        <tr>
+                          <th style="width:160px">날짜</th>
+                          <th>상담 및 관리 내용</th>
+                          <th style="width:80px;text-align:center">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="ih in m.interactionHistory" :key="ih.id">
+                          <td><input class="history-date-input" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onMemberInteractionChange(m)"></td>
+                          <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onMemberInteractionChange(m)"></td>
+                          <td style="text-align:center"><button class="btn-sm-danger" @click="removeInteractionItem(m.id,ih.id)">✕</button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
+                    <!-- Add new entry row -->
+                    <div class="hist-add-row">
+                      <input class="history-date-input" style="width:160px;" v-model="newInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addInteractionItem(m.id)">
+                      <input class="history-content-input" v-model="newInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addInteractionItem(m.id)">
+                      <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0" @click="addInteractionItem(m.id)">+ 추가</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="add-form" style="width:230px;">
+        <h4>+ 멤버 정보 등록</h4>
+        <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+        <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">전공</label><input v-model="nm.major" class="form-input" placeholder="예: 경영학"></div>
+          <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성"></div>
+          <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 70px;gap:6px">
+          <div><label class="form-label">생년월일</label><input type="text" v-model="nm.birthDate" class="form-input" placeholder="YYYY-MM-DD" @change="nm.age=calcAge($event.target.value)"></div>
+          <div><label class="form-label">나이</label><input type="number" v-model.number="nm.age" class="form-input" placeholder="나이"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">성별</label><select v-model="nm.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
+          <div><label class="form-label">점수</label><input type="number" v-model.number="nm.score" class="form-input" placeholder="0" @change="onScoreChange(nm, false)"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
+      </div>
+    </div>
+
+    <!-- ══ 🎯 Recruit 탭 ══ -->
+    <div v-if="tab==='recruit'" class="tab-content">
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
+        <div class="notes-pos-bar" style="flex-shrink:0;">
+          <span class="notes-pos-label">패널 표시 위치</span>
+          <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="none"> 숨기기</label>
+          <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="left"> 왼쪽</label>
+          <label class="pos-radio"><input type="radio" v-model="recruitPosition" value="right"> 오른쪽</label>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table class="member-table" style="font-size:12px;min-width:1150px;">
+            <colgroup>
+              <col style="width:110px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:165px">
+              <col style="width:120px">
+              <col style="width:65px">
+              <col style="width:130px">
+              <col style="width:75px">
+              <col style="width:95px">
+              <col style="width:100px">
+              <col>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>이름</th>
+                <th>전공</th>
+                <th>직업</th>
+                <th>직장</th>
+                <th>관계</th>
+                <th>생년월일/나이</th>
+                <th>만난 시기</th>
+                <th style="text-align:center">성별</th>
+                <th style="text-align:center">점수</th>
+                <th style="text-align:center">기본성향</th>
+                <th style="text-align:center">상담 히스토리</th>
+                <th style="text-align:center">작업</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody v-for="r in recruitsSortedAll" :key="r.id">
+              <tr>
+                <td><input v-model.lazy="r.name" class="form-input" style="padding:2px 5px"></td>
+                <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
+                <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
+                <td><input v-model.lazy="r.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
+                <td><input v-model.lazy="r.relation" class="form-input" style="padding:2px 5px" placeholder="관계"></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="text" v-model.lazy="r.birthDate" @change="r.age=calcAge($event.target.value)" class="form-input" style="padding:2px 5px;width:95px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM-DD">
+                    <div style="display:flex;align-items:center;gap:2px;">
+                      <input type="number" v-model.lazy="r.age" class="form-input" style="padding:2px 4px;width:45px;" placeholder="나이">
+                      <span style="font-size:10px;color:var(--muted)">세</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="text" v-model.lazy="r.meetDate" class="form-input" style="padding:2px 5px;width:75px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM">
+                    <span v-if="calcPeriod(r.meetDate)" style="font-size:10px;color:var(--muted);white-space:nowrap;">{{ calcPeriod(r.meetDate) }}</span>
+                  </div>
+                </td>
+                <td style="text-align:center"><select v-model="r.gender" class="form-select" style="padding:2px 5px"><option value="남">남</option><option value="여">여</option></select></td>
+                <td style="padding-right:15px;">
+                  <div style="display:grid; grid-template-columns: 1fr 50px; gap:8px; align-items:center;">
+                    <div style="text-align:right;">
+                      <input type="number" v-model.number.lazy="r.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(r, true)" style="width:44px;padding:2px;margin:0;text-align:right;">
+                    </div>
+                    <div class="score-dots-wrap" style="margin-left:0;">
+                      <div class="score-dots-fill" :style="{width:r.score+'%'}"></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align:center">
+                  <button class="btn-hist-toggle" :class="{active:expandedRecruitDispositionId===r.id}" @click="toggleRecruitDispositionPanel(r.id)">
+                    📊 평가
+                  </button>
+                </td>
+                <td style="text-align:center">
+                  <button class="btn-hist-toggle" :class="{active:expandedRecruitInteractionId===r.id}" @click="toggleRecruitInteractionPanel(r.id)">
+                    📋 {{ r.interactionHistory ? r.interactionHistory.length : 0 }}
+                  </button>
+                </td>
+                <td style="text-align:center">
+                  <!-- 승급(멤버 전환) 및 삭제 버튼 -->
+                  <button class="btn-sm-primary" @click="promoteRecruit(r)" style="margin-right:4px;" title="트리에 정식 멤버로 승급시킵니다">멤버</button>
+                  <button class="btn-sm-danger" @click="removeRecruit(r.id)">삭제</button>
+                </td>
+                <td></td>
+              </tr>
+              <!-- Recruit Disposition Expansion -->
+              <tr v-if="expandedRecruitDispositionId===r.id">
+                <td colspan="13" style="padding:0;background:var(--cream);">
+                  <div class="history-panel">
+                    <div class="history-panel-header">
+                      <div>
+                        <span class="history-panel-title">📊 {{ r.name }} — 기본성향 평가</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 점수가 자동으로 계산되어 적용됩니다.</span>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
+                       <div style="width:100px;">
+                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
+                          <input type="number" v-model.number="r.disposition.relationScore" min="1" max="10" class="form-input" @change="calcDisposition(r, true)">
+                       </div>
+                       <div style="width:100px;">
+                          <label class="form-label" style="margin-bottom:4px;">Market</label>
+                          <select v-model="r.disposition.market" class="form-select" @change="calcDisposition(r, true)">
+                             <option value="">선택</option>
+                             <option value="L">L (10점)</option>
+                             <option value="M">M (8점)</option>
+                             <option value="S">S (6점)</option>
+                          </select>
+                       </div>
+                       <div style="flex:1;">
+                          <label class="form-label" style="margin-bottom:6px;">체크리스트 (각 10점)</label>
+                          <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; padding-bottom:3px;">
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.married" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 결혼</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.child" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 자녀</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.house" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 주택</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.income" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 인컴</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.ambition" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 야심</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.dissatisfied" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 불만족</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.pma" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> PMA</label>
+                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.entrepreneur" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 기업가형</label>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <!-- Recruit Interaction History Expansion -->
+              <tr v-if="expandedRecruitInteractionId===r.id">
+                <td colspan="13" style="padding:0;background:var(--cream);">
+                  <div class="history-panel">
+                    <div class="history-panel-header">
+                      <div>
+                        <span class="history-panel-title">📝 {{ r.name }} — 상담/관리 기록</span>
+                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 점수가 올라 멤버(Potential 등)로 연동되면 양쪽에서 기록이 공유됩니다.</span>
+                      </div>
+                    </div>
+                    <table class="history-table" v-if="r.interactionHistory&&r.interactionHistory.length">
+                      <thead>
+                        <tr>
+                          <th style="width:160px">날짜</th>
+                          <th>상담 및 관리 내용</th>
+                          <th style="width:80px;text-align:center">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="ih in r.interactionHistory" :key="ih.id">
+                          <td><input class="history-date-input" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onRecruitInteractionChange(r)"></td>
+                          <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onRecruitInteractionChange(r)"></td>
+                          <td style="text-align:center"><button class="btn-sm-danger" @click="removeRecruitInteractionItem(r.id,ih.id)">✕</button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
+                    <!-- Add new entry row -->
+                    <div class="hist-add-row">
+                      <input class="history-date-input" style="width:160px;" v-model="newRecruitInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addRecruitInteractionItem(r.id)">
+                      <input class="history-content-input" v-model="newRecruitInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addRecruitInteractionItem(r.id)">
+                      <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0" @click="addRecruitInteractionItem(r.id)">+ 추가</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="recruits.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">리스트가 없습니다.</div>
+        </div>
+      </div>
+      <div class="add-form" style="width:230px;">
+        <h4>+ Recruit 추가</h4>
+        <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">전공</label><input v-model="newRecruit.major" class="form-input" placeholder="예: 경영학"></div>
+          <div><label class="form-label">직업</label><input v-model="newRecruit.job" class="form-input" placeholder="예: 교사"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">직장</label><input v-model="newRecruit.company" class="form-input" placeholder="예: 삼성전자"></div>
+          <div><label class="form-label">관계</label><input v-model="newRecruit.relation" class="form-input" placeholder="예: 친구"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 70px;gap:6px">
+          <div><label class="form-label">생년월일</label><input type="text" v-model="newRecruit.birthDate" class="form-input" placeholder="YYYY-MM-DD" @change="newRecruit.age=calcAge($event.target.value)"></div>
+          <div><label class="form-label">나이</label><input type="number" v-model.number="newRecruit.age" class="form-input" placeholder="나이" @keyup.enter="addRecruit()"></div>
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><label class="form-label">성별</label><select v-model="newRecruit.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
+          <div><label class="form-label">점수 (0~100)</label><input type="number" v-model.number="newRecruit.score" class="form-input" placeholder="0" min="0" max="100" @keyup.enter="addRecruit()"></div>
+        </div>
+        <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
+      </div>
+    </div>
+
+    <!-- ══ 📅 약속 관리 탭 (NEW) ══ -->
+    <div v-if="tab==='appointments'" class="tab-content">
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
+        <div class="notes-pos-bar" style="flex-shrink:0;">
+          <span class="notes-pos-label">패널 표시 위치</span>
+          <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="none"> 숨기기</label>
+          <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="left"> 왼쪽</label>
+          <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="right"> 오른쪽</label>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table class="member-table" style="font-size:12px;min-width:900px;">
+            <thead>
+              <tr>
+                <th style="width:140px">날짜</th>
+                <th style="width:200px">약속/이벤트 내용</th>
+                <th style="width:150px">만날 사람 (대상)</th>
+                <th style="width:200px">함께 참석할 멤버</th>
+                <th style="width:120px;text-align:center">작업</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="apt in upcomingAppointments" :key="apt.id">
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.date }}</td>
+                <td>{{ apt.title }}</td>
+                <td style="color:var(--navy);font-weight:600;">{{ apt.targetName || '-' }}</td>
+                <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') }}</td>
+                <td style="text-align:center">
+                  <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
+                  <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="upcomingAppointments.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">예정된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(과거 날짜의 약속은 자동으로 각 멤버의 히스토리로 이동됩니다.)</div>
+        </div>
+      </div>
+      
+      <div class="apt-form">
+        <h4>{{ editingApptId ? '✏️ 약속 / 이벤트 수정' : '+ 약속 / 이벤트 추가' }}</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
+            
+            <!-- 1단: 기본 입력폼 및 버튼 -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label class="form-label">날짜</label>
+                    <input type="date" v-model="newAppt.date" class="form-input">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label class="form-label">내용 (이벤트 명)</label>
+                    <input type="text" v-model="newAppt.title" class="form-input" placeholder="상담, 세미나 등">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label class="form-label">만날 사람 (대상자)</label>
+                    <input type="text" v-model="newAppt.targetName" list="all-persons" class="form-input" placeholder="(선택) 새 이름 시 자동 추가" @change="handleTargetNameChange">
+                    <datalist id="all-persons">
+                        <option v-for="name in allPersonNames" :key="name" :value="name"></option>
+                    </datalist>
+                </div>
+                <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+                    <button class="btn btn-primary" style="width:100%; background:#d35400; border-color:#d35400;" @click="addAppointment()">{{ editingApptId ? '수정 완료' : '등록하기' }}</button>
+                    <button v-if="editingApptId" class="btn" style="width:100%; background:transparent; border:1px solid var(--border); color:var(--text);" @click="cancelEditAppt()">취소</button>
+                </div>
+            </div>
+
+            <!-- 2단: 멤버 참석자 -->
+            <div style="display: flex; flex-direction: column; min-height: 0;">
+                <div class="apt-attendee-group-title">👥 멤버 참석자</div>
+                <div class="apt-attendee-wrap">
+                    <div class="apt-attendee-grid">
+                        <label v-for="name in memberNames" :key="name" class="apt-attendee-label" :title="name">
+                            <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--navy);margin-right:4px;flex-shrink:0;">
+                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
+                        </label>
+                    </div>
+                    <div v-if="memberNames.length===0" style="color:var(--muted);font-style:italic;text-align:center;padding-top:10px;">멤버 없음</div>
+                </div>
+            </div>
+
+            <!-- 3단: Recruit 참석자 -->
+            <div style="display: flex; flex-direction: column; min-height: 0;">
+                <div class="apt-attendee-group-title" style="color:var(--gold);">🎯 Recruit 참석자</div>
+                <div class="apt-attendee-wrap">
+                    <div class="apt-attendee-grid">
+                        <label v-for="name in recruitNames" :key="name" class="apt-attendee-label" :title="name">
+                            <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--gold);margin-right:4px;flex-shrink:0;">
+                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
+                        </label>
+                    </div>
+                    <div v-if="recruitNames.length===0" style="color:var(--muted);font-style:italic;text-align:center;padding-top:10px;">Recruit 없음</div>
+                </div>
+            </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 기본 정보 탭 -->
+    <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
+      <!-- 본인 정보 (50%) -->
+      <div class="info-col" style="flex: 2; min-width: 400px;">
+        <div class="info-box" style="height:100%;">
+          <div class="info-box-title">👤 본인 정보</div>
+          <div class="grid2">
+            <div class="form-row grid2-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
+            <div class="form-row grid2-full"><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
+            <div class="form-row"><label class="form-label">회원 ID</label><input v-model="header.id" class="form-input" placeholder="SCA12345"></div>
+            <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
+            <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
+            <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+            <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상위 직책 (25%) -->
+      <div class="info-col" style="flex: 1; min-width: 220px;">
+        <div class="info-box" style="height:100%;">
+          <div class="info-box-title">🔝 상위 직책 (Upline)</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">FD</label><input v-model="header.fd" class="form-input" placeholder="이름"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">SFD</label><input v-model="header.sfd" class="form-input" placeholder="이름"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">DD</label><input v-model="header.dd" class="form-input" placeholder="이름"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">EFD</label><input v-model="header.efd" class="form-input" placeholder="이름"></div>
+          </div>
+          <div class="ref-list" style="margin-top:12px; line-height:1.6;">FD = Field Director<br>SFD = Senior Field Director<br>DD = Division Director<br>EFD = Executive Field Director</div>
+        </div>
+      </div>
+
+      <!-- 범례 옵션 (25%) -->
+      <div class="info-col" style="flex: 1; min-width: 220px;">
+        <div class="info-box" style="height:100%; display:flex; flex-direction:column;">
+          <div class="info-box-title">🎨 범례(Legend) 옵션</div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <input type="checkbox" v-model="legendConfig.show" style="accent-color:var(--navy);">
+              화면 및 인쇄물에 범례 표시
+            </label>
+          </div>
+          <div v-if="legendConfig.show" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; border-top:1px solid var(--border); padding-top:10px; flex:1; overflow-y:auto; align-content:start;">
+            <div v-for="s in allStatuses" :key="s" style="display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" v-model="legendConfig.items[s].show" :id="'leg-'+s" style="accent-color:var(--navy);">
+              <label :for="'leg-'+s" class="legend-box" :style="{background:nColor(s),borderColor:nStroke(s),cursor:'pointer',flexShrink:0}"></label>
+              <input v-model="legendConfig.items[s].label" class="form-input" style="width:100%;padding:2px 4px;font-size:10px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="tab==='notes'" class="tab-content">
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="notes-pos-bar">
+          <span class="notes-pos-label">패널 표시 위치</span>
+          <label class="pos-radio"><input type="radio" v-model="notesPosition" value="none"> 숨기기</label>
+          <label class="pos-radio"><input type="radio" v-model="notesPosition" value="left"> 왼쪽</label>
+          <label class="pos-radio"><input type="radio" v-model="notesPosition" value="right"> 오른쪽</label>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table class="member-table">
+            <thead><tr><th>#</th><th style="width:100%">내용</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="(n,i) in notes" :key="i">
+                <td style="color:var(--gold);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px">{{ i+1 }}</td>
+                <td><input v-model.lazy="n.text" class="form-input" style="padding:2px 5px"></td>
+                <td><button class="btn-sm-danger" @click="notes.splice(i,1)">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="notes.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">메모가 없습니다.</div>
+        </div>
+      </div>
+      <div class="add-form" style="width: 30%; min-width: 280px; max-width: 500px; display: flex; flex-direction: column;">
+        <h4>+ 메모 추가</h4>
+        <div class="form-row" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><label class="form-label">내용</label><textarea v-model="newNote" class="form-textarea" style="flex: 1; resize: none;" rows="3" placeholder="액션 아이템 입력" @keydown.ctrl.enter="addNote()"></textarea></div>
+        <button class="btn btn-primary" style="margin-top: 6px;" @click="addNote()">추가</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
 </html>
