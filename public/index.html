@@ -92,12 +92,15 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .appt-date-block{display:flex;align-items:baseline;gap:6px;}
 .appt-type-chip{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:#fff;background:#d35400;border-radius:10px;padding:1px 7px;font-weight:700;flex-shrink:0;letter-spacing:.3px;line-height:1.4;transform:translateY(-2px);}
 .appt-type-chip.meet{background:var(--navy);}
-.appt-date-big{font-family:'Libre Baskerville',serif;font-size:20px;font-weight:700;color:#d35400;line-height:1;letter-spacing:.5px;}
+.appt-date-big{font-family:'Libre Baskerville',serif;font-size:16px;font-weight:700;color:#d35400;line-height:1.15;letter-spacing:.4px;}
 .appt-type-chip.meet ~ .appt-date-big, .appt-item.meet .appt-date-big{color:var(--navy);}
-.appt-time-big{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px;}
-.appt-title-big{font-size:13px;font-weight:700;color:var(--navy);line-height:1.25;margin:3px 0 2px 0;}
-.appt-location-big{font-size:10.5px;color:var(--navy-light);margin-bottom:3px;font-weight:500;}
+.appt-time-big{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.4px;}
+.appt-title-big{font-size:16px;font-weight:700;color:var(--navy);line-height:1.25;margin:4px 0 3px 0;letter-spacing:.2px;}
+.appt-desc{font-size:11px;color:var(--text);line-height:1.45;margin:0 0 4px 0;padding:3px 0 3px 2px;border-left:2px solid #e8dfc8;padding-left:7px;}
+.appt-item.meet .appt-desc{border-left-color:#d2d9e6;}
+.appt-location-big{font-size:11px;color:var(--navy-light);margin-bottom:4px;font-weight:500;}
 .appt-location-big::before{content:"📍 ";opacity:.7;}
+.appt-instructor{font-size:10.5px;color:#a14200;margin-bottom:3px;font-weight:600;letter-spacing:.2px;padding-left:2px;}
 .appt-attendee-row{display:flex;gap:5px;align-items:baseline;font-size:10px;line-height:1.45;padding:1px 0 1px 2px;}
 .appt-attendee-tag{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--navy);text-transform:uppercase;flex-shrink:0;min-width:54px;}
 .appt-attendee-tag.new{color:#d35400;}
@@ -320,16 +323,39 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 /* disabled field style */
 input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-allowed !important;}
 
-/* Appointment specific */
-.apt-form { width: 50%; min-width: 600px; max-width: 1000px; flex-shrink: 0; background: var(--white); border-radius: 6px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
-.apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 12px; flex-shrink:0;}
-.apt-attendee-wrap { flex: 1; overflow-y: auto; border: 1px solid var(--border); padding: 8px; border-radius: 4px; background: var(--white); font-size: 11px; }
-.apt-attendee-group { margin-bottom: 12px; }
+/* Appointment Registration Form — Right-side 40% panel */
+.apt-form { width: 40%; min-width: 340px; max-width: 520px; flex-shrink: 0; background: var(--white); border-radius: 6px; padding: 12px 14px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
+.apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 10px; flex-shrink:0;}
+.apt-form-scroll { flex:1; overflow-y: auto; overflow-x: hidden; padding-right: 4px; display:flex; flex-direction:column; gap:8px; }
+.apt-type-switch{display:flex;gap:6px;align-items:center;padding:3px 0;}
+.apt-type-switch label{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;padding:3px 9px;border-radius:14px;border:1px solid var(--border);transition:all .15s;}
+.apt-type-switch label.active-ev{background:#fff1e6;border-color:#d35400;color:#d35400;font-weight:700;}
+.apt-type-switch label.active-meet{background:#e8edf7;border-color:var(--navy);color:var(--navy);font-weight:700;}
+.apt-type-switch input{margin:0;}
+.apt-input-big{font-size:16px !important;font-weight:700;color:var(--navy) !important;padding:6px 9px !important;line-height:1.3;}
+.apt-input-big.meet{color:var(--navy) !important;}
+.apt-input-big.ev{color:#a14200 !important;}
+.apt-input-date{font-size:16px !important;font-weight:700;padding:6px 9px !important;font-family:'Libre Baskerville',serif;letter-spacing:.3px;}
+.apt-input-time{font-size:13px !important;padding:6px 9px !important;font-family:'JetBrains Mono',monospace;}
+.apt-textarea{font-size:12px !important;min-height:52px;resize:vertical;line-height:1.5;}
+.apt-form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px;display:block;}
+.apt-form-label.ev{color:#d35400;}
+.apt-form-label.meet{color:var(--navy);}
+
+.apt-attendee-wrap { flex-shrink:0; max-height:160px; overflow-y: auto; border: 1px solid var(--border); padding: 7px 8px; border-radius: 4px; background: #fafaf7; font-size: 11px; }
+.apt-attendee-group { margin-bottom: 8px; }
 .apt-attendee-group:last-child { margin-bottom: 0; }
-.apt-attendee-group-title { font-weight: 700; color: var(--navy); margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.apt-attendee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.apt-attendee-label { display: flex; align-items: center; cursor: pointer; padding: 2px; }
+.apt-attendee-group-title { font-weight: 700; color: var(--navy); margin-bottom: 4px; padding-bottom: 3px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size:11px;}
+.apt-attendee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.apt-attendee-label { display: flex; align-items: center; cursor: pointer; padding: 2px; font-size:11px;}
 .apt-attendee-label:hover { background: rgba(0,0,0,0.02); }
+.apt-form-btn{width:100%;padding:8px 12px;border:none;border-radius:5px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;margin-top:4px;letter-spacing:.3px;}
+.apt-form-btn.ev{background:#d35400;}
+.apt-form-btn.ev:hover{background:#b34700;}
+.apt-form-btn.meet{background:var(--navy);}
+.apt-form-btn.meet:hover{background:var(--navy-light);}
+.apt-form-cancel{width:100%;padding:6px 12px;background:transparent;border:1px solid var(--border);border-radius:5px;font-size:12px;color:var(--text);cursor:pointer;margin-top:4px;}
+.apt-form-cancel:hover{background:#f1f3f5;}
 
 @page{margin:0;size:A4;}
 @media print{html,body{height:auto;overflow:visible;background:#fff;}}
@@ -341,8 +367,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
   <!-- ─── LOGIN OVERLAY ─── -->
   <div v-if="!currentUser" class="full-overlay">
     <div class="login-box">
-      <h1>Network Tree Manager</h1>
-      <p>클라우드 환경에서 당신만의 패밀리 트리를<br>안전하게 무제한으로 저장하고 관리하세요.</p>
+      <h1>Family Tree Manager</h1>
+      <p>클라우드 환경에서 당신만의 패밀리 트리를<br>안전하게 무제한으로 저장하고 관리하세요.<br> IT DOWOOMI - HYUKI 제공</p>
       <button class="btn-google" @click="loginWithGoogle">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
         Google 계정으로 로그인
@@ -485,14 +511,16 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
             </div>
             <div class="appt-title-big">{{ apt.title }}</div>
+            <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
+            <div v-if="apt.instructor" class="appt-instructor">강사 · {{ apt.instructor }}</div>
             <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
-            <div v-if="apt.attendees && apt.attendees.filter(n=>memberNames.includes(n)).length" class="appt-attendee-row">
+            <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag">멤버</span>
-                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>memberNames.includes(n)).join(', ') }}</span>
+                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>apptMemberNames.includes(n)).join(', ') }}</span>
             </div>
-            <div v-if="(apt.targetName && !memberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!memberNames.includes(n)).length" class="appt-attendee-row">
+            <div v-if="(apt.targetName && !apptMemberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag new">신규</span>
-                <span class="appt-attendee-names">{{ [...(apt.targetName && !memberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!memberNames.includes(n))].join(', ') }}</span>
+                <span class="appt-attendee-names">{{ [...(apt.targetName && !apptMemberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!apptMemberNames.includes(n))].join(', ') }}</span>
             </div>
         </div>
       </div>
@@ -683,14 +711,16 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
             </div>
             <div class="appt-title-big">{{ apt.title }}</div>
+            <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
+            <div v-if="apt.instructor" class="appt-instructor">강사 · {{ apt.instructor }}</div>
             <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
-            <div v-if="apt.attendees && apt.attendees.filter(n=>memberNames.includes(n)).length" class="appt-attendee-row">
+            <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag">멤버</span>
-                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>memberNames.includes(n)).join(', ') }}</span>
+                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>apptMemberNames.includes(n)).join(', ') }}</span>
             </div>
-            <div v-if="(apt.targetName && !memberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!memberNames.includes(n)).length" class="appt-attendee-row">
+            <div v-if="(apt.targetName && !apptMemberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag new">신규</span>
-                <span class="appt-attendee-names">{{ [...(apt.targetName && !memberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!memberNames.includes(n))].join(', ') }}</span>
+                <span class="appt-attendee-names">{{ [...(apt.targetName && !apptMemberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!apptMemberNames.includes(n))].join(', ') }}</span>
             </div>
         </div>
       </div>
@@ -1398,17 +1428,18 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="right"> 오른쪽</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1000px;">
+          <table class="member-table" style="font-size:12px;min-width:1100px;">
             <thead>
               <tr>
-                <th style="width:70px">구분</th>
-                <th style="width:110px">날짜</th>
-                <th style="width:70px">시간</th>
-                <th style="width:180px">약속/이벤트 내용</th>
-                <th style="width:140px">장소</th>
-                <th style="width:130px">만날 사람 (대상)</th>
-                <th style="width:180px">함께 참석할 멤버</th>
-                <th style="width:120px;text-align:center">작업</th>
+                <th style="width:65px">구분</th>
+                <th style="width:100px">날짜</th>
+                <th style="width:60px">시간</th>
+                <th style="width:150px">이벤트 명 / 만날 사람</th>
+                <th style="width:180px">내용</th>
+                <th style="width:90px">강사</th>
+                <th style="width:120px">장소</th>
+                <th style="width:170px">함께 참석</th>
+                <th style="width:110px;text-align:center">작업</th>
                 <th></th>
               </tr>
             </thead>
@@ -1419,10 +1450,11 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 </td>
                 <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.date }}</td>
                 <td style="font-family:'JetBrains Mono',monospace;">{{ apt.time || '-' }}</td>
-                <td>{{ apt.title }}</td>
+                <td :style="{color: (apt.type||'이벤트')==='약속' ? 'var(--navy)' : '#a14200', fontWeight:600}">{{ apt.title }}</td>
+                <td style="font-size:11px;color:var(--text);">{{ apt.description || '-' }}</td>
+                <td style="font-size:11px;color:#a14200;font-weight:600;">{{ apt.instructor || '-' }}</td>
                 <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
-                <td style="color:var(--navy);font-weight:600;">{{ apt.targetName || '-' }}</td>
-                <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') }}</td>
+                <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
                 <td style="text-align:center">
                   <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
                   <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>
@@ -1436,79 +1468,111 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
       </div>
 
       <div class="apt-form">
-        <h4>{{ editingApptId ? '✏️ 약속 / 이벤트 수정' : '+ 약속 / 이벤트 추가' }}</h4>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
+        <h4>{{ editingApptId ? '✏️ ' + (newAppt.type==='약속' ? '약속' : '이벤트') + ' 수정' : '+ ' + (newAppt.type==='약속' ? '약속' : '이벤트') + ' 등록' }}</h4>
+        <div class="apt-form-scroll">
 
-            <!-- 1단: 기본 입력폼 및 버튼 -->
-            <div style="display: flex; flex-direction: column; gap: 7px;">
-                <div class="form-row" style="margin-bottom: 0;">
-                    <label class="form-label">구분</label>
-                    <div style="display:flex;gap:6px;align-items:center;padding:3px 0;">
-                      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;">
+            <!-- 구분 (Type switch) -->
+            <div>
+                <label class="apt-form-label">구분</label>
+                <div class="apt-type-switch">
+                    <label :class="{'active-ev': newAppt.type==='이벤트'}">
                         <input type="radio" v-model="newAppt.type" value="이벤트" style="accent-color:#d35400;"> 이벤트
-                      </label>
-                      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;">
+                    </label>
+                    <label :class="{'active-meet': newAppt.type==='약속'}">
                         <input type="radio" v-model="newAppt.type" value="약속" style="accent-color:var(--navy);"> 약속
-                      </label>
-                    </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
-                  <div class="form-row" style="margin-bottom: 0;">
-                      <label class="form-label">날짜</label>
-                      <input type="date" v-model="newAppt.date" class="form-input">
-                  </div>
-                  <div class="form-row" style="margin-bottom: 0;">
-                      <label class="form-label">시간</label>
-                      <input type="time" v-model="newAppt.time" class="form-input">
-                  </div>
-                </div>
-                <div class="form-row" style="margin-bottom: 0;">
-                    <label class="form-label">내용 (이벤트 명)</label>
-                    <input type="text" v-model="newAppt.title" class="form-input" :placeholder="newAppt.type==='약속' ? '커피 미팅, 상담 등' : '세미나, 모임 등'">
-                </div>
-                <div class="form-row" style="margin-bottom: 0;">
-                    <label class="form-label">장소</label>
-                    <input type="text" v-model="newAppt.location" class="form-input" placeholder="(선택) 강남역 스타벅스">
-                </div>
-                <div class="form-row" style="margin-bottom: 0;">
-                    <label class="form-label">만날 사람 (대상자)</label>
-                    <input type="text" v-model="newAppt.targetName" list="all-persons" class="form-input" placeholder="(선택) 새 이름 시 자동 추가" @change="handleTargetNameChange">
-                    <datalist id="all-persons">
-                        <option v-for="name in allPersonNames" :key="name" :value="name"></option>
-                    </datalist>
-                </div>
-                <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
-                    <button class="btn btn-primary" style="width:100%;" :style="{background: newAppt.type==='약속' ? 'var(--navy)' : '#d35400', borderColor: newAppt.type==='약속' ? 'var(--navy)' : '#d35400'}" @click="addAppointment()">{{ editingApptId ? '수정 완료' : '등록하기' }}</button>
-                    <button v-if="editingApptId" class="btn" style="width:100%; background:transparent; border:1px solid var(--border); color:var(--text);" @click="cancelEditAppt()">취소</button>
+                    </label>
                 </div>
             </div>
 
-            <!-- 2단: 멤버 참석자 -->
-            <div style="display: flex; flex-direction: column; min-height: 0;">
-                <div class="apt-attendee-group-title">👥 멤버 참석자</div>
-                <div class="apt-attendee-wrap">
-                    <div class="apt-attendee-grid">
-                        <label v-for="name in memberNames" :key="name" class="apt-attendee-label" :title="name">
-                            <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--navy);margin-right:4px;flex-shrink:0;">
-                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
-                        </label>
-                    </div>
-                    <div v-if="memberNames.length===0" style="color:var(--muted);font-style:italic;text-align:center;padding-top:10px;">멤버 없음</div>
+            <!-- 날짜 + 시간 -->
+            <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
+                <div>
+                    <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">날짜</label>
+                    <input type="date" v-model="newAppt.date" class="form-input apt-input-date">
+                </div>
+                <div>
+                    <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">시간</label>
+                    <input type="time" v-model="newAppt.time" class="form-input apt-input-time">
                 </div>
             </div>
 
-            <!-- 3단: Recruit 참석자 -->
-            <div style="display: flex; flex-direction: column; min-height: 0;">
-                <div class="apt-attendee-group-title" style="color:var(--gold);">🎯 Recruit 참석자</div>
-                <div class="apt-attendee-wrap">
-                    <div class="apt-attendee-grid">
-                        <label v-for="name in recruitNames" :key="name" class="apt-attendee-label" :title="name">
-                            <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--gold);margin-right:4px;flex-shrink:0;">
-                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
-                        </label>
+            <!-- 제목 (이벤트 명 / 만날 사람) -->
+            <div v-if="newAppt.type === '이벤트'">
+                <label class="apt-form-label ev">이벤트 명</label>
+                <input type="text" v-model="newAppt.title" class="form-input apt-input-big ev" placeholder="예: 봄맞이 네트워크 모임">
+            </div>
+            <div v-else>
+                <label class="apt-form-label meet">만날 사람</label>
+                <input type="text" v-model="newAppt.title" list="all-persons" class="form-input apt-input-big meet" placeholder="예: 홍길동 (새 이름 시 자동 추가)">
+                <datalist id="all-persons">
+                    <option v-for="name in allPersonNames" :key="name" :value="name"></option>
+                </datalist>
+            </div>
+
+            <!-- 내용 / 이벤트 내용 -->
+            <div v-if="newAppt.type === '이벤트'">
+                <label class="apt-form-label ev">이벤트 내용</label>
+                <textarea v-model="newAppt.description" class="form-input apt-textarea" placeholder="(선택) 이벤트 간단 소개 / 주제"></textarea>
+            </div>
+            <div v-else>
+                <label class="apt-form-label meet">내용</label>
+                <textarea v-model="newAppt.description" class="form-input apt-textarea" placeholder="(선택) 만남의 목적 / 주제"></textarea>
+            </div>
+
+            <!-- 강사 (이벤트일 때만) -->
+            <div v-if="newAppt.type === '이벤트'">
+                <label class="apt-form-label ev">강사</label>
+                <input type="text" v-model="newAppt.instructor" class="form-input" placeholder="(선택) 예: 김강사">
+            </div>
+
+            <!-- 장소 -->
+            <div>
+                <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">장소</label>
+                <input type="text" v-model="newAppt.location" class="form-input" placeholder="(선택) 예: 강남역 스타벅스">
+            </div>
+
+            <!-- 사람 추가 / 함께 만날 사람 -->
+            <div>
+                <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">
+                    {{ newAppt.type === '약속' ? '함께 만날 사람' : '참석자 추가' }}
+                </label>
+                <div class="apt-attendee-wrap" style="max-height:180px;">
+                    <div class="apt-attendee-group">
+                        <div class="apt-attendee-group-title">
+                            <span>👥 멤버 <span style="font-weight:400;opacity:.6;font-size:10px;">(상위 멤버 포함)</span></span>
+                        </div>
+                        <div class="apt-attendee-grid">
+                            <label v-for="name in apptMemberNames" :key="'m-'+name" class="apt-attendee-label" :title="name">
+                                <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--navy);margin-right:4px;flex-shrink:0;">
+                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                    {{ name }}<span v-if="uplineMemberNames.includes(name)" style="color:var(--gold);font-size:9px;margin-left:3px;">상위</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div v-if="apptMemberNames.length===0" style="color:var(--muted);font-style:italic;font-size:10px;padding:3px 0;">멤버 없음</div>
                     </div>
-                    <div v-if="recruitNames.length===0" style="color:var(--muted);font-style:italic;text-align:center;padding-top:10px;">Recruit 없음</div>
+                    <div class="apt-attendee-group">
+                        <div class="apt-attendee-group-title" style="color:var(--gold);">🎯 Recruit</div>
+                        <div class="apt-attendee-grid">
+                            <label v-for="name in recruitNames" :key="'r-'+name" class="apt-attendee-label" :title="name">
+                                <input type="checkbox" :value="name" v-model="newAppt.attendees" style="accent-color:var(--gold);margin-right:4px;flex-shrink:0;">
+                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
+                            </label>
+                        </div>
+                        <div v-if="recruitNames.length===0" style="color:var(--muted);font-style:italic;font-size:10px;padding:3px 0;">Recruit 없음</div>
+                    </div>
                 </div>
+                <!-- 신규 이름 추가 (리스트에 없는 새 이름) -->
+                <div style="display:flex;gap:5px;margin-top:6px;">
+                    <input type="text" v-model="newAppt.newAttendeeInput" class="form-input" style="flex:1;font-size:11px;padding:5px 8px;" :placeholder="newAppt.type === '약속' ? '신규 이름 입력 (자동 등록)' : '신규 참석자 이름 (자동 등록)'" @keyup.enter="addAttendeeByName()">
+                    <button type="button" class="apt-form-btn" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}" style="width:auto;padding:5px 12px;font-size:11px;margin-top:0;" @click="addAttendeeByName()">+ 추가</button>
+                </div>
+            </div>
+
+            <!-- 버튼 -->
+            <div style="margin-top:auto;padding-top:6px;">
+                <button class="apt-form-btn" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}" @click="addAppointment()">{{ editingApptId ? '수정 완료' : '등록하기' }}</button>
+                <button v-if="editingApptId" class="apt-form-cancel" @click="cancelEditAppt()">취소</button>
             </div>
 
         </div>

@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newHist = reactive({ date:'', type:'History', content:'', point:null, amount:null });
       const newInteraction = reactive({ date:'', content:'' });
       const newRecruitInteraction = reactive({ date:'', content:'' });
-      const newAppt = reactive({ date: '', time: '', location: '', type: '이벤트', title: '', targetName: '', attendees: [] });
+      const newAppt = reactive({ date: '', time: '', location: '', type: '이벤트', title: '', description: '', instructor: '', targetName: '', attendees: [], newAttendeeInput: '' });
 
       const nm = reactive({ name:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
@@ -255,8 +255,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const memberNames = computed(() => members.value.map(m => m.name));
       const recruitNames = computed(() => recruits.value.map(r => r.name));
 
+      // 상위 멤버 (FD/SFD/DD/EFD) - 기본정보에 등록된 이름들
+      const uplineMemberNames = computed(() => {
+          const names = [header.fd, header.sfd, header.dd, header.efd].map(n => (n || '').trim()).filter(Boolean);
+          // 일반 멤버에 이미 있으면 제외 (중복 방지)
+          return [...new Set(names)].filter(n => !memberNames.value.includes(n));
+      });
+
+      // 약속/이벤트 참석자용 "멤버" 리스트 = 실제 멤버 + 상위 멤버
+      const apptMemberNames = computed(() => {
+          return [...new Set([...memberNames.value, ...uplineMemberNames.value])];
+      });
+
       const allPersonNames = computed(() => {
-          return [...new Set([...memberNames.value, ...recruitNames.value])];
+          return [...new Set([...apptMemberNames.value, ...recruitNames.value])];
       });
 
       const upcomingAppointments = computed(() => {
@@ -864,6 +876,12 @@ document.addEventListener('DOMContentLoaded', () => {
               return showToastMsg('날짜와 내용은 필수 항목입니다.', 'error');
           }
 
+          // For 약속 mode: the title IS the target person's name.
+          // Sync targetName = title so auto-add-to-recruits still works.
+          if ((newAppt.type || '이벤트') === '약속') {
+              newAppt.targetName = (newAppt.title || '').trim();
+          }
+
           // Allow registration if there's either a target person OR an attendee
           if(!newAppt.targetName && newAppt.attendees.length === 0) {
               return showToastMsg('참석할 멤버나 만날 대상자를 최소 한 명 이상 지정해주세요.', 'error');
@@ -887,6 +905,8 @@ document.addEventListener('DOMContentLoaded', () => {
                   appointments.value[idx].location = newAppt.location || '';
                   appointments.value[idx].type = newAppt.type || '이벤트';
                   appointments.value[idx].title = newAppt.title;
+                  appointments.value[idx].description = newAppt.description || '';
+                  appointments.value[idx].instructor = newAppt.instructor || '';
                   appointments.value[idx].targetName = newAppt.targetName;
                   appointments.value[idx].attendees = [...newAppt.attendees];
                   showToastMsg('약속이 성공적으로 수정되었습니다.');
@@ -900,13 +920,15 @@ document.addEventListener('DOMContentLoaded', () => {
                   location: newAppt.location || '',
                   type: newAppt.type || '이벤트',
                   title: newAppt.title,
+                  description: newAppt.description || '',
+                  instructor: newAppt.instructor || '',
                   targetName: newAppt.targetName,
                   attendees: [...newAppt.attendees]
               });
               showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
 
-          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
+          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.instructor = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
           checkPastAppointments();
       }
 
@@ -921,13 +943,35 @@ document.addEventListener('DOMContentLoaded', () => {
           newAppt.location = apt.location || '';
           newAppt.type = apt.type || '이벤트';
           newAppt.title = apt.title;
+          newAppt.description = apt.description || '';
+          newAppt.instructor = apt.instructor || '';
           newAppt.targetName = apt.targetName || '';
           newAppt.attendees = [...(apt.attendees || [])];
+          newAppt.newAttendeeInput = '';
       }
 
       function cancelEditAppt() {
           editingApptId.value = null;
-          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
+          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.instructor = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
+      }
+
+      // 약속 모드: 함께 만날 사람 - 신규 이름 추가 (회원이 아니면 recruit에 자동 등록)
+      function addAttendeeByName() {
+          const name = (newAppt.newAttendeeInput || '').trim();
+          if (!name) return;
+          if (newAppt.attendees.includes(name)) {
+              newAppt.newAttendeeInput = '';
+              return;
+          }
+          const isMember = apptMemberNames.value.includes(name);
+          const isRecruit = recruitNames.value.includes(name);
+          if (!isMember && !isRecruit) {
+              const newR = { id:'r'+Date.now(), name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition() };
+              recruits.value.push(newR);
+              showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`);
+          }
+          newAppt.attendees.push(name);
+          newAppt.newAttendeeInput = '';
       }
 
       function checkPastAppointments() {
@@ -945,8 +989,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   let extraBits = [];
                   if(apt.time) extraBits.push(apt.time);
                   if(apt.location) extraBits.push('@'+apt.location);
+                  if(apt.instructor) extraBits.push('강사:'+apt.instructor);
                   const extraStr = extraBits.length ? ' ('+extraBits.join(' ')+')' : '';
-                  const content = `[${typeLabel}] ${apt.title}${extraStr}`;
+                  const descStr = apt.description ? ' — ' + apt.description : '';
+                  const content = `[${typeLabel}] ${apt.title}${extraStr}${descStr}`;
                   
                   if(apt.targetName) {
                       addHistoryToPerson(apt.targetName, histDate, content);
@@ -1036,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         if(d.appointments) appointments.value = d.appointments.map(a => ({
-            type: '이벤트', time: '', location: '', attendees: [], targetName: '', ...a
+            type: '이벤트', time: '', location: '', description: '', instructor: '', attendees: [], targetName: '', ...a
         }));
         
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition;
@@ -1248,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, printHistMode, printHistDays, printHistFrom, printHistTo,
-        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, upcomingAppointments,
+        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits,
         focusedList, rootMember, rootMemberName, currentMembers,
         teamTotal, statusCounts, layout,
@@ -1262,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, checkPromoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
-        addAppointment, removeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange,
+        addAppointment, removeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName,
         addNote, onNodeClick, getRecruitMeta,
         zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd,
         quickSave, exportJSON, exportSubJSON, importJSON,
