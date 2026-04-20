@@ -100,7 +100,6 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .appt-item.meet .appt-desc{border-left-color:#d2d9e6;}
 .appt-location-big{font-size:11px;color:var(--navy-light);margin-bottom:4px;font-weight:500;}
 .appt-location-big::before{content:"📍 ";opacity:.7;}
-.appt-instructor{font-size:10.5px;color:#a14200;margin-bottom:3px;font-weight:600;letter-spacing:.2px;padding-left:2px;}
 .appt-attendee-row{display:flex;gap:5px;align-items:baseline;font-size:10px;line-height:1.45;padding:1px 0 1px 2px;}
 .appt-attendee-tag{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--navy);text-transform:uppercase;flex-shrink:0;min-width:54px;}
 .appt-attendee-tag.new{color:#d35400;}
@@ -505,11 +504,10 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
                     <span class="appt-date-big">{{ fmtApptDateShort(apt.date) }}</span>
                 </div>
-                <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
+                <span v-if="apt.time" class="appt-time-big">{{ apt.endTime ? apt.time + ' ~ ' + apt.endTime : apt.time }}</span>
             </div>
             <div class="appt-title-big">{{ apt.title }}</div>
             <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
-            <div v-if="apt.instructor" class="appt-instructor">강사 · {{ apt.instructor }}</div>
             <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
             <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag">멤버</span>
@@ -705,11 +703,10 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
                     <span class="appt-date-big">{{ fmtApptDateShort(apt.date) }}</span>
                 </div>
-                <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
+                <span v-if="apt.time" class="appt-time-big">{{ apt.endTime ? apt.time + ' ~ ' + apt.endTime : apt.time }}</span>
             </div>
             <div class="appt-title-big">{{ apt.title }}</div>
             <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
-            <div v-if="apt.instructor" class="appt-instructor">강사 · {{ apt.instructor }}</div>
             <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
             <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
                 <span class="appt-attendee-tag">멤버</span>
@@ -1425,17 +1422,16 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="right"> 오른쪽</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1100px;">
+          <table class="member-table" style="font-size:12px;min-width:1050px;">
             <thead>
               <tr>
                 <th style="width:65px">구분</th>
                 <th style="width:100px">날짜</th>
-                <th style="width:60px">시간</th>
-                <th style="width:150px">이벤트 명 / 만날 사람</th>
-                <th style="width:180px">내용</th>
-                <th style="width:90px">강사</th>
-                <th style="width:120px">장소</th>
-                <th style="width:170px">함께 참석</th>
+                <th style="width:120px">시간 (시작~종료)</th>
+                <th style="width:160px">이벤트 명 / 만날 사람</th>
+                <th style="width:200px">내용</th>
+                <th style="width:130px">장소</th>
+                <th style="width:180px">함께 참석</th>
                 <th style="width:110px;text-align:center">작업</th>
                 <th></th>
               </tr>
@@ -1446,10 +1442,9 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                   <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
                 </td>
                 <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.date }}</td>
-                <td style="font-family:'JetBrains Mono',monospace;">{{ apt.time || '-' }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;">{{ apt.time ? (apt.endTime ? apt.time + ' ~ ' + apt.endTime : apt.time) : '-' }}</td>
                 <td :style="{color: (apt.type||'이벤트')==='약속' ? 'var(--navy)' : '#a14200', fontWeight:600}">{{ apt.title }}</td>
                 <td style="font-size:11px;color:var(--text);">{{ apt.description || '-' }}</td>
-                <td style="font-size:11px;color:#a14200;font-weight:600;">{{ apt.instructor || '-' }}</td>
                 <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
                 <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
                 <td style="text-align:center">
@@ -1482,14 +1477,19 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
+                <div>
+                    <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">날짜</label>
+                    <input type="date" v-model="newAppt.date" class="form-input">
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
                     <div>
-                        <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">날짜</label>
-                        <input type="date" v-model="newAppt.date" class="form-input">
+                        <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">시작 시간</label>
+                        <input type="time" v-model="newAppt.time" class="form-input">
                     </div>
                     <div>
-                        <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">시간</label>
-                        <input type="time" v-model="newAppt.time" class="form-input">
+                        <label class="apt-form-label" :class="{ev: newAppt.type==='이벤트', meet: newAppt.type==='약속'}">종료 시간</label>
+                        <input type="time" v-model="newAppt.endTime" class="form-input">
                     </div>
                 </div>
 
@@ -1512,11 +1512,6 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                 <div v-else>
                     <label class="apt-form-label meet">내용</label>
                     <textarea v-model="newAppt.description" class="form-input apt-textarea" placeholder="(선택) 만남 목적"></textarea>
-                </div>
-
-                <div v-if="newAppt.type === '이벤트'">
-                    <label class="apt-form-label ev">강사</label>
-                    <input type="text" v-model="newAppt.instructor" class="form-input" placeholder="(선택) 예: 김강사">
                 </div>
 
                 <div>

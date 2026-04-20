@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newHist = reactive({ date:'', type:'History', content:'', point:null, amount:null });
       const newInteraction = reactive({ date:'', content:'' });
       const newRecruitInteraction = reactive({ date:'', content:'' });
-      const newAppt = reactive({ date: '', time: '', location: '', type: '이벤트', title: '', description: '', instructor: '', targetName: '', attendees: [], newAttendeeInput: '' });
+      const newAppt = reactive({ date: '', time: '', endTime: '', location: '', type: '이벤트', title: '', description: '', targetName: '', attendees: [], newAttendeeInput: '' });
 
       const nm = reactive({ name:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
@@ -902,11 +902,11 @@ document.addEventListener('DOMContentLoaded', () => {
               if (idx !== -1) {
                   appointments.value[idx].date = newAppt.date;
                   appointments.value[idx].time = newAppt.time || '';
+                  appointments.value[idx].endTime = newAppt.endTime || '';
                   appointments.value[idx].location = newAppt.location || '';
                   appointments.value[idx].type = newAppt.type || '이벤트';
                   appointments.value[idx].title = newAppt.title;
                   appointments.value[idx].description = newAppt.description || '';
-                  appointments.value[idx].instructor = newAppt.instructor || '';
                   appointments.value[idx].targetName = newAppt.targetName;
                   appointments.value[idx].attendees = [...newAppt.attendees];
                   showToastMsg('약속이 성공적으로 수정되었습니다.');
@@ -917,18 +917,18 @@ document.addEventListener('DOMContentLoaded', () => {
                   id: 'apt'+Date.now(),
                   date: newAppt.date,
                   time: newAppt.time || '',
+                  endTime: newAppt.endTime || '',
                   location: newAppt.location || '',
                   type: newAppt.type || '이벤트',
                   title: newAppt.title,
                   description: newAppt.description || '',
-                  instructor: newAppt.instructor || '',
                   targetName: newAppt.targetName,
                   attendees: [...newAppt.attendees]
               });
               showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
 
-          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.instructor = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
+          newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
           checkPastAppointments();
       }
 
@@ -940,11 +940,11 @@ document.addEventListener('DOMContentLoaded', () => {
           editingApptId.value = apt.id;
           newAppt.date = apt.date;
           newAppt.time = apt.time || '';
+          newAppt.endTime = apt.endTime || '';
           newAppt.location = apt.location || '';
           newAppt.type = apt.type || '이벤트';
           newAppt.title = apt.title;
           newAppt.description = apt.description || '';
-          newAppt.instructor = apt.instructor || '';
           newAppt.targetName = apt.targetName || '';
           newAppt.attendees = [...(apt.attendees || [])];
           newAppt.newAttendeeInput = '';
@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function cancelEditAppt() {
           editingApptId.value = null;
-          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.instructor = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
+          newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
       }
 
       // 약속 모드: 함께 만날 사람 - 신규 이름 추가 (회원이 아니면 recruit에 자동 등록)
@@ -987,9 +987,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   const histDate = `${String(aptDate.getMonth()+1).padStart(2,'0')}/${String(aptDate.getDate()).padStart(2,'0')}/${String(aptDate.getFullYear()).slice(2)}`;
                   const typeLabel = apt.type || '약속/행사';
                   let extraBits = [];
-                  if(apt.time) extraBits.push(apt.time);
+                  if(apt.time) {
+                      extraBits.push(apt.endTime ? apt.time + '~' + apt.endTime : apt.time);
+                  }
                   if(apt.location) extraBits.push('@'+apt.location);
-                  if(apt.instructor) extraBits.push('강사:'+apt.instructor);
                   const extraStr = extraBits.length ? ' ('+extraBits.join(' ')+')' : '';
                   const descStr = apt.description ? ' — ' + apt.description : '';
                   const content = `[${typeLabel}] ${apt.title}${extraStr}${descStr}`;
@@ -1082,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         if(d.appointments) appointments.value = d.appointments.map(a => ({
-            type: '이벤트', time: '', location: '', description: '', instructor: '', attendees: [], targetName: '', ...a
+            type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', ...a
         }));
         
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition;
