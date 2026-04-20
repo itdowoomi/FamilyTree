@@ -860,6 +860,37 @@ document.addEventListener('DOMContentLoaded', () => {
       function addNote(){ if(!newNote.value.trim())return; notes.value.push({text:newNote.value.trim()}); newNote.value=''; }
       
       // Appointment Methods
+      function getPersonTitle(name) {
+          if (!name) return '';
+          const n = String(name).trim();
+          if (!n) return '';
+          // Upline roles from header (FD/SFD/DD/EFD are treated as members)
+          if ((header.fd || '').trim() === n) return 'FD';
+          if ((header.sfd || '').trim() === n) return 'SFD';
+          if ((header.dd || '').trim() === n) return 'DD';
+          if ((header.efd || '').trim() === n) return 'EFD';
+          // Regular member
+          const m = members.value.find(x => x.name === n);
+          if (m) {
+              if (m.status === 'root') return '본인';
+              return m.status || '';
+          }
+          // Non-members (recruits, 신규) get no title
+          return '';
+      }
+
+      function apptPeopleList(apt) {
+          const main = (apt && apt.title || '').trim();
+          const attendees = ((apt && apt.attendees) || [])
+              .map(n => (n || '').trim())
+              .filter(n => n && n !== main);
+          const seen = new Set();
+          const out = [];
+          if (main) { out.push(main); seen.add(main); }
+          attendees.forEach(n => { if (!seen.has(n)) { out.push(n); seen.add(n); } });
+          return out;
+      }
+
       function handleTargetNameChange() {
           const name = newAppt.targetName.trim();
           if (!name) return;
@@ -1309,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, checkPromoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
-        addAppointment, removeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName,
+        addAppointment, removeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
         addNote, onNodeClick, getRecruitMeta,
         zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd,
         quickSave, exportJSON, exportSubJSON, importJSON,
