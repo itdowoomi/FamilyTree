@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newHist = reactive({ date:'', type:'History', content:'', point:null, amount:null });
       const newInteraction = reactive({ date:'', content:'' });
       const newRecruitInteraction = reactive({ date:'', content:'' });
-      const newAppt = reactive({ date: '', title: '', targetName: '', attendees: [] });
+      const newAppt = reactive({ date: '', time: '', location: '', type: '이벤트', title: '', targetName: '', attendees: [] });
 
       const nm = reactive({ name:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
@@ -522,6 +522,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.min(100, Math.max(0, (mTotal / tTotal) * 100));
       }
 
+      // Formats a stored appointment date (YYYY-MM-DD / MM-DD-YYYY / etc.) into a short "M/D" for display.
+      function fmtApptDateShort(dStr){
+        if(!dStr) return '';
+        const parts = String(dStr).split(/[-./]/).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) return dStr;
+        let m, d;
+        if (parts[0].length === 4) { // YYYY-MM-DD
+          m = parseInt(parts[1], 10);
+          d = parseInt(parts[2] || '1', 10);
+        } else { // MM-DD-YYYY or MM/DD/YY
+          m = parseInt(parts[0], 10);
+          d = parseInt(parts[1], 10);
+        }
+        if (isNaN(m) || isNaN(d)) return dStr;
+        return `${m}/${d}`;
+      }
+
+      // Computes this history entry's share (%) of the member's visible amount or point totals.
+      function getPointHistPct(m, h){
+        if (!m || !h || !m.history) return 0;
+        const visible = m.history.filter(x => x.show);
+        const hasAmount = Number(h.amount) > 0;
+        const hasPoint = Number(h.point) > 0;
+        if (hasAmount) {
+          const tot = visible.reduce((s,x) => s + (Number(x.amount) || 0), 0);
+          if (tot > 0) return Math.min(100, (Number(h.amount) / tot) * 100);
+        }
+        if (hasPoint) {
+          const tot = visible.reduce((s,x) => s + (Number(x.point) || 0), 0);
+          if (tot > 0) return Math.min(100, (Number(h.point) / tot) * 100);
+        }
+        return 0;
+      }
+
       function calcDisposition(item, isRecruit) {
           if (!item.disposition) return;
           let total = 0;
@@ -849,6 +883,9 @@ document.addEventListener('DOMContentLoaded', () => {
               const idx = appointments.value.findIndex(a => a.id === editingApptId.value);
               if (idx !== -1) {
                   appointments.value[idx].date = newAppt.date;
+                  appointments.value[idx].time = newAppt.time || '';
+                  appointments.value[idx].location = newAppt.location || '';
+                  appointments.value[idx].type = newAppt.type || '이벤트';
                   appointments.value[idx].title = newAppt.title;
                   appointments.value[idx].targetName = newAppt.targetName;
                   appointments.value[idx].attendees = [...newAppt.attendees];
@@ -859,14 +896,17 @@ document.addEventListener('DOMContentLoaded', () => {
               appointments.value.push({
                   id: 'apt'+Date.now(),
                   date: newAppt.date,
+                  time: newAppt.time || '',
+                  location: newAppt.location || '',
+                  type: newAppt.type || '이벤트',
                   title: newAppt.title,
                   targetName: newAppt.targetName,
                   attendees: [...newAppt.attendees]
               });
-              showToastMsg('새로운 약속이 등록되었습니다.');
+              showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
-          
-          newAppt.date = ''; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
+
+          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
           checkPastAppointments();
       }
 
@@ -877,6 +917,9 @@ document.addEventListener('DOMContentLoaded', () => {
       function editAppointment(apt) {
           editingApptId.value = apt.id;
           newAppt.date = apt.date;
+          newAppt.time = apt.time || '';
+          newAppt.location = apt.location || '';
+          newAppt.type = apt.type || '이벤트';
           newAppt.title = apt.title;
           newAppt.targetName = apt.targetName || '';
           newAppt.attendees = [...(apt.attendees || [])];
@@ -884,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function cancelEditAppt() {
           editingApptId.value = null;
-          newAppt.date = ''; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
+          newAppt.date = ''; newAppt.time = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.targetName = ''; newAppt.attendees = [];
       }
 
       function checkPastAppointments() {
@@ -898,7 +941,12 @@ document.addEventListener('DOMContentLoaded', () => {
               const aptDate = new Date(apt.date.replace(/[-./]/g, '/'));
               if(aptDate < today) {
                   const histDate = `${String(aptDate.getMonth()+1).padStart(2,'0')}/${String(aptDate.getDate()).padStart(2,'0')}/${String(aptDate.getFullYear()).slice(2)}`;
-                  const content = `[약속/행사] ${apt.title}`;
+                  const typeLabel = apt.type || '약속/행사';
+                  let extraBits = [];
+                  if(apt.time) extraBits.push(apt.time);
+                  if(apt.location) extraBits.push('@'+apt.location);
+                  const extraStr = extraBits.length ? ' ('+extraBits.join(' ')+')' : '';
+                  const content = `[${typeLabel}] ${apt.title}${extraStr}`;
                   
                   if(apt.targetName) {
                       addHistoryToPerson(apt.targetName, histDate, content);
@@ -987,7 +1035,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',...r, interactionHistory: ih, disposition: disp};
             });
         }
-        if(d.appointments) appointments.value = d.appointments;
+        if(d.appointments) appointments.value = d.appointments.map(a => ({
+            type: '이벤트', time: '', location: '', attendees: [], targetName: '', ...a
+        }));
         
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition;
         if(d.notesPosition) notesPosition.value=d.notesPosition;
@@ -1206,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod,
         sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum,
-        getMemberTotal, getIncomePercent,
+        getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         updateRootMemberName, setFocus, clearFocus, toggleFocus,
         nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,

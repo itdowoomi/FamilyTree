@@ -84,11 +84,25 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .note-idx{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--gold);font-weight:700;flex-shrink:0;line-height:1.6;min-width:14px;}
 .note-text-disp{font-size:11px;line-height:1.55;color:var(--text);word-break:break-all;}
 
-/* Appointments Side Panel */
-.apt-card{background:var(--white);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin-bottom:6px;display:flex;flex-direction:column;gap:3px;}
-.apt-card-date{font-family:'JetBrains Mono',monospace;color:#d35400;font-size:10px;font-weight:700;}
-.apt-card-title{font-size:11px;font-weight:700;color:var(--navy);}
-.apt-card-meta{font-size:10px;color:var(--muted);}
+/* Appointments Side Panel — Box-less Recruit-style Layout */
+.appointment-panel{background:#fdf6ee;}
+.appt-item{margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid #f0e4cf;}
+.appt-item:last-child{border-bottom:none;margin-bottom:0;}
+.appt-top-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:1px;}
+.appt-date-block{display:flex;align-items:baseline;gap:6px;}
+.appt-type-chip{font-size:8.5px;font-family:'JetBrains Mono',monospace;color:#fff;background:#d35400;border-radius:10px;padding:1px 7px;font-weight:700;flex-shrink:0;letter-spacing:.3px;line-height:1.4;transform:translateY(-2px);}
+.appt-type-chip.meet{background:var(--navy);}
+.appt-date-big{font-family:'Libre Baskerville',serif;font-size:20px;font-weight:700;color:#d35400;line-height:1;letter-spacing:.5px;}
+.appt-type-chip.meet ~ .appt-date-big, .appt-item.meet .appt-date-big{color:var(--navy);}
+.appt-time-big{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px;}
+.appt-title-big{font-size:13px;font-weight:700;color:var(--navy);line-height:1.25;margin:3px 0 2px 0;}
+.appt-location-big{font-size:10.5px;color:var(--navy-light);margin-bottom:3px;font-weight:500;}
+.appt-location-big::before{content:"📍 ";opacity:.7;}
+.appt-attendee-row{display:flex;gap:5px;align-items:baseline;font-size:10px;line-height:1.45;padding:1px 0 1px 2px;}
+.appt-attendee-tag{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--navy);text-transform:uppercase;flex-shrink:0;min-width:54px;}
+.appt-attendee-tag.new{color:#d35400;}
+.appt-attendee-names{color:var(--text);word-break:keep-all;flex:1;}
+.appt-empty{font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;text-align:center;}
 
 /* SVG container */
 .tree-svg-wrap{flex:1;overflow:hidden;position:relative;cursor:grab;}
@@ -242,21 +256,39 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .btn-hist-toggle:hover{background:var(--navy);color:#fff;}
 .show-check{width:16px;height:16px;cursor:pointer;accent-color:var(--navy);}
 
-/* ─── MEMBER INFO PANEL ─── */
-.mem-info-wrapper{display:flex;flex-direction:column;gap:12px;}
-.mem-info-header{font-size:12px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;}
-.mem-info-badge{font-size:9px;background:var(--navy-light);color:#fff;padding:2px 6px;border-radius:10px;}
-.mem-info-detail{font-size:10px;color:var(--muted);line-height:1.4;background:var(--white);padding:6px;border-radius:4px;border:1px solid #e5e2dc;}
-.mem-hist-section-title{font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:3px;}
-.mem-hist-list{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
-.mem-hist-item{display:flex;align-items:flex-start;gap:4px;font-size:10.5px;background:var(--white);padding:4px;border:1px solid var(--border);border-radius:4px;}
-.mem-hist-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;white-space:nowrap;flex-shrink:0;margin-top:1px;}
-.mem-hist-text{flex:1;word-break:break-all;}
-.del-x-btn { background: none; border: none; color: var(--danger); cursor: pointer; padding: 0 4px; font-size: 11px; margin-left: auto; opacity: 0.5; transition: opacity 0.2s; }
-.del-x-btn:hover { opacity: 1; }
-.point-hist-readonly{background:#f1f3f5; color:#555; padding:5px 7px; border-radius:3px; border:1px solid #ddd; font-size:10.5px; display:flex; flex-direction:column; gap:4px;}
-.point-hist-top{display:flex; gap:6px; align-items:flex-start;}
-.point-hist-bottom{text-align:right; font-family:'JetBrains Mono',monospace; color:var(--navy); font-weight:700;}
+/* ─── MEMBER INFO PANEL (Recruit-style, box-less) ─── */
+.mem-info-wrapper{display:flex;flex-direction:column;gap:10px;}
+.mem-info-header{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;padding-bottom:4px;border-bottom:1px solid #dbe0ea;}
+.mem-info-name{font-size:15px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
+.mem-info-badge{font-size:8.5px;background:var(--navy-light);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;}
+.mem-info-inline{font-size:9.5px;color:var(--muted);line-height:1.45;margin-top:-1px;word-break:keep-all;}
+.mem-info-inline .mem-info-dot{color:#c8c3b7;margin:0 4px;}
+.mem-info-inline .mem-total-val{color:var(--navy);font-family:'JetBrains Mono',monospace;font-weight:700;}
+.mem-info-inline .mem-score-val{color:var(--gold);font-weight:700;}
+.mem-hist-section-title{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid #dbe0ea;margin-bottom:4px;}
+.mem-hist-list{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
+
+.del-x-btn { background: none; border: none; color: #ccc; cursor: pointer; padding: 0 4px; font-size: 11px; opacity: 0; transition: opacity 0.2s, color 0.15s; flex-shrink:0; }
+.del-x-btn:hover { color: var(--danger); opacity: 1; }
+
+/* Point history — blue horizontal bar graph (per-entry share) */
+.point-bar-item{padding:4px 0 5px;border-bottom:1px dotted #e5e2dc;}
+.point-bar-item:last-child{border-bottom:none;}
+.point-bar-row-1{display:flex;align-items:baseline;gap:6px;font-size:10.5px;line-height:1.3;}
+.point-bar-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
+.point-bar-content{flex:1;color:var(--text);word-break:break-all;}
+.point-bar-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:10px;flex-shrink:0;}
+.point-bar-track{height:5px;background:#e7edf6;border-radius:3px;overflow:hidden;margin-top:4px;position:relative;}
+.point-bar-fill{height:100%;background:linear-gradient(90deg,#60a5fa 0%,#3b82f6 55%,var(--navy) 100%);border-radius:3px;transition:width .4s ease;}
+.point-bar-pct{font-size:8.5px;color:var(--navy-light);font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:1px;text-align:right;letter-spacing:.3px;}
+.mem-hist-empty{font-size:10px;color:var(--muted);text-align:center;padding:6px;font-style:italic;}
+
+/* Interaction / Consultation history — navy-toned (recruit feel) */
+.mem-int-item{display:flex;gap:6px;align-items:baseline;padding:2px 0 2px 10px;font-size:10.5px;line-height:1.5;border-left:2px solid #d2d9e6;margin-left:2px;position:relative;}
+.mem-int-item:hover{border-left-color:var(--navy-light);background:rgba(28,43,74,0.02);}
+.mem-int-item:hover .del-x-btn{opacity:1;}
+.mem-int-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
+.mem-int-content{flex:1;color:var(--text);word-break:break-all;}
 
 .print-hist-ctrl{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:3px 7px;}
 .print-hist-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:11px;font-family:inherit;padding:2px 4px;cursor:pointer;}
@@ -443,12 +475,25 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 
       <div v-if="appointmentPosition==='left'" class="side-panel left appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="upcomingAppointments.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">예정된 약속 없음</div>
-        <div v-for="apt in upcomingAppointments" :key="apt.id" class="apt-card">
-            <div class="apt-card-date">{{ apt.date }}</div>
-            <div class="apt-card-title">{{ apt.title }}</div>
-            <div class="apt-card-meta" v-if="apt.targetName">대상: <strong style="color:var(--text)">{{ apt.targetName }}</strong></div>
-            <div v-if="apt.attendees && apt.attendees.length" class="apt-card-meta">참석: {{ apt.attendees.join(', ') }}</div>
+        <div v-if="upcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in upcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+            <div class="appt-top-row">
+                <div class="appt-date-block">
+                    <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
+                    <span class="appt-date-big">{{ fmtApptDateShort(apt.date) }}</span>
+                </div>
+                <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
+            </div>
+            <div class="appt-title-big">{{ apt.title }}</div>
+            <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
+            <div v-if="apt.attendees && apt.attendees.filter(n=>memberNames.includes(n)).length" class="appt-attendee-row">
+                <span class="appt-attendee-tag">멤버</span>
+                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>memberNames.includes(n)).join(', ') }}</span>
+            </div>
+            <div v-if="(apt.targetName && !memberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!memberNames.includes(n)).length" class="appt-attendee-row">
+                <span class="appt-attendee-tag new">신규</span>
+                <span class="appt-attendee-names">{{ [...(apt.targetName && !memberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!memberNames.includes(n))].join(', ') }}</span>
+            </div>
         </div>
       </div>
 
@@ -457,42 +502,48 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         <div v-if="selectedMember" class="mem-info-wrapper">
             <div>
               <div class="mem-info-header">
-                  <span>{{ selectedMember.name }}</span>
+                  <span class="mem-info-name">{{ selectedMember.name }}</span>
                   <span class="mem-info-badge">{{ selectedMember.status==='root'?'최상위(Root)':selectedMember.status }}</span>
               </div>
-              <div class="mem-info-detail">
-                  전공: {{ selectedMember.major || '-' }} | 직업: {{ selectedMember.job || '-' }} | 직장: {{ selectedMember.company || '-' }}<br>
-                  관계: {{ selectedMember.relation || '-' }} | 나이: {{ selectedMember.age ? selectedMember.age+'세' : '-' }}<br>
-                  만남: {{ selectedMember.meetDate || '-' }} | 성별: {{ selectedMember.gender }}<br>
+              <div class="mem-info-inline">
+                  <template v-if="selectedMember.major">{{ selectedMember.major }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.job">{{ selectedMember.job }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.company">{{ selectedMember.company }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.relation">{{ selectedMember.relation }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.age">{{ selectedMember.age }}세<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
-                    점수: <strong>{{ selectedMember.score || 0 }}</strong>
+                    점수 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
                   <template v-else>
-                    Total 수입: <strong style="color:var(--navy);font-family:'JetBrains Mono',monospace;">${{ getMemberTotal(selectedMember) }}</strong>
+                    Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
                   </template>
               </div>
             </div>
             <div>
-              <div class="mem-hist-section-title">💰 포인트/실적 기록</div>
+              <div class="mem-hist-section-title">💰 포인트 / 실적 기록</div>
               <div class="mem-hist-list">
-                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-hist-readonly">
-                  <div class="point-hist-top">
-                    <span style="font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;">{{ h.date || '-' }}</span>
-                    <span style="flex:1;word-break:break-all;">{{ h.content }}</span>
+                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-bar-item">
+                  <div class="point-bar-row-1">
+                    <span class="point-bar-date">{{ h.date || '—' }}</span>
+                    <span class="point-bar-content">{{ h.content }}</span>
+                    <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                   </div>
-                  <div v-if="h.amount||h.point" class="point-hist-bottom">
-                    {{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' | ' : '' }}{{ h.point ? h.point+'P' : '' }}
+                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-track">
+                    <div class="point-bar-fill" :style="{width: getPointHistPct(selectedMember, h) + '%'}"></div>
                   </div>
+                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</div>
                 </div>
-                <div v-if="!selectedMember.history || selectedMember.history.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+                <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
             <div>
-              <div class="mem-hist-section-title">📝 상담/관리 기록</div>
+              <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
               <div class="mem-hist-list">
-                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-hist-item" style="align-items: center;">
-                      <span class="mem-hist-date">{{ ih.date }}</span>
-                      <div class="mem-hist-text">{{ ih.content }}</div>
+                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
+                      <span class="mem-int-date">{{ ih.date||'—' }}</span>
+                      <span class="mem-int-content">{{ ih.content }}</span>
                       <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
                   </div>
                   <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
@@ -622,12 +673,25 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 
       <div v-if="appointmentPosition==='right'" class="side-panel right appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="upcomingAppointments.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">예정된 약속 없음</div>
-        <div v-for="apt in upcomingAppointments" :key="apt.id" class="apt-card">
-            <div class="apt-card-date">{{ apt.date }}</div>
-            <div class="apt-card-title">{{ apt.title }}</div>
-            <div class="apt-card-meta" v-if="apt.targetName">대상: <strong style="color:var(--text)">{{ apt.targetName }}</strong></div>
-            <div v-if="apt.attendees && apt.attendees.length" class="apt-card-meta">참석: {{ apt.attendees.join(', ') }}</div>
+        <div v-if="upcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in upcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+            <div class="appt-top-row">
+                <div class="appt-date-block">
+                    <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
+                    <span class="appt-date-big">{{ fmtApptDateShort(apt.date) }}</span>
+                </div>
+                <span v-if="apt.time" class="appt-time-big">{{ apt.time }}</span>
+            </div>
+            <div class="appt-title-big">{{ apt.title }}</div>
+            <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
+            <div v-if="apt.attendees && apt.attendees.filter(n=>memberNames.includes(n)).length" class="appt-attendee-row">
+                <span class="appt-attendee-tag">멤버</span>
+                <span class="appt-attendee-names">{{ apt.attendees.filter(n=>memberNames.includes(n)).join(', ') }}</span>
+            </div>
+            <div v-if="(apt.targetName && !memberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!memberNames.includes(n)).length" class="appt-attendee-row">
+                <span class="appt-attendee-tag new">신규</span>
+                <span class="appt-attendee-names">{{ [...(apt.targetName && !memberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!memberNames.includes(n))].join(', ') }}</span>
+            </div>
         </div>
       </div>
 
@@ -636,45 +700,51 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
         <div v-if="selectedMember" class="mem-info-wrapper">
             <div>
               <div class="mem-info-header">
-                  <span>{{ selectedMember.name }}</span>
+                  <span class="mem-info-name">{{ selectedMember.name }}</span>
                   <span class="mem-info-badge">{{ selectedMember.status==='root'?'최상위(Root)':selectedMember.status }}</span>
               </div>
-              <div class="mem-info-detail">
-                  전공: {{ selectedMember.major || '-' }} | 직업: {{ selectedMember.job || '-' }} | 직장: {{ selectedMember.company || '-' }}<br>
-                  관계: {{ selectedMember.relation || '-' }} | 나이: {{ selectedMember.age ? selectedMember.age+'세' : '-' }}<br>
-                  만남: {{ selectedMember.meetDate || '-' }} | 성별: {{ selectedMember.gender }}<br>
+              <div class="mem-info-inline">
+                  <template v-if="selectedMember.major">{{ selectedMember.major }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.job">{{ selectedMember.job }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.company">{{ selectedMember.company }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.relation">{{ selectedMember.relation }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.age">{{ selectedMember.age }}세<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
-                    점수: <strong>{{ selectedMember.score || 0 }}</strong>
+                    점수 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
                   <template v-else>
-                    Total 수입: <strong style="color:var(--navy);font-family:'JetBrains Mono',monospace;">${{ getMemberTotal(selectedMember) }}</strong>
+                    Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
                   </template>
               </div>
             </div>
             <div>
-              <div class="mem-hist-section-title">💰 포인트/실적 기록</div>
+              <div class="mem-hist-section-title">💰 포인트 / 실적 기록</div>
               <div class="mem-hist-list">
-                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-hist-readonly">
-                  <div class="point-hist-top">
-                    <span style="font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;">{{ h.date || '-' }}</span>
-                    <span style="flex:1;word-break:break-all;">{{ h.content }}</span>
+                <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-bar-item">
+                  <div class="point-bar-row-1">
+                    <span class="point-bar-date">{{ h.date || '—' }}</span>
+                    <span class="point-bar-content">{{ h.content }}</span>
+                    <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                   </div>
-                  <div v-if="h.amount||h.point" class="point-hist-bottom">
-                    {{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' | ' : '' }}{{ h.point ? h.point+'P' : '' }}
+                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-track">
+                    <div class="point-bar-fill" :style="{width: getPointHistPct(selectedMember, h) + '%'}"></div>
                   </div>
+                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</div>
                 </div>
-                <div v-if="!selectedMember.history || selectedMember.history.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+                <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
             <div>
-              <div class="mem-hist-section-title">📝 상담/관리 기록</div>
+              <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
               <div class="mem-hist-list">
-                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-hist-item" style="align-items: center;">
-                      <span class="mem-hist-date">{{ ih.date }}</span>
-                      <div class="mem-hist-text">{{ ih.content }}</div>
+                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
+                      <span class="mem-int-date">{{ ih.date||'—' }}</span>
+                      <span class="mem-int-content">{{ ih.content }}</span>
                       <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
                   </div>
-                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
+                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
         </div>
@@ -1328,21 +1398,29 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="right"> 오른쪽</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:900px;">
+          <table class="member-table" style="font-size:12px;min-width:1000px;">
             <thead>
               <tr>
-                <th style="width:140px">날짜</th>
-                <th style="width:200px">약속/이벤트 내용</th>
-                <th style="width:150px">만날 사람 (대상)</th>
-                <th style="width:200px">함께 참석할 멤버</th>
+                <th style="width:70px">구분</th>
+                <th style="width:110px">날짜</th>
+                <th style="width:70px">시간</th>
+                <th style="width:180px">약속/이벤트 내용</th>
+                <th style="width:140px">장소</th>
+                <th style="width:130px">만날 사람 (대상)</th>
+                <th style="width:180px">함께 참석할 멤버</th>
                 <th style="width:120px;text-align:center">작업</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="apt in upcomingAppointments" :key="apt.id">
+                <td>
+                  <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
+                </td>
                 <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.date }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;">{{ apt.time || '-' }}</td>
                 <td>{{ apt.title }}</td>
+                <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
                 <td style="color:var(--navy);font-weight:600;">{{ apt.targetName || '-' }}</td>
                 <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') }}</td>
                 <td style="text-align:center">
@@ -1356,20 +1434,41 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
           <div v-if="upcomingAppointments.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">예정된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(과거 날짜의 약속은 자동으로 각 멤버의 히스토리로 이동됩니다.)</div>
         </div>
       </div>
-      
+
       <div class="apt-form">
         <h4>{{ editingApptId ? '✏️ 약속 / 이벤트 수정' : '+ 약속 / 이벤트 추가' }}</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 1; min-height: 0;">
-            
+
             <!-- 1단: 기본 입력폼 및 버튼 -->
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 7px;">
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label class="form-label">날짜</label>
-                    <input type="date" v-model="newAppt.date" class="form-input">
+                    <label class="form-label">구분</label>
+                    <div style="display:flex;gap:6px;align-items:center;padding:3px 0;">
+                      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;">
+                        <input type="radio" v-model="newAppt.type" value="이벤트" style="accent-color:#d35400;"> 이벤트
+                      </label>
+                      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;">
+                        <input type="radio" v-model="newAppt.type" value="약속" style="accent-color:var(--navy);"> 약속
+                      </label>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
+                  <div class="form-row" style="margin-bottom: 0;">
+                      <label class="form-label">날짜</label>
+                      <input type="date" v-model="newAppt.date" class="form-input">
+                  </div>
+                  <div class="form-row" style="margin-bottom: 0;">
+                      <label class="form-label">시간</label>
+                      <input type="time" v-model="newAppt.time" class="form-input">
+                  </div>
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                     <label class="form-label">내용 (이벤트 명)</label>
-                    <input type="text" v-model="newAppt.title" class="form-input" placeholder="상담, 세미나 등">
+                    <input type="text" v-model="newAppt.title" class="form-input" :placeholder="newAppt.type==='약속' ? '커피 미팅, 상담 등' : '세미나, 모임 등'">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label class="form-label">장소</label>
+                    <input type="text" v-model="newAppt.location" class="form-input" placeholder="(선택) 강남역 스타벅스">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                     <label class="form-label">만날 사람 (대상자)</label>
@@ -1379,7 +1478,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
                     </datalist>
                 </div>
                 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
-                    <button class="btn btn-primary" style="width:100%; background:#d35400; border-color:#d35400;" @click="addAppointment()">{{ editingApptId ? '수정 완료' : '등록하기' }}</button>
+                    <button class="btn btn-primary" style="width:100%;" :style="{background: newAppt.type==='약속' ? 'var(--navy)' : '#d35400', borderColor: newAppt.type==='약속' ? 'var(--navy)' : '#d35400'}" @click="addAppointment()">{{ editingApptId ? '수정 완료' : '등록하기' }}</button>
                     <button v-if="editingApptId" class="btn" style="width:100%; background:transparent; border:1px solid var(--border); color:var(--text);" @click="cancelEditAppt()">취소</button>
                 </div>
             </div>
