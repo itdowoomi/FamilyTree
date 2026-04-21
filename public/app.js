@@ -538,10 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
             memberCount: parentMembers.length,
             data: {
               ...parentData.data,
-              header: parentHeader,
+              header: parentData.data.header,
               members: parentMembers,
               recruits: parentRecruits,
-              appointments: parentAppointments
+              appointments: parentData.data.appointments || []
             }
           };
           
