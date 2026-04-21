@@ -782,9 +782,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const subAppointments = subTreeShareInput.includeData ? appointments.value.filter(apt => {
             if (apt.type === '이벤트') return true; 
-            const hasTargetInSubtree = apt.targetName && subMembers.some(m => m.name === apt.targetName);
-            const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMembers.some(m => m.name === name));
-            return hasTargetInSubtree || hasAttendeeInSubtree;
+            const subMemberNames = new Set(subMembers.map(m => m.name));
+            const hasTargetInSubtree = apt.targetName && subMemberNames.has(apt.targetName);
+            const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMemberNames.has(name));
+            const hasCreatorInSubtree = apt.createdBy && subMemberNames.has(apt.createdBy);
+            return hasTargetInSubtree || hasAttendeeInSubtree || hasCreatorInSubtree;
           }) : [];
 
           const newTreeId = 'shared_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -933,6 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const myDownlineNames = meSubtreeNames.value;
 
         // 약속(이벤트 제외) 가시성: 본인 혹은 본인 이하가 포함된 약속만 보임
+        // 작성자(createdBy)도 자동으로 참석자로 인식
         const apptIncludesMeOrDownline = (a) => {
           if (!myName) return false;
           const names = new Set([...(a.attendees || []), a.targetName, a.createdBy].filter(Boolean));
@@ -988,6 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                // 본인(로그인 사용자)이 포함되지 않은 약속은 표시하지 않음
                if (!apptIncludesMeOrDownline(a)) return false;
                // 서브 뷰에선 선택된 멤버 서브트리에 관련된 것만
+               // 작성자도 참석자로 인식하여 필터링
                if (a.createdBy && selectedNames.has(a.createdBy)) return true;
                if (a.targetName && selectedNames.has(a.targetName)) return true;
                if ((a.attendees || []).some(n => selectedNames.has(n))) return true;
