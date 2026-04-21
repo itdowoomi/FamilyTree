@@ -265,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
           sharePermissions: {}
         };
         isDashboard.value = false;
+        lastLocalSaveMs = 0; // 트리 전환 시 에코 가드 초기화
         subscribeToCurrentTree();
         nextTick(centerTree);
       };
@@ -283,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
           parentTreeId: treeSummary.parentTreeId || null
         };
         isDashboard.value = false;
+        lastLocalSaveMs = 0; // 트리 전환 시 에코 가드 초기화 (다른 트리의 저장이 이 트리의 onSnapshot을 가리지 않도록)
         nextTick(() => {
           setRootEmailToLoginIfEmpty();
           centerTree();
@@ -295,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isDashboard.value = true;
         currentTreeId.value = null;
         currentTreeMeta.value = null;
+        lastLocalSaveMs = 0;
         fetchSavedTrees();
       };
 
@@ -435,28 +438,16 @@ document.addEventListener('DOMContentLoaded', () => {
               return linkedMember && ids.has(linkedMember.id);
             });
 
-            // 약속 동기화: 부모 트리의 전체 약속/이벤트를 서브 트리에 내려보냄(id 기반 병합)
-            const existingSubApts = subTreeData.data.appointments || [];
-            let mergedApts = [...existingSubApts];
-            appointments.value.forEach(pe => {
-                const idx = mergedApts.findIndex(a => a.id === pe.id);
-                if(idx >= 0) mergedApts[idx] = { ...pe };
-                else mergedApts.push({ ...pe });
-            });
+            // 약속 동기화: 부모가 단일 진실 → 서브의 약속을 부모 상태로 완전 교체
+            //   (삭제까지 전파되도록 upsert 가 아닌 replace 전략 사용)
+            const mergedApts = JSON.parse(JSON.stringify(appointments.value || []));
 
-            // 메모 동기화: 부모 트리의 전체 공개(scope='all') 메모를 서브 트리로 내려보냄
-            //   개인(scope='personal') 메모는 제외. 서브 트리의 개인 메모는 유지.
+            // 메모 동기화: 부모의 공개(scope!=='personal') 메모로 서브 공개 메모를 교체.
+            //   서브 트리의 개인(scope='personal') 메모는 그대로 유지.
             const existingSubNotes = subTreeData.data.notes || [];
+            const subPersonal = existingSubNotes.filter(n => n && n.scope === 'personal');
             const parentPublicNotes = (notes.value || []).filter(n => n && n.scope !== 'personal');
-            let mergedNotes = existingSubNotes.filter(n => n && n.scope === 'personal');
-            parentPublicNotes.forEach(pn => {
-                const dup = mergedNotes.findIndex(n =>
-                  (pn.id && n.id === pn.id) ||
-                  (n.text === pn.text && (n.createdBy || '') === (pn.createdBy || ''))
-                );
-                if (dup >= 0) mergedNotes[dup] = { ...pn };
-                else mergedNotes.push({ ...pn });
-            });
+            const mergedNotes = [...subPersonal, ...parentPublicNotes.map(n => ({ ...n }))];
 
             const originalRoot = members.value.find(m => !m.parentId);
             const newHeader = {
@@ -548,38 +539,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
           
+          // 리크룻은 보존(추가/수정만 반영). 삭제까지 전파하면 다른 서브의 리크룻을 잃을 수 있음.
           const subRecruits = subTreeData.data.recruits || [];
           let parentRecruits = JSON.parse(JSON.stringify(parentData.data.recruits || []));
-
           subRecruits.forEach(subR => {
             const existingIdx = parentRecruits.findIndex(r => r.id === subR.id);
-            if (existingIdx >= 0) {
-              parentRecruits[existingIdx] = { ...subR };
-            } else {
-              parentRecruits.push({ ...subR });
-            }
+            if (existingIdx >= 0) parentRecruits[existingIdx] = { ...subR };
+            else parentRecruits.push({ ...subR });
           });
 
-          // ── 약속(appointments) 병합: 서브에서 추가/수정된 모든 약속을 부모로 반영 ──
-          const subApts = subTreeData.data.appointments || [];
-          let parentApts = JSON.parse(JSON.stringify(parentData.data.appointments || []));
-          subApts.forEach(sa => {
-            const idx = parentApts.findIndex(a => a.id === sa.id);
-            if (idx >= 0) parentApts[idx] = { ...sa };
-            else parentApts.push({ ...sa });
-          });
+          // ── 약속(appointments): 서브가 단일 진실(Source of Truth) → 전체 교체 ──
+          //    삭제까지 전파되도록 부모의 약속은 서브의 현재 상태로 완전히 대체한다.
+          const parentApts = JSON.parse(JSON.stringify(subTreeData.data.appointments || []));
 
-          // ── 메모 병합: 전체 공개(scope!=='personal') 메모는 부모에 반영 ──
-          const subNotes = (subTreeData.data.notes || []).filter(n => n && n.scope !== 'personal');
-          let parentNotes = JSON.parse(JSON.stringify(parentData.data.notes || []));
-          subNotes.forEach(sn => {
-            const match = parentNotes.findIndex(n =>
-              (sn.id && n.id === sn.id) ||
-              (n.text === sn.text && (n.createdBy || '') === (sn.createdBy || ''))
-            );
-            if (match >= 0) parentNotes[match] = { ...sn };
-            else parentNotes.push({ ...sn });
-          });
+          // ── 메모(notes): 공개 메모(scope!=='personal') 는 서브의 상태로 교체.
+          //    부모의 개인 메모는 그대로 보존(개인 메모는 작성자 본인 트리에서만 보임).
+          const parentPersonal = (parentData.data.notes || []).filter(n => n && n.scope === 'personal');
+          const subPublic = (subTreeData.data.notes || []).filter(n => n && n.scope !== 'personal');
+          const parentNotes = [...parentPersonal, ...subPublic.map(n => ({ ...n }))];
 
           // 메인 트리 업데이트
           const updatedParentData = {
