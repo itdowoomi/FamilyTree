@@ -1,0 +1,76 @@
+// Firebase Firestore Security Rules
+// 배포: Firebase Console → Firestore Database → 규칙 (Rules) 탭에 복사 → 게시(Publish)
+//
+// ● 요구 사항
+//   - 모든 사용자는 Google 로그인(또는 익명 로그인) 상태여야 읽기/쓰기 가능
+//   - 자신이 소유(ownerId)이거나 공유(sharedEmails)된 트리만 읽기 가능
+//   - 편집 권한(sharePermissions.{email}.role == "editor")을 가진 사용자만 쓰기 가능
+//   - 소유자는 삭제까지 가능
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 공통 함수
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function emailLower() {
+      return request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+    function isOwner(data) {
+      return isSignedIn() && data.ownerId == request.auth.uid;
+    }
+    function isEditor(data) {
+      return isSignedIn() && (
+        isOwner(data) ||
+        (data.sharePermissions != null &&
+         data.sharePermissions[emailLower()] != null &&
+         data.sharePermissions[emailLower()].role == 'editor')
+      );
+    }
+    function isReader(data) {
+      return isSignedIn() && (
+        isOwner(data) ||
+        (data.sharedEmails != null && emailLower() in data.sharedEmails)
+      );
+    }
+
+    // ── 최상위 trees 컬렉션 (FamilyTreeApp 표준 경로) ──
+    match /trees/{treeId} {
+      allow read:   if isReader(resource.data);
+
+      // 최초 생성: 본인이 소유자일 때만
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid;
+
+      // 수정: 소유자 또는 편집자 역할
+      allow update: if isEditor(resource.data)
+                    // 공유 설정은 소유자만 변경 가능
+                    && (isOwner(resource.data) || (
+                        request.resource.data.ownerId == resource.data.ownerId &&
+                        request.resource.data.sharedEmails == resource.data.sharedEmails &&
+                        request.resource.data.sharePermissions == resource.data.sharePermissions
+                    ));
+
+      // 삭제: 소유자만
+      allow delete: if isOwner(resource.data);
+    }
+
+    // ── (선택) 과거 경로 호환: /artifacts/{appId}/trees/{treeId} ──
+    match /artifacts/{appId}/trees/{treeId} {
+      allow read:   if isReader(resource.data);
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isEditor(resource.data);
+      allow delete: if isOwner(resource.data);
+    }
+
+    // ── (선택) 레거시 사용자별 경로 마이그레이션용 ──
+    match /users/{userId}/trees/{treeId} {
+      allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}

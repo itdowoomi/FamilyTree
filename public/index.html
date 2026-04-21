@@ -200,17 +200,18 @@
     <div class="tree-body">
       <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title">📝 메모 / 액션</div>
-        <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
-        <div v-for="(n,i) in notes" :key="i" class="note-card">
+        <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
+        <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
           <span class="note-text-disp">{{ n.text }}</span>
+          <span v-if="n.scope==='personal'" style="font-size:9px;color:#b07;margin-left:4px;">(본인)</span>
         </div>
       </div>
 
       <div v-if="recruitPosition==='left'" class="side-panel left recruit-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title gold">🎯 Recruit 리스트</div>
-        <div v-if="visibleRecruits.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
-        <div v-for="(r,i) in visibleRecruits" :key="r.id" class="recruit-card">
+        <div v-if="tabRecruitsSorted.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
+        <div v-for="(r,i) in tabRecruitsSorted" :key="r.id" class="recruit-card">
           <div class="recruit-card-header">
               <span class="recruit-rank">{{ i+1 }}</span>
               <span class="recruit-name-score">{{ r.name }} <span class="recruit-score-badge">({{ r.score }})</span><div class="score-dots-wrap"><div class="score-dots-fill" :style="{width:r.score+'%'}"></div></div></span>
@@ -228,8 +229,8 @@
 
       <div v-if="appointmentPosition==='left'" class="side-panel left appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="upcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
-        <div v-for="apt in upcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+        <div v-if="tabUpcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in tabUpcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
             <div class="appt-top-row">
                 <div class="appt-date-block">
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
@@ -411,17 +412,18 @@
 
       <div v-if="notesPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
         <div class="panel-title">📝 메모 / 액션</div>
-        <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
-        <div v-for="(n,i) in notes" :key="i" class="note-card">
+        <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
+        <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
           <span class="note-text-disp">{{ n.text }}</span>
+          <span v-if="n.scope==='personal'" style="font-size:9px;color:#b07;margin-left:4px;">(본인)</span>
         </div>
       </div>
 
       <div v-if="recruitPosition==='right'" class="side-panel right recruit-panel" :style="{width:notePanelWidth+'px'}">
         <div class="panel-title gold">🎯 Recruit 리스트</div>
-        <div v-if="visibleRecruits.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
-        <div v-for="(r,i) in visibleRecruits" :key="r.id" class="recruit-card">
+        <div v-if="tabRecruitsSorted.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">리스트 없음</div>
+        <div v-for="(r,i) in tabRecruitsSorted" :key="r.id" class="recruit-card">
           <div class="recruit-card-header">
               <span class="recruit-rank">{{ i+1 }}</span>
               <span class="recruit-name-score">{{ r.name }} <span class="recruit-score-badge">({{ r.score }})</span><div class="score-dots-wrap"><div class="score-dots-fill" :style="{width:r.score+'%'}"></div></div></span>
@@ -439,8 +441,8 @@
 
       <div v-if="appointmentPosition==='right'" class="side-panel right appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="upcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
-        <div v-for="apt in upcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+        <div v-if="tabUpcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in tabUpcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
             <div class="appt-top-row">
                 <div class="appt-date-block">
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
@@ -984,6 +986,7 @@
           <table class="member-table" style="font-size:12px;min-width:1150px;">
             <colgroup>
               <col style="width:110px">
+              <col style="width:100px">
               <col style="width:90px">
               <col style="width:90px">
               <col style="width:90px">
@@ -1000,7 +1003,7 @@
             <thead>
               <tr>
                 <th>이름</th>
-                <th style="width:100px">작성자</th>
+                <th>작성자</th>
                 <th>전공</th>
                 <th>직업</th>
                 <th>직장</th>
@@ -1066,7 +1069,7 @@
                 <td></td>
               </tr>
               <tr v-if="expandedRecruitDispositionId===r.id">
-                <td colspan="13" style="padding:0;background:var(--cream);">
+                <td colspan="14" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
                     <div class="history-panel-header">
                       <div>
@@ -1106,7 +1109,7 @@
                 </td>
               </tr>
               <tr v-if="expandedRecruitInteractionId===r.id">
-                <td colspan="13" style="padding:0;background:var(--cream);">
+                <td colspan="14" style="padding:0;background:var(--cream);">
                   <div class="history-panel">
                     <div class="history-panel-header">
                       <div>
@@ -1402,7 +1405,7 @@
                   </select>
                 </td>
                 <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ n.createdBy || '-' }}</span></td>
-                <td><button class="btn-sm-danger" @click="notes.splice(i,1)">✕</button></td>
+                <td><button class="btn-sm-danger" @click="notes.splice(notes.indexOf(n),1)">✕</button></td>
               </tr>
             </tbody>
           </table>

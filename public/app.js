@@ -372,8 +372,20 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if(!isAuto) showToastMsg('☁️ 클라우드에 안전하게 저장되었습니다!');
         } catch (e) {
-          console.error(e);
-          showToastMsg('저장 실패', 'error');
+          console.error('[saveToCloud] failed:', e);
+          const code = (e && e.code) ? e.code : '';
+          const msg = (e && e.message) ? e.message : '';
+          let friendly = '저장 실패';
+          if (code === 'permission-denied' || /permission/i.test(msg)) {
+            friendly = '권한 오류: Firestore 보안 규칙을 확인하세요. (firestore.rules 파일 참고)';
+          } else if (code === 'unauthenticated') {
+            friendly = '로그인 세션이 만료되었습니다. 다시 로그인 해 주세요.';
+          } else if (code === 'unavailable' || /network|offline/i.test(msg)) {
+            friendly = '네트워크 연결을 확인하세요.';
+          } else if (msg) {
+            friendly = `저장 실패: ${msg.slice(0,120)}`;
+          }
+          showToastMsg(friendly, 'error');
         }
       };
 
@@ -764,47 +776,111 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const currentIsReadOnly = computed(() => !!currentTreeId.value && !currentIsEditor.value);
 
+      // ── 신원(identity) 계산: 접속한 사용자에 대응되는 멤버 ──
+      const meMember = computed(() => {
+        const myEmail = (currentUser.value?.email || '').toLowerCase();
+        if (!myEmail) return null;
+        // 1) 트리 내에서 이메일이 일치하는 멤버
+        const byEmail = members.value.find(m => (m.email || '').toLowerCase() === myEmail);
+        if (byEmail) return byEmail;
+        // 2) 트리 소유자(=본인)인 경우 root 멤버
+        if (currentTreeMeta.value && currentUser.value && currentTreeMeta.value.ownerId === currentUser.value.uid) {
+          return rootMember.value || null;
+        }
+        // 3) 로컬(클라우드 미저장) 상태일 땐 root가 본인
+        if (!currentTreeId.value) return rootMember.value || null;
+        return null;
+      });
+      const meName = computed(() => meMember.value?.name || '');
+      const meSubtreeIds = computed(() => {
+        const me = meMember.value;
+        if (!me) return new Set();
+        const ids = new Set();
+        const collect = (id) => {
+          ids.add(id);
+          members.value.filter(m => m.parentId === id).forEach(m => collect(m.id));
+        };
+        collect(me.id);
+        return ids;
+      });
+      const meSubtreeNames = computed(() => {
+        const ids = meSubtreeIds.value;
+        return new Set(members.value.filter(m => ids.has(m.id)).map(m => m.name));
+      });
+
       // ── 핵심 필터링 로직 (선택된 멤버 기준 뷰) ──
       const tabContext = computed(() => {
-        const rootName = rootMember.value?.name || '';
-        
+        const myEmail = (currentUser.value?.email || '').toLowerCase();
+        const myName = meName.value;
+        const myDownlineIds = meSubtreeIds.value;
+        const myDownlineNames = meSubtreeNames.value;
+
+        // 약속(이벤트 제외) 가시성: 본인 혹은 본인 이하가 포함된 약속만 보임
+        const apptIncludesMeOrDownline = (a) => {
+          if (!myName) return false;
+          const names = new Set([...(a.attendees || []), a.targetName, a.createdBy].filter(Boolean));
+          for (const n of names) if (myDownlineNames.has(n)) return true;
+          return false;
+        };
+        // 메모 가시성: scope=all(전체) 또는 작성자 본인(이메일/이름 일치)
+        const noteVisible = (n) => {
+          if (!n) return false;
+          if (n.scope === 'all' || !n.scope) return true;
+          const byEmail = (n.createdByEmail || '').toLowerCase();
+          if (byEmail && myEmail && byEmail === myEmail) return true;
+          if (n.createdBy && myName && n.createdBy === myName) return true;
+          return false;
+        };
+
         if (!selectedMemberId.value || selectedMemberId.value === 'root') {
-           return { 
-             members: members.value, 
-             recruits: recruits.value.filter(r => !r.createdBy || r.createdBy === rootName),
+           // 메인 뷰: 멤버 전체, 리크룻 전체(작성자 이름 표시), 이벤트+본인포함 약속, 메모는 전체+본인 개인메모
+           return {
+             members: members.value,
+             recruits: recruits.value, // 메인에서는 전부 보이되 화면에서 '작성자' 표시로 구분
              appointments: appointments.value.filter(a => {
                if (a.type === '이벤트') return true;
-               if (!a.createdBy || a.createdBy === rootName) return true;
-               return false;
+               return apptIncludesMeOrDownline(a);
              }),
-             notes: notes.value.filter(n => !n.createdBy || n.createdBy === rootName || n.scope === 'all')
+             notes: notes.value.filter(noteVisible)
            };
         }
+
+        // 서브 뷰: 선택된 멤버와 그 하위만
         const ids = new Set();
         const collect = (id) => {
            ids.add(id);
            members.value.filter(m => m.parentId === id).forEach(m => collect(m.id));
         };
         collect(selectedMemberId.value);
-        
+
         const selectedName = members.value.find(m => m.id === selectedMemberId.value)?.name || '';
+        const selectedNames = new Set(members.value.filter(m => ids.has(m.id)).map(m => m.name));
 
         return {
            members: members.value.filter(m => ids.has(m.id)),
            recruits: recruits.value.filter(r => {
-               if (r.createdBy && r.createdBy !== selectedName) return false;
+               // 작성자 이름이 선택된 멤버이거나, parentId가 서브트리 내인 경우에만
+               if (r.createdBy && r.createdBy === selectedName) return true;
+               if (r.parentId && ids.has(r.parentId)) return true;
                const linked = members.value.find(m => m.recruitId === r.id);
-               return linked && ids.has(linked.id);
+               if (linked && ids.has(linked.id)) return true;
+               return false;
            }),
            appointments: appointments.value.filter(a => {
                if (a.type === '이벤트') return true;
-               if (a.createdBy && a.createdBy !== selectedName) return false;
-               const targetInSubtree = a.targetName && ids.has(members.value.find(m => m.name === a.targetName)?.id);
-               const attendeeInSubtree = a.attendees && a.attendees.some(name => ids.has(members.value.find(m => m.name === name)?.id));
-               return targetInSubtree || attendeeInSubtree;
+               // 본인(로그인 사용자)이 포함되지 않은 약속은 표시하지 않음
+               if (!apptIncludesMeOrDownline(a)) return false;
+               // 서브 뷰에선 선택된 멤버 서브트리에 관련된 것만
+               if (a.createdBy && selectedNames.has(a.createdBy)) return true;
+               if (a.targetName && selectedNames.has(a.targetName)) return true;
+               if ((a.attendees || []).some(n => selectedNames.has(n))) return true;
+               return false;
            }),
            notes: notes.value.filter(n => {
-               if (!n.createdBy || n.createdBy === selectedName || n.scope === 'all') return true;
+               if (!noteVisible(n)) return false;
+               // 서브 뷰에서는 선택된 멤버 영역의 메모만
+               if (n.scope === 'all' && (!n.createdBy || selectedNames.has(n.createdBy))) return true;
+               if (n.createdBy && selectedNames.has(n.createdBy)) return true;
                return false;
            })
         };
@@ -1152,21 +1228,25 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addRecruit(){
         if(!newRecruit.name.trim()) return;
-        const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
-          ? members.value.find(m => m.id === selectedMemberId.value)?.name 
-          : rootMember.value?.name || '';
-        const parentId = newRecruit.parentId || selectedMemberId.value || (members.value.find(m => !m.parentId)?.id) || 'root';
-        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId}; recruits.value.push(newR);
+        const createdBy = meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
+          ? members.value.find(m => m.id === selectedMemberId.value)?.name
+          : rootMember.value?.name || '');
+        const createdByEmail = (currentUser.value?.email || '').toLowerCase();
+        // parentId: 선택 시 우선, 아니면 작성자(본인) 멤버, 아니면 트리 루트
+        const fallbackParentId = (meMember.value && meMember.value.id) || (members.value.find(m => !m.parentId)?.id) || 'root';
+        const parentId = newRecruit.parentId || fallbackParentId;
+        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition(), createdBy, createdByEmail, parentId}; recruits.value.push(newR);
         newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
       }
       function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }
-      function addNote(){ 
-        if(!newNote.text.trim())return; 
-        const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
-          ? members.value.find(m => m.id === selectedMemberId.value)?.name 
-          : rootMember.value?.name || '';
-        notes.value.push({text:newNote.text.trim(), scope: newNote.scope, createdBy}); 
-        newNote.text=''; 
+      function addNote(){
+        if(!newNote.text.trim())return;
+        const createdBy = meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
+          ? members.value.find(m => m.id === selectedMemberId.value)?.name
+          : rootMember.value?.name || '');
+        const createdByEmail = (currentUser.value?.email || '').toLowerCase();
+        notes.value.push({text:newNote.text.trim(), scope: newNote.scope, createdBy, createdByEmail, createdAt: Date.now()});
+        newNote.text='';
         newNote.scope='all';
       }
       function getPersonTitle(name) {
@@ -1185,10 +1265,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addAppointment() {
           if(!newAppt.date || !newAppt.title) return showToastMsg('날짜와 내용은 필수 항목입니다.', 'error');
-          
-          const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
-            ? members.value.find(m => m.id === selectedMemberId.value)?.name 
-            : rootMember.value?.name || '';
+
+          const createdBy = meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
+            ? members.value.find(m => m.id === selectedMemberId.value)?.name
+            : rootMember.value?.name || '');
+          const createdByEmail = (currentUser.value?.email || '').toLowerCase();
           
           if ((newAppt.type || '이벤트') === '약속') {
             newAppt.targetName = (newAppt.title || '').trim();
@@ -1223,19 +1304,20 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               editingApptId.value = null;
           } else {
-              appointments.value.push({ 
-                id: 'apt'+Date.now(), 
-                date: newAppt.date, 
-                time: newAppt.time || '', 
-                endTime: newAppt.endTime || '', 
-                location: newAppt.location || '', 
-                type: newAppt.type || '이벤트', 
-                title: newAppt.title, 
-                description: newAppt.description || '', 
-                targetName: newAppt.targetName, 
+              appointments.value.push({
+                id: 'apt'+Date.now(),
+                date: newAppt.date,
+                time: newAppt.time || '',
+                endTime: newAppt.endTime || '',
+                location: newAppt.location || '',
+                type: newAppt.type || '이벤트',
+                title: newAppt.title,
+                description: newAppt.description || '',
+                targetName: newAppt.targetName,
                 attendees: [...newAppt.attendees],
-                createdBy: newAppt.type === '이벤트' ? '' : createdBy
-              }); 
+                createdBy: newAppt.type === '이벤트' ? '' : createdBy,
+                createdByEmail: newAppt.type === '이벤트' ? '' : createdByEmail
+              });
               showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
           newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; newAppt.createdBy = '';
@@ -1402,6 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
+        meMember, meName, meSubtreeIds, meSubtreeNames,
         teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
