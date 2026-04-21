@@ -69,6 +69,7 @@
           <span>마지막 수정: {{ tree.updatedAt }}</span>
           <span>총 멤버 수: {{ tree.memberCount }}명</span>
         </div>
+        <button class="btn-delete-tree" @click.stop="removeFromSharedTree(tree.id, tree.name)" title="공유 목록에서 제거">✕</button>
       </div>
     </div>
   </div>

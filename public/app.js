@@ -318,6 +318,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
+      // 공유받은 트리에서 자신을 제거 (본인만 가능)
+      const removeFromSharedTree = async (id, name) => {
+        if (!confirm(`'${name || '이 트리'}'를 공유 목록에서 제거하시겠습니까?`)) return;
+        try {
+          const ref = doc(db, getTreesPath(), id);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) return;
+          const d = snap.data();
+          const myEmail = (currentUser.value.email || '').toLowerCase();
+          const emails = (d.sharedEmails || []).filter(e => e !== myEmail);
+          const perms = { ...(d.sharePermissions || {}) };
+          delete perms[myEmail];
+          await updateDoc(ref, { sharedEmails: emails, sharePermissions: perms });
+          fetchSavedTrees();
+          showToastMsg('공유 목록에서 제거되었습니다.');
+        } catch (e) {
+          console.error(e);
+          showToastMsg('제거 실패', 'error');
+        }
+      };
+
       const saveToCloud = async (isAuto = false) => {
         if (!currentUser.value || !currentTreeId.value) return;
         if (currentIsReadOnly.value) {
@@ -344,15 +365,119 @@ document.addEventListener('DOMContentLoaded', () => {
             ownerId: prev ? prev.ownerId : currentUser.value.uid,
             ownerEmail: prev ? (prev.ownerEmail || currentUser.value.email || '') : (currentUser.value.email || ''),
             sharedEmails: prev ? (prev.sharedEmails || []) : [],
-            sharePermissions: prev ? (prev.sharePermissions || {}) : {}
+            sharePermissions: prev ? (prev.sharePermissions || {}) : {},
+            isSubTree: prev ? prev.isSubTree : false,
+            parentTreeId: prev ? prev.parentTreeId : null,
+            subTreeRootMemberId: prev ? prev.subTreeRootMemberId : null,
+            subTreeRootMemberName: prev ? prev.subTreeRootMemberName : null
           };
           await setDoc(ref, treeData);
           lastAutoSave.value = treeData.updatedAt;
           isDirty.value = false;
+          
+          // 서브트리 실시간 연동: 이 트리의 서브트리들을 자동 업데이트
+          if (!treeData.isSubTree) {
+            await updateRelatedSubTrees(currentTreeId.value);
+          }
+          
           if(!isAuto) showToastMsg('☁️ 클라우드에 안전하게 저장되었습니다!');
         } catch (e) {
           console.error(e);
           showToastMsg('저장 실패', 'error');
+        }
+      };
+
+      // 서브트리 실시간 연동: 부모 트리 변경 시 서브트리 자동 업데이트
+      const updateRelatedSubTrees = async (parentTreeId) => {
+        try {
+          const topPath = getTreesPath();
+          const col = collection(db, topPath);
+          const subTreesSnap = await getDocs(query(col, 
+            where('parentTreeId', '==', parentTreeId),
+            where('ownerId', '==', currentUser.value.uid)
+          ));
+
+          if (subTreesSnap.empty) return;
+
+          // 각 서브트리 업데이트
+          for (const subTreeDoc of subTreesSnap.docs) {
+            const subTreeData = subTreeDoc.data();
+            const subRootMemberId = subTreeData.subTreeRootMemberId;
+            
+            if (!subRootMemberId) continue;
+
+            // 서브트리 루트 멤버 찾기
+            const subRoot = members.value.find(m => m.id === subRootMemberId);
+            if (!subRoot) continue;
+
+            // 서브트리 멤버 수집
+            const ids = new Set();
+            function collectSubtree(id) {
+              ids.add(id);
+              members.value.filter(m => m.parentId === id).forEach(m => collectSubtree(m.id));
+            }
+            collectSubtree(subRootMemberId);
+
+            const subMembers = members.value.filter(m => ids.has(m.id)).map(m => 
+              m.id === subRootMemberId ? { ...m, parentId: null } : { ...m }
+            );
+
+            // 서브 데이터 업데이트
+            const subRecruits = recruits.value.filter(r => {
+              const linkedMember = members.value.find(m => m.recruitId === r.id);
+              return linkedMember && ids.has(linkedMember.id);
+            });
+
+            const subAppointments = appointments.value.filter(apt => {
+              const hasTargetInSubtree = apt.targetName && subMembers.some(m => m.name === apt.targetName);
+              const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMembers.some(m => m.name === name));
+              return hasTargetInSubtree || hasAttendeeInSubtree;
+            });
+
+            const originalRoot = members.value.find(m => !m.parentId);
+            const newHeader = {
+              ...header,
+              id: subRoot.status === 'root' ? header.id : '',
+              rank: subRoot.status === 'root' ? header.rank : subRoot.status,
+              fd: originalRoot ? originalRoot.name : header.fd,
+              sfd: header.fd || header.sfd,
+              dd: header.sfd || header.dd,
+              efd: header.dd || header.efd
+            };
+
+            // 서브트리 업데이트
+            const updatedSubTreeData = {
+              ...subTreeData,
+              name: `${subRoot.name} 서브 트리 (공유)`,
+              updatedAt: new Date().toLocaleString('ko-KR'),
+              updatedAtMs: Date.now(),
+              savedByUid: currentUser.value.uid,
+              savedByEmail: currentUser.value.email || '',
+              memberCount: subMembers.length,
+              subTreeRootMemberName: subRoot.name,
+              data: {
+                header: newHeader,
+                members: JSON.parse(JSON.stringify(subMembers)),
+                notes: subTreeData.data.notes || [],
+                recruits: JSON.parse(JSON.stringify(subRecruits)),
+                appointments: JSON.parse(JSON.stringify(subAppointments)),
+                recruitPosition: recruitPosition.value,
+                notesPosition: notesPosition.value,
+                memberInfoPosition: memberInfoPosition.value,
+                appointmentPosition: appointmentPosition.value,
+                nodeWidth: nodeWidth.value,
+                nodeBaseHeight: nodeBaseHeight.value,
+                nodeFontSize: nodeFontSize.value,
+                nodeLineGap: nodeLineGap.value,
+                notePanelWidth: notePanelWidth.value,
+                legendConfig: JSON.parse(JSON.stringify(legendConfig.value))
+              }
+            };
+
+            await updateDoc(doc(db, topPath, subTreeDoc.id), updatedSubTreeData);
+          }
+        } catch (e) {
+          console.error('[subtree sync] failed', e);
         }
       };
 
@@ -478,6 +603,41 @@ document.addEventListener('DOMContentLoaded', () => {
           const subRoot = members.value.find(m => m.id === selectedMemberId.value);
           if (!subRoot) return showToastMsg('멤버를 찾을 수 없습니다.', 'error');
 
+          // 중복 확인: 같은 parentTreeId와 subTreeRootMemberId를 가진 트리가 이미 있는지 확인
+          const topPath = getTreesPath();
+          const col = collection(db, topPath);
+          const existingSnap = await getDocs(query(col, 
+            where('parentTreeId', '==', currentTreeId.value),
+            where('subTreeRootMemberId', '==', selectedMemberId.value),
+            where('ownerId', '==', currentUser.value.uid)
+          ));
+
+          if (!existingSnap.empty) {
+            // 이미 서브트리가 존재함 - 이메일만 추가
+            const existingTree = existingSnap.docs[0];
+            const existingData = existingTree.data();
+            const existingEmails = new Set(existingData.sharedEmails || []);
+            
+            if (existingEmails.has(trimmedEmail)) {
+              return showToastMsg('이미 이 사용자에게 공유된 서브 트리입니다.', 'error');
+            }
+
+            existingEmails.add(trimmedEmail);
+            const perms = { ...(existingData.sharePermissions || {}) };
+            perms[trimmedEmail] = { role: subTreeShareInput.role || 'editor', scope: 'subtree' };
+            
+            await updateDoc(doc(db, topPath, existingTree.id), {
+              sharedEmails: Array.from(existingEmails),
+              sharePermissions: perms
+            });
+
+            showToastMsg(`🔗 기존 ${subRoot.name} 서브 트리에 ${trimmedEmail}님이 추가되었습니다!`);
+            showSubTreeShareModal.value = false;
+            subTreeShareInput.email = '';
+            return;
+          }
+
+          // 새 서브트리 생성
           const ids = new Set();
           function collectSubtree(id) {
             ids.add(id);
