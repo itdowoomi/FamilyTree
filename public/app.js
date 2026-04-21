@@ -286,9 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
           sharePermissions: treeSummary.sharePermissions || {}
         };
         isDashboard.value = false;
-        setRootEmailToLoginIfEmpty();
+        nextTick(() => {
+          setRootEmailToLoginIfEmpty();
+          centerTree();
+        });
         subscribeToCurrentTree();
-        nextTick(centerTree);
       };
 
       const goToDashboard = () => {
