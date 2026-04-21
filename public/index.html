@@ -31,6 +31,7 @@
       </div>
     </div>
 
+    <div class="dashboard-section-title">🌳 내 트리</div>
     <div class="tree-grid">
       <div class="tree-card tree-card-new" @click="createNewTree">
         <div class="tree-card-new-icon">＋</div>
@@ -42,13 +43,33 @@
         <div class="tree-card-meta">
           <span>마지막 수정: {{ tree.updatedAt }}</span>
           <span>총 멤버 수: {{ tree.memberCount }}명</span>
+          <span v-if="tree.sharedEmails && tree.sharedEmails.length" class="tree-card-shared-chip">🔗 {{ tree.sharedEmails.length }}명 공유중</span>
         </div>
         <button class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
       </div>
     </div>
-    
-    <div v-if="savedTrees.length === 0" style="margin-top: 40px; color: var(--muted); font-size: 14px;">
+
+    <div v-if="savedTrees.length === 0" style="margin-top: 20px; margin-bottom: 30px; color: var(--muted); font-size: 14px;">
       저장된 트리가 없습니다. 새로운 트리를 만들어 보세요!
+    </div>
+
+    <div class="dashboard-section-title" style="margin-top:28px;">🔗 공유받은 트리</div>
+    <div v-if="sharedTrees.length === 0" style="margin-top: 8px; color: var(--muted); font-size: 13px;">
+      아직 공유받은 트리가 없습니다.
+    </div>
+    <div v-else class="tree-grid">
+      <div v-for="tree in sharedTrees" :key="tree.id" class="tree-card tree-card-shared" @click="loadTree(tree)">
+        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}
+          <span class="tree-card-role-chip" :class="{view:((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()]||{}).role!=='editor'}">
+            {{ (((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()])||{}).role === 'editor' ? '편집' : '보기' }}
+          </span>
+        </div>
+        <div class="tree-card-meta">
+          <span>소유자: {{ tree.ownerEmail || '—' }}</span>
+          <span>마지막 수정: {{ tree.updatedAt }}</span>
+          <span>총 멤버 수: {{ tree.memberCount }}명</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -66,6 +87,46 @@
   </div>
 
   <div class="toast" :class="getToastClass()">{{ toast.msg }}</div>
+
+  <!-- 공유 관리 모달 -->
+  <div v-if="showShareModal" class="share-modal-overlay" @click.self="showShareModal=false">
+    <div class="share-modal">
+      <div class="share-modal-header">
+        <span>🔗 트리 공유 관리</span>
+        <button class="share-modal-close" @click="showShareModal=false">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-modal-hint">
+          공유받은 사람은 본인 구글 계정으로 로그인 후 "공유받은 트리" 섹션에서 이 트리를 열 수 있습니다.<br>
+          <b>편집 권한</b>은 함께 수정할 수 있고, <b>보기 권한</b>은 읽기만 가능합니다.
+        </div>
+        <div class="share-add-row">
+          <input type="email" v-model="shareInput.email" class="form-input" placeholder="공유할 이메일 (example@gmail.com)" style="flex:1;font-family:'JetBrains Mono',monospace;" @keyup.enter="addShare(shareInput.email, shareInput.role); shareInput.email='';">
+          <select v-model="shareInput.role" class="form-select" style="width:100px;">
+            <option value="editor">편집</option>
+            <option value="viewer">보기</option>
+          </select>
+          <button class="btn btn-primary" style="padding:6px 14px;" @click="addShare(shareInput.email, shareInput.role); shareInput.email='';">+ 추가</button>
+        </div>
+        <div class="share-list-title">현재 공유 중</div>
+        <div v-if="!currentTreeMeta || !currentTreeMeta.sharedEmails || currentTreeMeta.sharedEmails.length===0" class="share-empty">
+          아직 공유된 사람이 없습니다.
+        </div>
+        <div v-else class="share-list">
+          <div v-for="em in currentTreeMeta.sharedEmails" :key="em" class="share-item">
+            <span class="share-item-email">{{ em }}</span>
+            <select :value="((currentTreeMeta.sharePermissions||{})[em]||{}).role || 'editor'"
+                    @change="changeShareRole(em, $event.target.value)"
+                    class="form-select" style="width:90px;font-size:11px;">
+              <option value="editor">편집</option>
+              <option value="viewer">보기</option>
+            </select>
+            <button class="btn-sm-danger" @click="removeShare(em)">해제</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="tree-panel" v-if="currentUser && !isDashboard">
 
@@ -452,7 +513,11 @@
             크기설정 <span style="font-size:9px;opacity:.7">{{ showSizePanel ? '▲' : '▼' }}</span>
           </button>
           <div class="tab-actions-sep"></div>
-          <button class="tbar-btn tbar-save" @click="saveToCloud()">☁️ 클라우드 저장</button>
+          <button class="tbar-btn tbar-save" @click="saveToCloud()" :disabled="currentIsReadOnly" :title="currentIsReadOnly ? '읽기 전용 트리입니다' : ''">☁️ 클라우드 저장</button>
+          <button v-if="currentIsOwner" class="tbar-btn tbar-share" @click="showShareModal=true" title="이 트리를 다른 사람과 공유">🔗 공유</button>
+          <span v-else-if="currentTreeMeta && currentTreeMeta.ownerEmail" class="shared-owner-indicator" :title="'소유자: '+currentTreeMeta.ownerEmail">
+            {{ currentIsEditor ? '✏️ 공동편집 중' : '👁 읽기 전용' }} · 소유자 {{ currentTreeMeta.ownerEmail }}
+          </span>
           <div class="tab-actions-sep"></div>
           <button class="tbar-btn" :class="getTbarClass(printLandscape)" @click="printLandscape=!printLandscape">
             {{ printLandscape ? '가로' : '세로' }}
@@ -1223,7 +1288,10 @@
           <div class="info-box-title">👤 본인 정보</div>
           <div class="grid2">
             <div class="form-row grid2-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
-            <div class="form-row grid2-full"><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
+            <div class="form-row grid2-full" style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(260px,2.4fr);gap:10px;align-items:end;">
+              <div><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
+              <div><label class="form-label">이메일 (로그인 계정)</label><input type="email" :value="rootMemberEmail" @input="updateRootMemberEmail" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
+            </div>
             <div class="form-row"><label class="form-label">회원 ID</label><input v-model="header.id" class="form-input" placeholder="SCA12345"></div>
             <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
             <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>

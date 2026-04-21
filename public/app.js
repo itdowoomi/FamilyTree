@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
@@ -81,6 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const tab = ref('memberInfo');
 
       const newNote = ref('');
+      const showShareModal = ref(false);
+      const shareInput = reactive({ email: '', role: 'editor' });
       const toast = reactive({ msg:'', type:'success', visible:false });
       let toastTimer = null, autoTimer = null;
       const isDirty = ref(false);
@@ -133,6 +135,23 @@ document.addEventListener('DOMContentLoaded', () => {
       ALL_STATUSES.forEach(s => { legendConfig.value.items[s] = { label:s, show:true }; });
 
       // ── Auth & Cloud Logic ──
+      // 최상위 공용 trees 컬렉션 (공유 지원)
+      const getTreesPath = () => {
+        if (isCanvas) {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          return `artifacts/${appId}/trees`;
+        }
+        return 'trees';
+      };
+      const getLegacyTreesPath = (uid) => getCollectionPath(uid, 'trees');
+
+      const sharedTrees = ref([]);       // 공유받은 트리
+      const currentTreeMeta = ref(null); // 현재 트리의 {ownerId, ownerEmail, sharedEmails, sharePermissions}
+      let unsubTreeDoc = null;
+      let lastLocalSaveMs = 0;
+      let applyingRemote = false;
+      let migrationDone = false;
+
       const initAuth = async () => {
         if (isCanvas) {
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -141,12 +160,50 @@ document.addEventListener('DOMContentLoaded', () => {
             await signInAnonymously(auth);
           }
         }
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
           currentUser.value = user;
-          if (user) fetchSavedTrees();
+          if (user) {
+            if (!migrationDone) {
+              migrationDone = true;
+              await migrateLegacyTrees();
+            }
+            fetchSavedTrees();
+            if (!isDashboard.value) setRootEmailToLoginIfEmpty();
+          }
         });
       };
-      
+
+      // 레거시 users/{uid}/trees -> 최상위 trees/ 로 1회 이전
+      const migrateLegacyTrees = async () => {
+        if (!currentUser.value) return;
+        try {
+          const legacyPath = getLegacyTreesPath(currentUser.value.uid);
+          const snap = await getDocs(collection(db, legacyPath));
+          if (snap.empty) return;
+          const topPath = getTreesPath();
+          let migrated = 0;
+          for (const d of snap.docs) {
+            const data = d.data();
+            const newRef = doc(db, topPath, d.id);
+            const existing = await getDoc(newRef);
+            if (existing.exists()) { await deleteDoc(doc(db, legacyPath, d.id)); continue; }
+            await setDoc(newRef, {
+              ...data,
+              ownerId: currentUser.value.uid,
+              ownerEmail: currentUser.value.email || '',
+              sharedEmails: [],
+              sharePermissions: {},
+              migratedFromLegacy: true
+            });
+            await deleteDoc(doc(db, legacyPath, d.id));
+            migrated++;
+          }
+          if (migrated > 0) console.log('[migration] moved', migrated, 'tree(s) to shared structure');
+        } catch (e) {
+          console.error('[migration] failed', e);
+        }
+      };
+
       const loginWithGoogle = async () => {
         try {
           const provider = new GoogleAuthProvider();
@@ -158,21 +215,35 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const logout = async () => {
+        if (unsubTreeDoc) { unsubTreeDoc(); unsubTreeDoc = null; }
         await signOut(auth);
         isDashboard.value = true;
         currentTreeId.value = null;
         savedTrees.value = [];
+        sharedTrees.value = [];
+        currentTreeMeta.value = null;
       };
 
       const fetchSavedTrees = async () => {
         if (!currentUser.value) return;
         try {
-          const path = getCollectionPath(currentUser.value.uid, 'trees');
-          const snapshot = await getDocs(collection(db, path));
-          savedTrees.value = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })).sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          const topPath = getTreesPath();
+          const col = collection(db, topPath);
+          // 내 트리
+          const ownedSnap = await getDocs(query(col, where('ownerId', '==', currentUser.value.uid)));
+          savedTrees.value = ownedSnap.docs.map(d => ({ id: d.id, ...d.data(), _owned: true }))
+            .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          // 공유받은 트리
+          const email = (currentUser.value.email || '').toLowerCase();
+          if (email) {
+            const sharedSnap = await getDocs(query(col, where('sharedEmails', 'array-contains', email)));
+            sharedTrees.value = sharedSnap.docs
+              .map(d => ({ id: d.id, ...d.data(), _owned: false }))
+              .filter(t => t.ownerId !== currentUser.value.uid)
+              .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          } else {
+            sharedTrees.value = [];
+          }
         } catch (e) {
           console.error("Error fetching trees:", e);
         }
@@ -181,33 +252,57 @@ document.addEventListener('DOMContentLoaded', () => {
       const createNewTree = () => {
         currentTreeId.value = 'tree_' + Date.now();
         Object.assign(header, defaultHeader());
-        members.value = [defaultRoot()];
+        const root = defaultRoot();
+        if (currentUser.value && currentUser.value.email) root.email = currentUser.value.email;
+        members.value = [root];
         notes.value = [];
         recruits.value = [];
         appointments.value = [];
+        currentTreeMeta.value = {
+          ownerId: currentUser.value ? currentUser.value.uid : '',
+          ownerEmail: currentUser.value ? (currentUser.value.email || '') : '',
+          sharedEmails: [],
+          sharePermissions: {}
+        };
         isDashboard.value = false;
+        subscribeToCurrentTree();
         nextTick(centerTree);
       };
 
       const loadTree = (treeSummary) => {
         if(!treeSummary.data) return;
-        restore(treeSummary.data);
+        applyingRemote = true;
+        try { restore(treeSummary.data); } finally { applyingRemote = false; }
         currentTreeId.value = treeSummary.id;
+        currentTreeMeta.value = {
+          ownerId: treeSummary.ownerId || '',
+          ownerEmail: treeSummary.ownerEmail || '',
+          sharedEmails: treeSummary.sharedEmails || [],
+          sharePermissions: treeSummary.sharePermissions || {}
+        };
         isDashboard.value = false;
+        setRootEmailToLoginIfEmpty();
+        subscribeToCurrentTree();
         nextTick(centerTree);
       };
 
       const goToDashboard = () => {
+        if (unsubTreeDoc) { unsubTreeDoc(); unsubTreeDoc = null; }
         isDashboard.value = true;
         currentTreeId.value = null;
+        currentTreeMeta.value = null;
         fetchSavedTrees();
       };
 
       const deleteTree = async (id, name) => {
         if (!confirm(`'${name || '이 트리'}'를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
         try {
-          const path = getCollectionPath(currentUser.value.uid, 'trees');
-          await deleteDoc(doc(db, path, id));
+          const ref = doc(db, getTreesPath(), id);
+          const snap = await getDoc(ref);
+          if (snap.exists() && snap.data().ownerId !== currentUser.value.uid) {
+            return showToastMsg('소유자만 삭제할 수 있습니다.', 'error');
+          }
+          await deleteDoc(ref);
           fetchSavedTrees();
           showToastMsg('트리가 삭제되었습니다.');
         } catch (e) {
@@ -218,16 +313,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const saveToCloud = async (isAuto = false) => {
         if (!currentUser.value || !currentTreeId.value) return;
+        if (currentIsReadOnly.value) {
+          if (!isAuto) showToastMsg('읽기 전용 트리입니다. 저장할 수 없습니다.', 'error');
+          return;
+        }
         try {
-          const path = getCollectionPath(currentUser.value.uid, 'trees');
+          const ref = doc(db, getTreesPath(), currentTreeId.value);
+          const existing = await getDoc(ref);
+          const prev = existing.exists() ? existing.data() : null;
+
           const snap = snapshot();
+          const now = Date.now();
+          lastLocalSaveMs = now;
+
           const treeData = {
             name: rootMemberName.value || '제목 없는 트리',
             updatedAt: new Date().toLocaleString('ko-KR'),
+            updatedAtMs: now,
+            savedByUid: currentUser.value.uid,
+            savedByEmail: currentUser.value.email || '',
             memberCount: members.value.length,
-            data: snap
+            data: snap,
+            ownerId: prev ? prev.ownerId : currentUser.value.uid,
+            ownerEmail: prev ? (prev.ownerEmail || currentUser.value.email || '') : (currentUser.value.email || ''),
+            sharedEmails: prev ? (prev.sharedEmails || []) : [],
+            sharePermissions: prev ? (prev.sharePermissions || {}) : {}
           };
-          await setDoc(doc(db, path, currentTreeId.value), treeData);
+          await setDoc(ref, treeData);
           lastAutoSave.value = treeData.updatedAt;
           isDirty.value = false;
           if(!isAuto) showToastMsg('☁️ 클라우드에 안전하게 저장되었습니다!');
@@ -238,6 +350,125 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       function quickSave() { saveToCloud(false); }
+
+      // ── Realtime sync ──
+      const subscribeToCurrentTree = () => {
+        if (unsubTreeDoc) { unsubTreeDoc(); unsubTreeDoc = null; }
+        if (!currentTreeId.value) return;
+        const ref = doc(db, getTreesPath(), currentTreeId.value);
+        unsubTreeDoc = onSnapshot(ref, (snap) => {
+          if (!snap.exists()) return;
+          const d = snap.data();
+          // 공유 메타 최신화
+          currentTreeMeta.value = {
+            ownerId: d.ownerId || '',
+            ownerEmail: d.ownerEmail || '',
+            sharedEmails: d.sharedEmails || [],
+            sharePermissions: d.sharePermissions || {}
+          };
+          // 에코 무시: 내가 방금 저장한 변경
+          if (d.savedByUid && currentUser.value && d.savedByUid === currentUser.value.uid) {
+            if (d.updatedAtMs && Math.abs(d.updatedAtMs - lastLocalSaveMs) < 8000) return;
+          }
+          if (!d.data) return;
+          applyingRemote = true;
+          try {
+            restore(d.data);
+            lastAutoSave.value = d.updatedAt || '';
+            isDirty.value = false;
+            if (d.savedByEmail && (!currentUser.value || d.savedByEmail !== currentUser.value.email)) {
+              showToastMsg(`🔄 ${d.savedByEmail} 님의 변경이 반영되었습니다.`);
+            }
+          } finally {
+            nextTick(() => { applyingRemote = false; });
+          }
+        }, (err) => {
+          console.error('[realtime] listener error', err);
+        });
+      };
+
+      // ── Share CRUD ──
+      const addShare = async (email, role) => {
+        if (!currentTreeId.value || !currentUser.value) return;
+        const trimmed = (email || '').trim().toLowerCase();
+        if (!trimmed || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+          return showToastMsg('올바른 이메일을 입력하세요.', 'error');
+        }
+        if (currentUser.value.email && trimmed === currentUser.value.email.toLowerCase()) {
+          return showToastMsg('본인 이메일은 추가할 수 없습니다.', 'error');
+        }
+        try {
+          const ref = doc(db, getTreesPath(), currentTreeId.value);
+          const existing = await getDoc(ref);
+          if (!existing.exists()) {
+            // 아직 저장 안 된 새 트리면 먼저 저장
+            await saveToCloud(true);
+          }
+          const refreshed = await getDoc(ref);
+          if (!refreshed.exists()) return showToastMsg('먼저 저장해 주세요.', 'error');
+          const d = refreshed.data();
+          if (d.ownerId !== currentUser.value.uid) return showToastMsg('소유자만 공유할 수 있습니다.', 'error');
+          const emails = new Set(d.sharedEmails || []);
+          emails.add(trimmed);
+          const perms = { ...(d.sharePermissions || {}) };
+          perms[trimmed] = { role: role || 'editor', scope: 'full' };
+          await updateDoc(ref, { sharedEmails: Array.from(emails), sharePermissions: perms });
+          showToastMsg(`🔗 ${trimmed} 님에게 공유되었습니다.`);
+        } catch (e) {
+          console.error(e);
+          showToastMsg('공유 실패', 'error');
+        }
+      };
+
+      const removeShare = async (email) => {
+        if (!currentTreeId.value || !currentUser.value) return;
+        const target = (email || '').trim().toLowerCase();
+        try {
+          const ref = doc(db, getTreesPath(), currentTreeId.value);
+          const existing = await getDoc(ref);
+          if (!existing.exists()) return;
+          const d = existing.data();
+          if (d.ownerId !== currentUser.value.uid) return showToastMsg('소유자만 해제할 수 있습니다.', 'error');
+          const emails = (d.sharedEmails || []).filter(e => e !== target);
+          const perms = { ...(d.sharePermissions || {}) };
+          delete perms[target];
+          await updateDoc(ref, { sharedEmails: emails, sharePermissions: perms });
+          showToastMsg(`🔓 ${target} 공유 해제됨`);
+        } catch (e) { console.error(e); showToastMsg('해제 실패', 'error'); }
+      };
+
+      const changeShareRole = async (email, role) => {
+        if (!currentTreeId.value || !currentUser.value) return;
+        const target = (email || '').trim().toLowerCase();
+        try {
+          const ref = doc(db, getTreesPath(), currentTreeId.value);
+          const existing = await getDoc(ref);
+          if (!existing.exists()) return;
+          const d = existing.data();
+          if (d.ownerId !== currentUser.value.uid) return;
+          const perms = { ...(d.sharePermissions || {}) };
+          perms[target] = { ...(perms[target] || { scope: 'full' }), role };
+          await updateDoc(ref, { sharePermissions: perms });
+          showToastMsg(`권한 변경: ${target} → ${role === 'editor' ? '편집' : '보기'}`);
+        } catch (e) { console.error(e); }
+      };
+
+      // ── Permission computeds ──
+      const currentIsOwner = computed(() => {
+        const m = currentTreeMeta.value;
+        return !!(m && currentUser.value && m.ownerId === currentUser.value.uid);
+      });
+      const currentIsEditor = computed(() => {
+        if (currentIsOwner.value) return true;
+        const m = currentTreeMeta.value;
+        if (!m || !currentUser.value) return false;
+        const key = (currentUser.value.email || '').toLowerCase();
+        const p = (m.sharePermissions || {})[key] || (m.sharePermissions || {})[currentUser.value.email];
+        return !!(p && p.role === 'editor');
+      });
+      const currentIsReadOnly = computed(() => {
+        return !!currentTreeId.value && !currentIsEditor.value;
+      });
 
       // ── Computed ──
       const availableStatuses = computed(() => STATUSES.filter(s => legendConfig.value.items[s] && legendConfig.value.items[s].show));
@@ -260,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const rootMember = computed(() => focusedList.value.find(m=>!m.parentId));
       const rootMemberName = computed(() => rootMember.value ? rootMember.value.name : '');
+      const rootMemberEmail = computed(() => rootMember.value ? (rootMember.value.email || '') : '');
       const currentMembers = computed(() => focusRootId.value ? focusedList.value : members.value);
       
       const selectedMember = computed(() => members.value.find(m => m.id === selectedMemberId.value));
@@ -502,6 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       function updateRootMemberName(e){ if(rootMember.value) rootMember.value.name=e.target.value; }
+      function updateRootMemberEmail(e){ if(rootMember.value) rootMember.value.email=e.target.value; }
+      function setRootEmailToLoginIfEmpty() {
+          if (!rootMember.value) return;
+          const loginEmail = currentUser.value && currentUser.value.email;
+          if (!loginEmail) return;
+          if (!rootMember.value.email || !String(rootMember.value.email).trim()) {
+              rootMember.value.email = loginEmail;
+          }
+      }
       function setFocus(id){ focusRootId.value=id; zoomLevel.value=1; nextTick(centerTree); }
       function clearFocus(){ focusRootId.value=null; zoomLevel.value=1; nextTick(centerTree); }
       function toggleFocus(id){ if(focusRootId.value===id) clearFocus(); else setFocus(id); }
@@ -1320,6 +1561,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       watch([header,members,notes,recruits,appointments,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
+        if (applyingRemote) return;                 // 원격 변경 적용 중엔 저장 트리거 금지 (에코 방지)
+        if (currentIsReadOnly.value) return;        // 읽기 전용 트리는 저장 안 함
         if(!isDashboard.value) {
             isDirty.value=true;
             if(autoTimer)clearTimeout(autoTimer);
@@ -1328,24 +1571,25 @@ document.addEventListener('DOMContentLoaded', () => {
       },{deep:true});
 
       return {
-        currentUser, isDashboard, savedTrees, currentTreeId,
+        currentUser, isDashboard, savedTrees, sharedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
+        addShare, removeShare, changeShareRole,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
-        toast, showPreview, isDirty, lastAutoSave, slots,
+        toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput,
         focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, printHistMode, printHistDays, printHistFrom, printHistTo,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits,
-        focusedList, rootMember, rootMemberName, currentMembers,
+        focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers,
         teamTotal, statusCounts, layout,
         panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod,
         sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum,
         getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
-        updateRootMemberName, setFocus, clearFocus, toggleFocus,
+        updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus,
         nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,

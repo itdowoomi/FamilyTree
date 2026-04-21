@@ -32,6 +32,29 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .tree-card-new-icon { font-size: 32px; }
 .tree-card-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
 .tree-card-meta { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; font-family: 'JetBrains Mono', monospace; }
+.tree-card-shared { background: #fffbea; border-color: #f3dc9e; }
+.tree-card-shared:hover { background: #fff4d0; }
+.tree-card-role-chip { display:inline-block; margin-left:8px; font-size:10px; font-weight:700; letter-spacing:.3px; padding:2px 8px; border-radius:10px; background:var(--navy); color:#fff; vertical-align:2px; font-family:'JetBrains Mono',monospace;}
+.tree-card-role-chip.view { background:#9ca3af; }
+.tree-card-shared-chip { color:#9a7a00; font-weight:700; }
+.dashboard-section-title { width: 100%; max-width: 1000px; font-size: 14px; font-weight: 700; color: var(--navy); letter-spacing:.4px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1.5px solid #d9d9d9; }
+.tbar-btn.tbar-share { background: #fff6d9; color: #8a6d14; border-color: #e8d488; }
+.tbar-btn.tbar-share:hover { background: #f5e5a7; }
+.shared-owner-indicator { font-size: 10.5px; color: var(--muted); font-weight: 600; padding: 0 8px; letter-spacing:.2px; }
+/* 공유 모달 */
+.share-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+.share-modal { background:#fff; width: 540px; max-width: 100%; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow:hidden; }
+.share-modal-header { display:flex; justify-content:space-between; align-items:center; padding: 14px 18px; border-bottom: 1.5px solid #ececec; font-size: 15px; font-weight:700; color: var(--navy); background:#fafaf7;}
+.share-modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+.share-modal-close:hover { color: var(--danger); }
+.share-modal-body { padding: 16px 18px 18px; display:flex; flex-direction:column; gap: 12px; }
+.share-modal-hint { font-size: 11.5px; color: var(--muted); line-height: 1.6; background:#f7f4eb; padding: 9px 11px; border-radius: 5px; border: 1px solid #ece5cf; }
+.share-add-row { display:flex; gap:6px; align-items:center; }
+.share-list-title { font-size: 10.5px; font-weight:700; letter-spacing:.4px; color: var(--muted); text-transform: uppercase; margin-top: 4px; border-bottom: 1px solid #ececec; padding-bottom: 4px; }
+.share-list { display:flex; flex-direction:column; gap: 6px; }
+.share-item { display:flex; align-items:center; gap:8px; padding: 5px 8px; background:#fafaf7; border: 1px solid #ececec; border-radius: 4px; }
+.share-item-email { flex:1; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); word-break: break-all;}
+.share-empty { font-size: 11.5px; color: var(--muted); font-style: italic; padding: 8px 4px; text-align:center;}
 .btn-delete-tree { position: absolute; top: 12px; right: 12px; background: rgba(192, 57, 43, 0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: all 0.2s; }
 .tree-card:hover .btn-delete-tree { opacity: 1; }
 .btn-delete-tree:hover { background: var(--danger); color: #fff; }
