@@ -194,7 +194,14 @@ document.addEventListener('DOMContentLoaded', () => {
             migrated++;
           }
         } catch (e) {
-          console.error('[migration] failed', e);
+          // permission-denied 등은 레거시 경로가 더 이상 허용되지 않는 일반적 상황.
+          // 기능 동작에는 영향이 없으므로 경고로 낮춰 조용히 무시한다.
+          const code = (e && e.code) || '';
+          if (code === 'permission-denied') {
+            console.warn('[migration] skipped (no legacy access)');
+          } else {
+            console.warn('[migration] skipped:', code || (e && e.message) || e);
+          }
         }
       };
 
@@ -343,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const now = Date.now();
           lastLocalSaveMs = now;
 
+          // Firestore는 undefined 를 거부하므로 항상 허용 값(false / null / 빈값)으로 보정한다.
           const treeData = {
             name: rootMemberName.value || '제목 없는 트리',
             updatedAt: new Date().toLocaleString('ko-KR'),
@@ -351,15 +359,17 @@ document.addEventListener('DOMContentLoaded', () => {
             savedByEmail: currentUser.value.email || '',
             memberCount: members.value.length,
             data: snap,
-            ownerId: prev ? prev.ownerId : currentUser.value.uid,
-            ownerEmail: prev ? (prev.ownerEmail || currentUser.value.email || '') : (currentUser.value.email || ''),
-            sharedEmails: prev ? (prev.sharedEmails || []) : [],
-            sharePermissions: prev ? (prev.sharePermissions || {}) : {},
-            isSubTree: prev ? prev.isSubTree : false,
-            parentTreeId: prev ? prev.parentTreeId : null,
-            subTreeRootMemberId: prev ? prev.subTreeRootMemberId : null,
-            subTreeRootMemberName: prev ? prev.subTreeRootMemberName : null
+            ownerId: (prev && prev.ownerId) ? prev.ownerId : currentUser.value.uid,
+            ownerEmail: (prev && prev.ownerEmail) ? prev.ownerEmail : (currentUser.value.email || ''),
+            sharedEmails: (prev && Array.isArray(prev.sharedEmails)) ? prev.sharedEmails : [],
+            sharePermissions: (prev && prev.sharePermissions && typeof prev.sharePermissions === 'object') ? prev.sharePermissions : {},
+            isSubTree: !!(prev && prev.isSubTree),
+            parentTreeId: (prev && prev.parentTreeId) ? prev.parentTreeId : null,
+            subTreeRootMemberId: (prev && prev.subTreeRootMemberId) ? prev.subTreeRootMemberId : null,
+            subTreeRootMemberName: (prev && prev.subTreeRootMemberName) ? prev.subTreeRootMemberName : null
           };
+          // 안전망: 남아있는 undefined 를 모두 null 로 치환
+          Object.keys(treeData).forEach(k => { if (treeData[k] === undefined) treeData[k] = null; });
           await setDoc(ref, treeData);
           lastAutoSave.value = treeData.updatedAt;
           isDirty.value = false;
@@ -425,16 +435,27 @@ document.addEventListener('DOMContentLoaded', () => {
               return linkedMember && ids.has(linkedMember.id);
             });
 
-            // 약속 동기화: 부모 트리의 이벤트를 서브 트리에 내려보냄
-            // 서브 트리에 이미 존재하는 고유의 약속은 유지 (id 기반 병합)
+            // 약속 동기화: 부모 트리의 전체 약속/이벤트를 서브 트리에 내려보냄(id 기반 병합)
             const existingSubApts = subTreeData.data.appointments || [];
-            const parentEvents = appointments.value.filter(apt => apt.type === '이벤트');
-            
             let mergedApts = [...existingSubApts];
-            parentEvents.forEach(pe => {
+            appointments.value.forEach(pe => {
                 const idx = mergedApts.findIndex(a => a.id === pe.id);
                 if(idx >= 0) mergedApts[idx] = { ...pe };
                 else mergedApts.push({ ...pe });
+            });
+
+            // 메모 동기화: 부모 트리의 전체 공개(scope='all') 메모를 서브 트리로 내려보냄
+            //   개인(scope='personal') 메모는 제외. 서브 트리의 개인 메모는 유지.
+            const existingSubNotes = subTreeData.data.notes || [];
+            const parentPublicNotes = (notes.value || []).filter(n => n && n.scope !== 'personal');
+            let mergedNotes = existingSubNotes.filter(n => n && n.scope === 'personal');
+            parentPublicNotes.forEach(pn => {
+                const dup = mergedNotes.findIndex(n =>
+                  (pn.id && n.id === pn.id) ||
+                  (n.text === pn.text && (n.createdBy || '') === (pn.createdBy || ''))
+                );
+                if (dup >= 0) mergedNotes[dup] = { ...pn };
+                else mergedNotes.push({ ...pn });
             });
 
             const originalRoot = members.value.find(m => !m.parentId);
@@ -460,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
               data: {
                 header: newHeader,
                 members: JSON.parse(JSON.stringify(subMembers)),
-                notes: subTreeData.data.notes || [],
+                notes: JSON.parse(JSON.stringify(mergedNotes)),
                 recruits: JSON.parse(JSON.stringify(subRecruits)),
                 appointments: JSON.parse(JSON.stringify(mergedApts)),
                 recruitPosition: recruitPosition.value,
@@ -529,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const subRecruits = subTreeData.data.recruits || [];
           let parentRecruits = JSON.parse(JSON.stringify(parentData.data.recruits || []));
-          
+
           subRecruits.forEach(subR => {
             const existingIdx = parentRecruits.findIndex(r => r.id === subR.id);
             if (existingIdx >= 0) {
@@ -538,7 +559,28 @@ document.addEventListener('DOMContentLoaded', () => {
               parentRecruits.push({ ...subR });
             }
           });
-          
+
+          // ── 약속(appointments) 병합: 서브에서 추가/수정된 모든 약속을 부모로 반영 ──
+          const subApts = subTreeData.data.appointments || [];
+          let parentApts = JSON.parse(JSON.stringify(parentData.data.appointments || []));
+          subApts.forEach(sa => {
+            const idx = parentApts.findIndex(a => a.id === sa.id);
+            if (idx >= 0) parentApts[idx] = { ...sa };
+            else parentApts.push({ ...sa });
+          });
+
+          // ── 메모 병합: 전체 공개(scope!=='personal') 메모는 부모에 반영 ──
+          const subNotes = (subTreeData.data.notes || []).filter(n => n && n.scope !== 'personal');
+          let parentNotes = JSON.parse(JSON.stringify(parentData.data.notes || []));
+          subNotes.forEach(sn => {
+            const match = parentNotes.findIndex(n =>
+              (sn.id && n.id === sn.id) ||
+              (n.text === sn.text && (n.createdBy || '') === (sn.createdBy || ''))
+            );
+            if (match >= 0) parentNotes[match] = { ...sn };
+            else parentNotes.push({ ...sn });
+          });
+
           // 메인 트리 업데이트
           const updatedParentData = {
             ...parentData,
@@ -552,10 +594,11 @@ document.addEventListener('DOMContentLoaded', () => {
               header: parentData.data.header,
               members: parentMembers,
               recruits: parentRecruits,
-              appointments: parentData.data.appointments || []
+              appointments: parentApts,
+              notes: parentNotes
             }
           };
-          
+
           await updateDoc(parentRef, updatedParentData);
           console.log('[sync] 서브트리 변경사항이 메인 트리에 반영되었습니다.');
         } catch (e) {
@@ -807,6 +850,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const ids = meSubtreeIds.value;
         return new Set(members.value.filter(m => ids.has(m.id)).map(m => m.name));
       });
+
+      // ── 선택된 멤버의 상위 체인에서 FD/SFD/DD/EFD 각 직책을 가진 가장 가까운 조상을 찾음 ──
+      // "바로 위 상위가 FD가 아니라면 더 위로 올라가서 FD를 찾는다" 로직
+      // 조상에 해당 직책이 없으면 트리의 header 값(= 최상위 소유자 기준)으로 대체.
+      const selectedUpline = computed(() => {
+        const out = { fd: '', sfd: '', dd: '', efd: '' };
+        const sid = selectedMemberId.value;
+        if (!sid || sid === 'root') return out;
+        const findNearest = (startId, status) => {
+          let cur = members.value.find(m => m.id === startId);
+          // 자신은 제외하고 상위부터
+          cur = cur ? members.value.find(m => m.id === cur.parentId) : null;
+          while (cur) {
+            if ((cur.status || '') === status) return cur.name || '';
+            cur = members.value.find(m => m.id === cur.parentId);
+          }
+          return '';
+        };
+        out.fd  = findNearest(sid, 'FD')  || header.fd  || '';
+        out.sfd = findNearest(sid, 'SFD') || header.sfd || '';
+        out.dd  = findNearest(sid, 'DD')  || header.dd  || '';
+        out.efd = findNearest(sid, 'EFD') || header.efd || '';
+        return out;
+      });
+
+      // ── 현재 뷰에 표시할 헤더 (root 선택시 트리의 header, 서브 선택시 해당 멤버 기준) ──
+      const viewHeader = computed(() => {
+        const sid = selectedMemberId.value;
+        if (!sid || sid === 'root') return header;
+        const m = members.value.find(x => x.id === sid);
+        if (!m) return header;
+        const up = selectedUpline.value;
+        return {
+          title: header.title || '',
+          id: m.id || '',
+          rank: m.status || '',
+          periodStart: header.periodStart || '',
+          periodEnd: header.periodEnd || '',
+          asOf: header.asOf || '',
+          fd: up.fd,
+          sfd: up.sfd,
+          dd: up.dd,
+          efd: up.efd
+        };
+      });
+      const selectedIsRootView = computed(() => !selectedMemberId.value || selectedMemberId.value === 'root');
 
       // ── 핵심 필터링 로직 (선택된 멤버 기준 뷰) ──
       const tabContext = computed(() => {
@@ -1485,6 +1574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
+        selectedUpline, viewHeader, selectedIsRootView,
         teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,

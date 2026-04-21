@@ -1332,18 +1332,49 @@
     <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
       <div class="info-col" style="flex: 2; min-width: 400px;">
         <div class="info-box" style="height:100%;">
-          <div class="info-box-title">👤 본인 정보</div>
+          <div class="info-box-title">
+            <template v-if="selectedIsRootView">👤 본인 정보</template>
+            <template v-else>👤 {{ selectedMember ? selectedMember.name : '' }} 님의 기본 정보 <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px;">(서브 트리 관리자 관점)</span></template>
+          </div>
           <div class="grid2">
-            <div class="form-row grid2-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
-            <div class="form-row grid2-full" style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(260px,2.4fr);gap:10px;align-items:end;">
-              <div><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
-              <div><label class="form-label">이메일 (로그인 계정)</label><input type="email" :value="rootMemberEmail" @input="updateRootMemberEmail" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
-            </div>
-            <div class="form-row"><label class="form-label">회원 ID</label><input v-model="header.id" class="form-input" placeholder="SCA12345"></div>
-            <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
-            <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
-            <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
-            <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+            <!-- Root 뷰 -->
+            <template v-if="selectedIsRootView">
+              <div class="form-row grid2-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
+              <div class="form-row grid2-full" style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(260px,2.4fr);gap:10px;align-items:end;">
+                <div><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
+                <div><label class="form-label">이메일 (로그인 계정)</label><input type="email" :value="rootMemberEmail" @input="updateRootMemberEmail" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
+              </div>
+              <div class="form-row"><label class="form-label">회원 ID</label><input v-model="header.id" class="form-input" placeholder="SCA12345"></div>
+              <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
+              <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
+              <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+              <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+            </template>
+
+            <!-- 서브 트리 뷰: 선택된 멤버의 기본정보를 편집 -->
+            <template v-else-if="selectedMember">
+              <div class="form-row grid2-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="(트리 공통)"></div>
+              <div class="form-row grid2-full" style="display:grid;grid-template-columns:minmax(160px,1fr) minmax(260px,2.4fr);gap:10px;align-items:end;">
+                <div><label class="form-label">이름</label><input v-model="selectedMember.name" class="form-input"></div>
+                <div><label class="form-label">이메일</label><input type="email" v-model="selectedMember.email" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
+              </div>
+              <div class="form-row"><label class="form-label">회원 ID</label><input :value="selectedMember.id" class="form-input" disabled style="background:#f5f5f5;color:#888;"></div>
+              <div class="form-row"><label class="form-label">직책 (Rank)</label>
+                <select v-model="selectedMember.status" class="form-select">
+                  <option value="">— 선택 —</option>
+                  <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+                </select>
+              </div>
+              <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
+              <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+              <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+              <div class="form-row"><label class="form-label">전공</label><input v-model="selectedMember.major" class="form-input"></div>
+              <div class="form-row"><label class="form-label">직업</label><input v-model="selectedMember.job" class="form-input"></div>
+              <div class="form-row"><label class="form-label">직장</label><input v-model="selectedMember.company" class="form-input"></div>
+              <div class="form-row"><label class="form-label">관계</label><input v-model="selectedMember.relation" class="form-input"></div>
+              <div class="form-row"><label class="form-label">생년월일</label><input v-model="selectedMember.birthDate" class="form-input" placeholder="YYYY-MM-DD" @change="selectedMember.age=calcAge($event.target.value)"></div>
+              <div class="form-row"><label class="form-label">나이</label><input type="number" v-model.number="selectedMember.age" class="form-input"></div>
+            </template>
           </div>
         </div>
       </div>
@@ -1351,11 +1382,20 @@
       <div class="info-col" style="flex: 1; min-width: 220px;">
         <div class="info-box" style="height:100%;">
           <div class="info-box-title">🔝 상위 직책 (Upline)</div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
+          <!-- Root 뷰: 트리 전체 header 편집 -->
+          <div v-if="selectedIsRootView" style="display:flex; flex-direction:column; gap:6px;">
             <div class="form-row" style="margin-bottom:0;"><label class="form-label">FD</label><input v-model="header.fd" class="form-input" placeholder="이름"></div>
             <div class="form-row" style="margin-bottom:0;"><label class="form-label">SFD</label><input v-model="header.sfd" class="form-input" placeholder="이름"></div>
             <div class="form-row" style="margin-bottom:0;"><label class="form-label">DD</label><input v-model="header.dd" class="form-input" placeholder="이름"></div>
             <div class="form-row" style="margin-bottom:0;"><label class="form-label">EFD</label><input v-model="header.efd" class="form-input" placeholder="이름"></div>
+          </div>
+          <!-- 서브 뷰: 상위 체인에서 자동 계산된 직책 표시 (읽기 전용) -->
+          <div v-else style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">↑ 이 멤버의 상위 체인에서 가장 가까운 해당 직책자입니다. 없으면 트리 기본값으로 대체됩니다.</div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">FD</label><input :value="selectedUpline.fd" class="form-input" disabled style="background:#f5f5f5;color:#333;"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">SFD</label><input :value="selectedUpline.sfd" class="form-input" disabled style="background:#f5f5f5;color:#333;"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">DD</label><input :value="selectedUpline.dd" class="form-input" disabled style="background:#f5f5f5;color:#333;"></div>
+            <div class="form-row" style="margin-bottom:0;"><label class="form-label">EFD</label><input :value="selectedUpline.efd" class="form-input" disabled style="background:#f5f5f5;color:#333;"></div>
           </div>
           <div class="ref-list" style="margin-top:12px; line-height:1.6;">FD = Field Director<br>SFD = Senior Field Director<br>DD = Division Director<br>EFD = Executive Field Director</div>
         </div>
