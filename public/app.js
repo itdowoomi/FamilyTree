@@ -375,9 +375,13 @@ document.addEventListener('DOMContentLoaded', () => {
           lastAutoSave.value = treeData.updatedAt;
           isDirty.value = false;
           
-          // 서브트리 실시간 연동: 이 트리의 서브트리들을 자동 업데이트
+          // 양방향 동기화
           if (!treeData.isSubTree) {
+            // 메인 트리: 서브트리들을 자동 업데이트 (메인→서브)
             await updateRelatedSubTrees(currentTreeId.value);
+          } else {
+            // 서브트리: 메인 트리의 해당 부분을 업데이트 (서브→메인)
+            await syncSubTreeToParent(currentTreeId.value, treeData);
           }
           
           if(!isAuto) showToastMsg('☁️ 클라우드에 안전하게 저장되었습니다!');
@@ -387,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
-      // 서브트리 실시간 연동: 부모 트리 변경 시 서브트리 자동 업데이트
+      // 메인→서브 동기화: 부모 트리 변경 시 서브트리 자동 업데이트
       const updateRelatedSubTrees = async (parentTreeId) => {
         try {
           const topPath = getTreesPath();
@@ -428,7 +432,9 @@ document.addEventListener('DOMContentLoaded', () => {
               return linkedMember && ids.has(linkedMember.id);
             });
 
+            // 이벤트만 공유 (약속 제외)
             const subAppointments = appointments.value.filter(apt => {
+              if (apt.type !== '이벤트') return false; // 약속 제외, 이벤트만
               const hasTargetInSubtree = apt.targetName && subMembers.some(m => m.name === apt.targetName);
               const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMembers.some(m => m.name === name));
               return hasTargetInSubtree || hasAttendeeInSubtree;
@@ -445,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
               efd: header.dd || header.efd
             };
 
-            // 서브트리 업데이트
+            // 서브트리 업데이트 (메모는 유지, 이벤트만 업데이트)
             const updatedSubTreeData = {
               ...subTreeData,
               name: `${subRoot.name} 서브 트리 (공유)`,
@@ -458,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
               data: {
                 header: newHeader,
                 members: JSON.parse(JSON.stringify(subMembers)),
-                notes: subTreeData.data.notes || [],
+                notes: subTreeData.data.notes || [], // 메모는 서브트리 자체 메모 유지
                 recruits: JSON.parse(JSON.stringify(subRecruits)),
                 appointments: JSON.parse(JSON.stringify(subAppointments)),
                 recruitPosition: recruitPosition.value,
@@ -478,6 +484,97 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (e) {
           console.error('[subtree sync] failed', e);
+        }
+      };
+
+      // 서브→메인 동기화: 서브트리 변경 시 메인 트리의 해당 부분 업데이트
+      const syncSubTreeToParent = async (subTreeId, subTreeData) => {
+        try {
+          if (!subTreeData.isSubTree || !subTreeData.parentTreeId || !subTreeData.subTreeRootMemberId) return;
+          
+          const topPath = getTreesPath();
+          const parentRef = doc(db, topPath, subTreeData.parentTreeId);
+          const parentSnap = await getDoc(parentRef);
+          
+          if (!parentSnap.exists()) return;
+          
+          const parentData = parentSnap.data();
+          if (!parentData.data || !parentData.data.members) return;
+          
+          // 서브트리의 멤버들을 가져옴
+          const subMembers = subTreeData.data.members || [];
+          const subRootMemberId = subTreeData.subTreeRootMemberId;
+          
+          // 메인 트리의 멤버 복사
+          let parentMembers = JSON.parse(JSON.stringify(parentData.data.members));
+          
+          // 메인 트리에서 서브트리 루트 찾기
+          const parentSubRoot = parentMembers.find(m => m.id === subRootMemberId);
+          if (!parentSubRoot) return;
+          
+          // 메인 트리에서 기존 서브트리 멤버들 제거
+          const existingSubIds = new Set();
+          function collectExistingSubtree(id) {
+            existingSubIds.add(id);
+            parentMembers.filter(m => m.parentId === id).forEach(m => collectExistingSubtree(m.id));
+          }
+          collectExistingSubtree(subRootMemberId);
+          
+          // 서브트리 루트는 유지, 나머지는 제거
+          parentMembers = parentMembers.filter(m => !existingSubIds.has(m.id) || m.id === subRootMemberId);
+          
+          // 서브트리의 새 멤버들을 메인 트리에 추가
+          subMembers.forEach(subM => {
+            if (subM.id === subRootMemberId) {
+              // 루트는 이미 존재하므로 업데이트만
+              const idx = parentMembers.findIndex(m => m.id === subRootMemberId);
+              if (idx >= 0) {
+                // 서브트리 루트의 parentId는 메인 트리의 원래 parentId 유지
+                parentMembers[idx] = { ...subM, parentId: parentSubRoot.parentId };
+              }
+            } else {
+              // 서브 멤버의 parentId가 null이면 서브트리 루트로 설정
+              const newMember = { ...subM };
+              if (newMember.parentId === null) {
+                newMember.parentId = subRootMemberId;
+              }
+              parentMembers.push(newMember);
+            }
+          });
+          
+          // Recruits 동기화
+          const subRecruits = subTreeData.data.recruits || [];
+          let parentRecruits = JSON.parse(JSON.stringify(parentData.data.recruits || []));
+          
+          // 서브트리 멤버와 연결된 리크루트만 업데이트
+          subRecruits.forEach(subR => {
+            const existingIdx = parentRecruits.findIndex(r => r.id === subR.id);
+            if (existingIdx >= 0) {
+              parentRecruits[existingIdx] = { ...subR };
+            } else {
+              parentRecruits.push({ ...subR });
+            }
+          });
+          
+          // 메인 트리 업데이트
+          const updatedParentData = {
+            ...parentData,
+            updatedAt: new Date().toLocaleString('ko-KR'),
+            updatedAtMs: Date.now(),
+            savedByUid: currentUser.value.uid,
+            savedByEmail: currentUser.value.email || '',
+            memberCount: parentMembers.length,
+            data: {
+              ...parentData.data,
+              members: parentMembers,
+              recruits: parentRecruits
+            }
+          };
+          
+          await updateDoc(parentRef, updatedParentData);
+          console.log('[sync] 서브트리 변경사항이 메인 트리에 반영되었습니다.');
+        } catch (e) {
+          console.error('[sync to parent] failed', e);
         }
       };
 
@@ -655,7 +752,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return linkedMember && ids.has(linkedMember.id);
           }) : [];
 
+          // 이벤트만 공유 (약속 제외)
           const subAppointments = subTreeShareInput.includeData ? appointments.value.filter(apt => {
+            if (apt.type !== '이벤트') return false; // 약속은 공유 안함
             const hasTargetInSubtree = apt.targetName && subMembers.some(m => m.name === apt.targetName);
             const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMembers.some(m => m.name === name));
             return hasTargetInSubtree || hasAttendeeInSubtree;
@@ -684,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
               header: newHeader,
               members: JSON.parse(JSON.stringify(subMembers)),
-              notes: subTreeShareInput.includeData ? JSON.parse(JSON.stringify(notes.value)) : [],
+              notes: [], // 메모는 공유하지 않음
               recruits: JSON.parse(JSON.stringify(subRecruits)),
               appointments: JSON.parse(JSON.stringify(subAppointments)),
               recruitPosition: recruitPosition.value,
