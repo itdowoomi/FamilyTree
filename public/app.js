@@ -500,6 +500,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           collectExistingSubtree(subRootMemberId);
           
+          // 서브트리에 속한 멤버 ID 목록
+          const subMemberIds = new Set(subMembers.map(m => m.id));
+          
           parentMembers = parentMembers.filter(m => !existingSubIds.has(m.id) || m.id === subRootMemberId);
           
           subMembers.forEach(subM => {
@@ -518,20 +521,14 @@ document.addEventListener('DOMContentLoaded', () => {
           
           subRecruits.forEach(subR => {
             const existingIdx = parentRecruits.findIndex(r => r.id === subR.id);
-            if (existingIdx >= 0) parentRecruits[existingIdx] = { ...subR };
-            else parentRecruits.push({ ...subR });
-          });
-
-          // 약속 병합 (서브트리에서 추가/수정된 약속 및 이벤트를 메인에 반영)
-          const subAppointments = subTreeData.data.appointments || [];
-          let parentAppointments = JSON.parse(JSON.stringify(parentData.data.appointments || []));
-
-          subAppointments.forEach(subApt => {
-             const existingIdx = parentAppointments.findIndex(a => a.id === subApt.id);
-             if (existingIdx >= 0) parentAppointments[existingIdx] = { ...subApt };
-             else parentAppointments.push({ ...subApt });
+            if (existingIdx >= 0) {
+              parentRecruits[existingIdx] = { ...subR };
+            } else {
+              parentRecruits.push({ ...subR });
+            }
           });
           
+          // 메인 트리 업데이트
           const updatedParentData = {
             ...parentData,
             updatedAt: new Date().toLocaleString('ko-KR'),
@@ -541,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
             memberCount: parentMembers.length,
             data: {
               ...parentData.data,
+              header: parentHeader,
               members: parentMembers,
               recruits: parentRecruits,
               appointments: parentAppointments
@@ -548,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
           };
           
           await updateDoc(parentRef, updatedParentData);
+          console.log('[sync] 서브트리 변경사항이 메인 트리에 반영되었습니다.');
         } catch (e) {
           console.error('[sync to parent] failed', e);
         }
@@ -811,8 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const previewFrameStyle = computed(() => ({ width:PAGE_W_PX.value+'px', height:PAGE_H_PX.value+'px', transform:`scale(${previewScale.value})`, transformOrigin:'0 0' }));
       const panTransform = computed(() => `translate(${panX.value}px,${panY.value}px)`);
       
-      const recruitsSortedAll = computed(() => [...recruits.value].sort((a,b)=>(b.score||0)-(a.score||0)));
-      const visibleRecruits = computed(() => recruitsSortedAll.value.filter(r=>r.show));
       const focusedList = computed(() => {
         if (!focusRootId.value) return members.value;
         const ids = new Set();
@@ -820,10 +817,37 @@ document.addEventListener('DOMContentLoaded', () => {
         col(focusRootId.value);
         return members.value.filter(m=>ids.has(m.id)).map(m=>m.id===focusRootId.value ? {...m,parentId:null} : m);
       });
+      
+      // focusRootId가 설정된 경우 서브트리 멤버 ID 세트
+      const focusedMemberIds = computed(() => {
+        if (!focusRootId.value) return null;
+        const ids = new Set();
+        function col(id){ ids.add(id); members.value.filter(m=>m.parentId===id).forEach(m=>col(m.id)); }
+        col(focusRootId.value);
+        return ids;
+      });
+      
       const rootMember = computed(() => focusedList.value.find(m=>!m.parentId));
       const rootMemberName = computed(() => rootMember.value ? rootMember.value.name : '');
       const rootMemberEmail = computed(() => rootMember.value ? (rootMember.value.email || '') : '');
       const currentMembers = computed(() => focusRootId.value ? focusedList.value : members.value);
+      
+      // 포커스된 서브트리에 속한 리크루트만 필터링
+      const recruitsSortedAll = computed(() => {
+        let filtered = recruits.value;
+        
+        // focusRootId가 설정되어 있으면 해당 서브트리에 연결된 리크루트만
+        if (focusedMemberIds.value) {
+          filtered = recruits.value.filter(r => {
+            // 리크루트와 연결된 멤버 찾기
+            const linkedMember = members.value.find(m => m.recruitId === r.id);
+            return linkedMember && focusedMemberIds.value.has(linkedMember.id);
+          });
+        }
+        
+        return [...filtered].sort((a,b)=>(b.score||0)-(a.score||0));
+      });
+      const visibleRecruits = computed(() => recruitsSortedAll.value.filter(r=>r.show));
       
       const selectedMember = computed(() => members.value.find(m => m.id === selectedMemberId.value));
       const memberNames = computed(() => members.value.map(m => m.name));
@@ -838,9 +862,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const allPersonNames = computed(() => { return [...new Set([...apptMemberNames.value, ...recruitNames.value])]; });
 
       const upcomingAppointments = computed(() => {
-          const today = new Date(); today.setHours(0,0,0,0);
+          const today = new Date();
+          today.setHours(0,0,0,0);
           return appointments.value.filter(a => {
-              const d = new Date(a.date.replace(/[-./]/g, '/')); return d >= today;
+              const d = new Date(a.date.replace(/[-./]/g, '/'));
+              return d >= today;
           }).sort((a,b) => new Date(a.date.replace(/[-./]/g, '/')) - new Date(b.date.replace(/[-./]/g, '/')));
       });
 
