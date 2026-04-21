@@ -260,6 +260,12 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .mem-info-inline .mem-info-dot{color:#c8c3b7;margin:0 4px;}
 .mem-info-inline .mem-total-val{color:var(--navy);font-family:'JetBrains Mono',monospace;font-weight:700;}
 .mem-info-inline .mem-score-val{color:var(--gold);font-weight:700;}
+.mem-info-inline .mem-info-email{color:var(--navy);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.2px;}
+.mem-info-inline .mem-info-email:hover{text-decoration:underline;color:var(--navy-light);}
+.mem-info-edit-row{display:flex;align-items:center;gap:6px;margin-top:5px;padding:3px 0;}
+.mem-info-edit-label{font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.3px;flex-shrink:0;min-width:50px;}
+.mem-info-edit-input{flex:1;font-size:10.5px;font-family:'JetBrains Mono',monospace;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:var(--text);}
+.mem-info-edit-input:focus{outline:none;border-color:var(--navy);}
 .mem-hist-section-title{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid #dbe0ea;margin-bottom:4px;}
 .mem-hist-list{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
 

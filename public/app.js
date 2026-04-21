@@ -63,12 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
       const defaultDisposition = () => ({ relationScore: 0, market: '', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false });
-      const defaultRoot = () => ({ id:'root', recruitId: null, name:'방동혁 (Don Bang)', major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() });
+      const defaultRoot = () => ({ id:'root', recruitId: null, name:'방동혁 (Don Bang)', email:'donghyukbang@gmail.com', major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() });
 
       const header = reactive(defaultHeader());
       const members = ref([
         defaultRoot(),
-        { id:'m1', recruitId: null, name:'김은숙', major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
+        { id:'m1', recruitId: null, name:'김은숙', email:'', major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
       ]);
       const notes = ref([]);
       const appointments = ref([]);
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const printIncludeMemberInfo = ref(true);
       const printIncludePointHistory = ref(true);
       
-      const newRecruit = reactive({ name:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
+      const newRecruit = reactive({ name:'', email:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
       const focusRootId = ref(null);
       
       const expandedMemberId = ref(null);
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newRecruitInteraction = reactive({ date:'', content:'' });
       const newAppt = reactive({ date: '', time: '', endTime: '', location: '', type: '이벤트', title: '', description: '', targetName: '', attendees: [], newAttendeeInput: '' });
 
-      const nm = reactive({ name:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
+      const nm = reactive({ name:'', email:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
       const nodeWidth = ref(155), nodeBaseHeight = ref(58), nodeFontSize = ref(10), nodeLineGap = ref(11);
       const widthLocked = ref(false), heightLocked = ref(false), fontLocked = ref(false), lineGapLocked = ref(false);
@@ -620,11 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!nm.name.trim()) return;
         const newId = 'm'+Date.now();
         members.value.push({
-          id:newId, recruitId: null, name:nm.name.trim(), major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId:nm.parentId,
+          id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId:nm.parentId,
           history:[], interactionHistory:[], issuePaid:0, pending:0,
           birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition()
         });
-        nm.name=''; nm.major=''; nm.job=''; nm.company=''; nm.birthDate=''; nm.age=''; nm.meetDate=''; nm.relation=''; nm.gender='남'; nm.score=0;
+        nm.name=''; nm.email=''; nm.major=''; nm.job=''; nm.company=''; nm.birthDate=''; nm.age=''; nm.meetDate=''; nm.relation=''; nm.gender='남'; nm.score=0;
         showToastMsg(`✅ 멤버가 추가되었습니다.`);
       }
       function removeMember(id){
@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mappedInteractions.push({ id: 'ih' + Date.now(), date: d, content: 'Recruit 리스트에서 정식 멤버로 승급됨' });
 
             members.value.push({
-                id: targetMemberId, recruitId: null, name: r.name, major: r.major || '', job: r.job || '', company: r.company || '', status: 'New(Code-in)', parentId: pId,
+                id: targetMemberId, recruitId: null, name: r.name, email: r.email || '', major: r.major || '', job: r.job || '', company: r.company || '', status: 'New(Code-in)', parentId: pId,
                 history: [], interactionHistory: mappedInteractions,
                 issuePaid: 0, pending: 0,
                 birthDate: r.birthDate || '', age: r.age || '', meetDate: r.meetDate || '', relation: r.relation || '', gender: r.gender || '남', score: r.score,
@@ -804,9 +804,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function addRecruit(){
         if(!newRecruit.name.trim()) return;
-        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition()};
+        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition()};
         recruits.value.push(newR);
-        newRecruit.name=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age='';
+        newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age='';
       }
       function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }
       function addNote(){ if(!newNote.value.trim())return; notes.value.push({text:newNote.value.trim()}); newNote.value=''; }
@@ -1068,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
           let st = m.status;
           if(st === 'New' || st === 'Code-in') st = 'New(Code-in)';
           const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition();
-          return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp};
+          return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp};
         });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n}:n);
         if(d.recruits) {
@@ -1078,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h);
                 }
                 const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition();
-                return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',...r, interactionHistory: ih, disposition: disp};
+                return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',...r, interactionHistory: ih, disposition: disp};
             });
         }
         if(d.appointments) appointments.value = d.appointments.map(a => ({
