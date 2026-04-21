@@ -89,7 +89,6 @@
 
   <div class="toast" :class="getToastClass()">{{ toast.msg }}</div>
 
-  <!-- 공유 관리 모달 -->
   <div v-if="showShareModal" class="share-modal-overlay" @click.self="showShareModal=false">
     <div class="share-modal">
       <div class="share-modal-header">
@@ -129,7 +128,6 @@
     </div>
   </div>
 
-  <!-- 서브 트리 공유 모달 -->
   <div v-if="showSubTreeShareModal" class="share-modal-overlay" @click.self="showSubTreeShareModal=false">
     <div class="share-modal">
       <div class="share-modal-header">
@@ -161,7 +159,6 @@
   </div>
 
   <div class="tree-panel" v-if="currentUser && !isDashboard">
-
     <div v-if="focusRootId" class="focus-banner">
       <span class="focus-banner-icon">🔍</span>
       <span class="focus-banner-text">
@@ -202,7 +199,6 @@
     </div>
 
     <div class="tree-body">
-
       <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title">📝 메모 / 액션</div>
         <div v-if="notes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
@@ -537,7 +533,6 @@
         </div>
         <div v-else style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0; text-align:center;">멤버를 클릭하여 선택하세요.</div>
       </div>
-
     </div>
   </div>
 
@@ -645,7 +640,7 @@
               <th></th>
             </tr>
           </thead>
-          <tbody v-for="m in currentMembers" :key="m.id">
+          <tbody v-for="m in tabMembers" :key="m.id">
             <tr>
               <td><input v-model.lazy="m.name" class="form-input"></td>
               <td>
@@ -814,7 +809,7 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody v-for="m in currentMembers" :key="m.id">
+            <tbody v-for="m in tabMembers" :key="m.id">
               <tr>
                 <td style="cursor:pointer;" @click="onNodeClick(m)">
                     <span style="font-weight:600; color:var(--navy); text-decoration:underline;" title="클릭하여 정보 패널 열기">{{m.name}}</span>
@@ -1020,7 +1015,7 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody v-for="r in recruitsSortedAll" :key="r.id">
+            <tbody v-for="r in tabRecruitsSorted" :key="r.id">
               <tr>
                 <td><input v-model.lazy="r.name" class="form-input" style="padding:2px 5px"></td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
@@ -1145,7 +1140,7 @@
               </tr>
             </tbody>
           </table>
-          <div v-if="recruits.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">리스트가 없습니다.</div>
+          <div v-if="tabRecruitsSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">리스트가 없습니다.</div>
         </div>
       </div>
       <div class="add-form" style="width:230px;">
@@ -1198,7 +1193,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="apt in upcomingAppointments" :key="apt.id">
+              <tr v-for="apt in tabUpcomingAppointments" :key="apt.id">
                 <td>
                   <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
                 </td>
@@ -1217,7 +1212,7 @@
               </tr>
             </tbody>
           </table>
-          <div v-if="upcomingAppointments.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">예정된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(과거 날짜의 약속은 자동으로 각 멤버의 히스토리로 이동됩니다.)</div>
+          <div v-if="tabUpcomingAppointments.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">예정된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(과거 날짜의 약속은 자동으로 각 멤버의 히스토리로 이동됩니다.)</div>
         </div>
       </div>
 
