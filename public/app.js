@@ -438,16 +438,43 @@ document.addEventListener('DOMContentLoaded', () => {
               return linkedMember && ids.has(linkedMember.id);
             });
 
-            // 약속 동기화: 부모가 단일 진실 → 서브의 약속을 부모 상태로 완전 교체
-            //   (삭제까지 전파되도록 upsert 가 아닌 replace 전략 사용)
-            const mergedApts = JSON.parse(JSON.stringify(appointments.value || []));
+            // 약속 동기화: 양방향 병합 (upsert 전략)
+            //   - 부모의 기존 약속 유지
+            //   - 서브에 있던 약속 중 부모에 없는 것 추가
+            //   - 타임스탬프 기반으로 최신 버전 우선
+            const existingSubApts = subTreeData.data.appointments || [];
+            const parentApts = appointments.value || [];
+            const aptMap = new Map();
+            
+            // 기존 서브 약속 먼저 로드
+            existingSubApts.forEach(apt => {
+              aptMap.set(apt.id, { ...apt, _source: 'sub' });
+            });
+            
+            // 부모 약속으로 업데이트 (최신 것 우선)
+            parentApts.forEach(apt => {
+              const existing = aptMap.get(apt.id);
+              if (!existing || !apt.updatedAt || !existing.updatedAt || 
+                  new Date(apt.updatedAt) >= new Date(existing.updatedAt)) {
+                aptMap.set(apt.id, { ...apt, _source: 'parent' });
+              }
+            });
+            
+            const mergedApts = Array.from(aptMap.values());
 
-            // 메모 동기화: 부모의 공개(scope!=='personal') 메모로 서브 공개 메모를 교체.
-            //   서브 트리의 개인(scope='personal') 메모는 그대로 유지.
+            // 메모 동기화: 양방향 병합
+            //   - 서브의 개인(scope='personal') 메모 유지
+            //   - 부모와 서브의 공개 메모 병합
             const existingSubNotes = subTreeData.data.notes || [];
             const subPersonal = existingSubNotes.filter(n => n && n.scope === 'personal');
+            const subPublic = existingSubNotes.filter(n => n && n.scope !== 'personal');
             const parentPublicNotes = (notes.value || []).filter(n => n && n.scope !== 'personal');
-            const mergedNotes = [...subPersonal, ...parentPublicNotes.map(n => ({ ...n }))];
+            
+            const noteMap = new Map();
+            subPublic.forEach(n => noteMap.set(n.createdAt || n.text, n));
+            parentPublicNotes.forEach(n => noteMap.set(n.createdAt || n.text, n));
+            
+            const mergedNotes = [...subPersonal, ...Array.from(noteMap.values())];
 
             const originalRoot = members.value.find(m => !m.parentId);
             const newHeader = {
@@ -548,15 +575,39 @@ document.addEventListener('DOMContentLoaded', () => {
             else parentRecruits.push({ ...subR });
           });
 
-          // ── 약속(appointments): 서브가 단일 진실(Source of Truth) → 전체 교체 ──
-          //    삭제까지 전파되도록 부모의 약속은 서브의 현재 상태로 완전히 대체한다.
-          const parentApts = JSON.parse(JSON.stringify(subTreeData.data.appointments || []));
+          // ── 약속(appointments): 양방향 병합 전략 ──
+          //    서브와 부모의 약속을 ID 기반으로 병합 (최신 버전 우선)
+          const parentExistingApts = parentData.data.appointments || [];
+          const subApts = subTreeData.data.appointments || [];
+          const aptMergeMap = new Map();
+          
+          // 기존 부모 약속 먼저 로드
+          parentExistingApts.forEach(apt => {
+            aptMergeMap.set(apt.id, { ...apt, _source: 'parent' });
+          });
+          
+          // 서브 약속으로 업데이트 (최신 것 우선)
+          subApts.forEach(apt => {
+            const existing = aptMergeMap.get(apt.id);
+            if (!existing || !apt.updatedAt || !existing.updatedAt || 
+                new Date(apt.updatedAt) >= new Date(existing.updatedAt)) {
+              aptMergeMap.set(apt.id, { ...apt, _source: 'sub' });
+            }
+          });
+          
+          const parentApts = Array.from(aptMergeMap.values());
 
-          // ── 메모(notes): 공개 메모(scope!=='personal') 는 서브의 상태로 교체.
-          //    부모의 개인 메모는 그대로 보존(개인 메모는 작성자 본인 트리에서만 보임).
+          // ── 메모(notes): 양방향 병합 전략 ──
+          //    부모의 개인 메모 + 서브와 부모의 공개 메모 병합
           const parentPersonal = (parentData.data.notes || []).filter(n => n && n.scope === 'personal');
+          const parentPublic = (parentData.data.notes || []).filter(n => n && n.scope !== 'personal');
           const subPublic = (subTreeData.data.notes || []).filter(n => n && n.scope !== 'personal');
-          const parentNotes = [...parentPersonal, ...subPublic.map(n => ({ ...n }))];
+          
+          const noteMergeMap = new Map();
+          parentPublic.forEach(n => noteMergeMap.set(n.createdAt || n.text, n));
+          subPublic.forEach(n => noteMergeMap.set(n.createdAt || n.text, n));
+          
+          const parentNotes = [...parentPersonal, ...Array.from(noteMergeMap.values())];
 
           // 메인 트리 업데이트
           const updatedParentData = {
@@ -1301,7 +1352,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // parentId: 선택 시 우선, 아니면 작성자(본인) 멤버, 아니면 트리 루트
         const fallbackParentId = (meMember.value && meMember.value.id) || (members.value.find(m => !m.parentId)?.id) || 'root';
         const parentId = newRecruit.parentId || fallbackParentId;
-        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition(), createdBy, createdByEmail, parentId}; recruits.value.push(newR);
+        const now = new Date().toISOString();
+        const newR={
+          id:'r'+Date.now(),
+          name:newRecruit.name.trim(),
+          email:(newRecruit.email||'').trim(),
+          major:newRecruit.major.trim(),
+          job:newRecruit.job.trim(),
+          company:newRecruit.company.trim(),
+          relation:newRecruit.relation.trim(),
+          meetDate:newRecruit.meetDate,
+          period:'',
+          gender:newRecruit.gender,
+          score:newRecruit.score||0,
+          birthDate:newRecruit.birthDate,
+          age:newRecruit.age,
+          show:true,
+          interactionHistory:[], 
+          disposition: defaultDisposition(), 
+          createdBy, 
+          createdByEmail, 
+          parentId,
+          createdAt: now,
+          updatedAt: now
+        }; 
+        recruits.value.push(newR);
         newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
       }
       function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }
@@ -1311,7 +1386,16 @@ document.addEventListener('DOMContentLoaded', () => {
           ? members.value.find(m => m.id === selectedMemberId.value)?.name
           : rootMember.value?.name || '');
         const createdByEmail = (currentUser.value?.email || '').toLowerCase();
-        notes.value.push({text:newNote.text.trim(), scope: newNote.scope, createdBy, createdByEmail, createdAt: Date.now()});
+        const now = new Date().toISOString();
+        notes.value.push({
+          id: 'note_' + Date.now(),
+          text: newNote.text.trim(), 
+          scope: newNote.scope, 
+          createdBy, 
+          createdByEmail, 
+          createdAt: now,
+          updatedAt: now
+        });
         newNote.text='';
         newNote.scope='all';
       }
@@ -1365,7 +1449,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 appointments.value[idx].title = newAppt.title; 
                 appointments.value[idx].description = newAppt.description || ''; 
                 appointments.value[idx].targetName = newAppt.targetName; 
-                appointments.value[idx].attendees = [...newAppt.attendees]; 
+                appointments.value[idx].attendees = [...newAppt.attendees];
+                appointments.value[idx].updatedAt = new Date().toISOString();
                 showToastMsg('약속이 성공적으로 수정되었습니다.'); 
               }
               editingApptId.value = null;
@@ -1382,7 +1467,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetName: newAppt.targetName,
                 attendees: [...newAppt.attendees],
                 createdBy: newAppt.type === '이벤트' ? '' : createdBy,
-                createdByEmail: newAppt.type === '이벤트' ? '' : createdByEmail
+                createdByEmail: newAppt.type === '이벤트' ? '' : createdByEmail,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
               });
               showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
