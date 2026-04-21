@@ -1000,6 +1000,7 @@
             <thead>
               <tr>
                 <th>이름</th>
+                <th style="width:100px">작성자</th>
                 <th>전공</th>
                 <th>직업</th>
                 <th>직장</th>
@@ -1017,6 +1018,7 @@
             <tbody v-for="r in tabRecruitsSorted" :key="r.id">
               <tr>
                 <td><input v-model.lazy="r.name" class="form-input" style="padding:2px 5px"></td>
+                <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ r.createdBy || '-' }}</span></td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
                 <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
                 <td><input v-model.lazy="r.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
@@ -1142,10 +1144,16 @@
           <div v-if="tabRecruitsSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">리스트가 없습니다.</div>
         </div>
       </div>
-      <div class="add-form" style="width:230px;">
+        <div class="add-form" style="width:230px;">
         <h4>+ Recruit 추가</h4>
         <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
         <div class="form-row"><label class="form-label">이메일</label><input type="email" v-model="newRecruit.email" class="form-input" placeholder="example@gmail.com" @keyup.enter="addRecruit()"></div>
+        <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
+          <select v-model="newRecruit.parentId" class="form-select">
+            <option value="">— 기본: 작성자 —</option>
+            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <div><label class="form-label">전공</label><input v-model="newRecruit.major" class="form-input" placeholder="예: 경영학"></div>
           <div><label class="form-label">직업</label><input v-model="newRecruit.job" class="form-input" placeholder="예: 교사"></div>
@@ -1382,21 +1390,41 @@
         </div>
         <div style="flex:1;overflow:auto;">
           <table class="member-table">
-            <thead><tr><th>#</th><th style="width:100%">내용</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th style="width:100%">내용</th><th style="width:80px">공개범위</th><th style="width:80px">작성자</th><th style="width:60px"></th></tr></thead>
             <tbody>
-              <tr v-for="(n,i) in notes" :key="i">
+              <tr v-for="(n,i) in tabNotes" :key="i">
                 <td style="color:var(--gold);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px">{{ i+1 }}</td>
                 <td><input v-model.lazy="n.text" class="form-input" style="padding:2px 5px"></td>
+                <td style="text-align:center">
+                  <select v-model="n.scope" class="form-select" style="padding:2px 4px;font-size:10px;">
+                    <option value="all">전체</option>
+                    <option value="personal">본인</option>
+                  </select>
+                </td>
+                <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ n.createdBy || '-' }}</span></td>
                 <td><button class="btn-sm-danger" @click="notes.splice(i,1)">✕</button></td>
               </tr>
             </tbody>
           </table>
-          <div v-if="notes.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">메모가 없습니다.</div>
+          <div v-if="tabNotes.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">메모가 없습니다.</div>
         </div>
       </div>
       <div class="add-form" style="width: 30%; min-width: 280px; max-width: 500px; display: flex; flex-direction: column;">
         <h4>+ 메모 추가</h4>
-        <div class="form-row" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><label class="form-label">내용</label><textarea v-model="newNote" class="form-textarea" style="flex: 1; resize: none;" rows="3" placeholder="액션 아이템 입력" @keydown.ctrl.enter="addNote()"></textarea></div>
+        <div class="form-row">
+          <label class="form-label">공개 범위</label>
+          <div style="display:flex;gap:10px;font-size:12px;">
+            <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <input type="radio" v-model="newNote.scope" value="all" style="accent-color:var(--navy);">
+              전체
+            </label>
+            <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <input type="radio" v-model="newNote.scope" value="personal" style="accent-color:var(--gold);">
+              본인만
+            </label>
+          </div>
+        </div>
+        <div class="form-row" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><label class="form-label">내용</label><textarea v-model="newNote.text" class="form-textarea" style="flex: 1; resize: none;" rows="3" placeholder="액션 아이템 입력" @keydown.ctrl.enter="addNote()"></textarea></div>
         <button class="btn btn-primary" style="margin-top: 6px;" @click="addNote()">추가</button>
       </div>
     </div>

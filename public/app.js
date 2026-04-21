@@ -75,14 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const notes = ref([]);
       const appointments = ref([]);
       const recruits = ref([]);
+      const newNote = reactive({ text: '', scope: 'all' }); // all or personal
       
       const notesPosition = ref('none');
       const recruitPosition = ref('none');
       const memberInfoPosition = ref('right');
       const appointmentPosition = ref('none');
       const tab = ref('memberInfo');
-
-      const newNote = ref('');
       const showShareModal = ref(false);
       const showSubTreeShareModal = ref(false);
       const shareInput = reactive({ email: '', role: 'editor' });
@@ -104,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const printIncludeMemberInfo = ref(true);
       const printIncludePointHistory = ref(true);
       
-      const newRecruit = reactive({ name:'', email:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'' });
+      const newRecruit = reactive({ name:'', email:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', parentId:'' });
       const focusRootId = ref(null);
       
       const expandedMemberId = ref(null);
@@ -120,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newHist = reactive({ date:'', type:'History', content:'', point:null, amount:null });
       const newInteraction = reactive({ date:'', content:'' });
       const newRecruitInteraction = reactive({ date:'', content:'' });
-      const newAppt = reactive({ date: '', time: '', endTime: '', location: '', type: '이벤트', title: '', description: '', targetName: '', attendees: [], newAttendeeInput: '' });
+      const newAppt = reactive({ date: '', time: '', endTime: '', location: '', type: '이벤트', title: '', description: '', targetName: '', attendees: [], newAttendeeInput: '', createdBy: '' });
 
       const nm = reactive({ name:'', email:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
@@ -767,8 +766,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ── 핵심 필터링 로직 (선택된 멤버 기준 뷰) ──
       const tabContext = computed(() => {
+        const rootName = rootMember.value?.name || '';
+        
         if (!selectedMemberId.value || selectedMemberId.value === 'root') {
-           return { members: members.value, recruits: recruits.value, appointments: appointments.value };
+           return { 
+             members: members.value, 
+             recruits: recruits.value.filter(r => !r.createdBy || r.createdBy === rootName),
+             appointments: appointments.value.filter(a => {
+               if (a.type === '이벤트') return true;
+               if (!a.createdBy || a.createdBy === rootName) return true;
+               return false;
+             }),
+             notes: notes.value.filter(n => !n.createdBy || n.createdBy === rootName || n.scope === 'all')
+           };
         }
         const ids = new Set();
         const collect = (id) => {
@@ -776,24 +786,33 @@ document.addEventListener('DOMContentLoaded', () => {
            members.value.filter(m => m.parentId === id).forEach(m => collect(m.id));
         };
         collect(selectedMemberId.value);
+        
+        const selectedName = members.value.find(m => m.id === selectedMemberId.value)?.name || '';
 
         return {
            members: members.value.filter(m => ids.has(m.id)),
            recruits: recruits.value.filter(r => {
+               if (r.createdBy && r.createdBy !== selectedName) return false;
                const linked = members.value.find(m => m.recruitId === r.id);
                return linked && ids.has(linked.id);
            }),
            appointments: appointments.value.filter(a => {
-               if (a.type === '이벤트') return true; 
+               if (a.type === '이벤트') return true;
+               if (a.createdBy && a.createdBy !== selectedName) return false;
                const targetInSubtree = a.targetName && ids.has(members.value.find(m => m.name === a.targetName)?.id);
                const attendeeInSubtree = a.attendees && a.attendees.some(name => ids.has(members.value.find(m => m.name === name)?.id));
                return targetInSubtree || attendeeInSubtree;
+           }),
+           notes: notes.value.filter(n => {
+               if (!n.createdBy || n.createdBy === selectedName || n.scope === 'all') return true;
+               return false;
            })
         };
       });
 
       const tabMembers = computed(() => tabContext.value.members);
       const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>(b.score||0)-(a.score||0)));
+      const tabNotes = computed(() => tabContext.value.notes || notes.value);
       const tabUpcomingAppointments = computed(() => {
         const today = new Date(); today.setHours(0,0,0,0);
         return tabContext.value.appointments.filter(a => {
@@ -1133,11 +1152,23 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addRecruit(){
         if(!newRecruit.name.trim()) return;
-        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition()}; recruits.value.push(newR);
-        newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age='';
+        const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
+          ? members.value.find(m => m.id === selectedMemberId.value)?.name 
+          : rootMember.value?.name || '';
+        const parentId = newRecruit.parentId || selectedMemberId.value || (members.value.find(m => !m.parentId)?.id) || 'root';
+        const newR={id:'r'+Date.now(),name:newRecruit.name.trim(),email:(newRecruit.email||'').trim(),major:newRecruit.major.trim(),job:newRecruit.job.trim(),company:newRecruit.company.trim(),relation:newRecruit.relation.trim(),meetDate:newRecruit.meetDate,period:'',gender:newRecruit.gender,score:newRecruit.score||0,birthDate:newRecruit.birthDate,age:newRecruit.age,show:true,interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId}; recruits.value.push(newR);
+        newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
       }
       function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }
-      function addNote(){ if(!newNote.value.trim())return; notes.value.push({text:newNote.value.trim()}); newNote.value=''; }
+      function addNote(){ 
+        if(!newNote.text.trim())return; 
+        const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
+          ? members.value.find(m => m.id === selectedMemberId.value)?.name 
+          : rootMember.value?.name || '';
+        notes.value.push({text:newNote.text.trim(), scope: newNote.scope, createdBy}); 
+        newNote.text=''; 
+        newNote.scope='all';
+      }
       function getPersonTitle(name) {
           if (!name) return ''; const n = String(name).trim(); if (!n) return '';
           if ((header.fd || '').trim() === n) return 'FD'; if ((header.sfd || '').trim() === n) return 'SFD'; if ((header.dd || '').trim() === n) return 'DD'; if ((header.efd || '').trim() === n) return 'EFD';
@@ -1154,20 +1185,60 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addAppointment() {
           if(!newAppt.date || !newAppt.title) return showToastMsg('날짜와 내용은 필수 항목입니다.', 'error');
-          if ((newAppt.type || '이벤트') === '약속') newAppt.targetName = (newAppt.title || '').trim();
+          
+          const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
+            ? members.value.find(m => m.id === selectedMemberId.value)?.name 
+            : rootMember.value?.name || '';
+          
+          if ((newAppt.type || '이벤트') === '약속') {
+            newAppt.targetName = (newAppt.title || '').trim();
+            // 약속의 경우 본인을 자동으로 참석자에 추가
+            if (createdBy && !newAppt.attendees.includes(createdBy)) {
+              newAppt.attendees.unshift(createdBy);
+            }
+          }
+          
           if(!newAppt.targetName && newAppt.attendees.length === 0) return showToastMsg('참석할 멤버나 만날 대상자를 최소 한 명 이상 지정해주세요.', 'error');
           if(newAppt.targetName) {
             let exists = members.value.some(m => m.name === newAppt.targetName) || recruits.value.some(r => r.name === newAppt.targetName);
-            if(!exists) { const newR = { id:'r'+Date.now(), name:newAppt.targetName, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition() }; recruits.value.push(newR); showToastMsg(`[${newAppt.targetName}]님이 Recruit 리스트에 자동 추가되었습니다.`); }
+            if(!exists) { 
+              const newR = { id:'r'+Date.now(), name:newAppt.targetName, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId: selectedMemberId.value || 'root' }; 
+              recruits.value.push(newR); 
+              showToastMsg(`[${newAppt.targetName}]님이 Recruit 리스트에 자동 추가되었습니다.`); 
+            }
           }
           if (editingApptId.value) {
               const idx = appointments.value.findIndex(a => a.id === editingApptId.value);
-              if (idx !== -1) { appointments.value[idx].date = newAppt.date; appointments.value[idx].time = newAppt.time || ''; appointments.value[idx].endTime = newAppt.endTime || ''; appointments.value[idx].location = newAppt.location || ''; appointments.value[idx].type = newAppt.type || '이벤트'; appointments.value[idx].title = newAppt.title; appointments.value[idx].description = newAppt.description || ''; appointments.value[idx].targetName = newAppt.targetName; appointments.value[idx].attendees = [...newAppt.attendees]; showToastMsg('약속이 성공적으로 수정되었습니다.'); }
+              if (idx !== -1) { 
+                appointments.value[idx].date = newAppt.date; 
+                appointments.value[idx].time = newAppt.time || ''; 
+                appointments.value[idx].endTime = newAppt.endTime || ''; 
+                appointments.value[idx].location = newAppt.location || ''; 
+                appointments.value[idx].type = newAppt.type || '이벤트'; 
+                appointments.value[idx].title = newAppt.title; 
+                appointments.value[idx].description = newAppt.description || ''; 
+                appointments.value[idx].targetName = newAppt.targetName; 
+                appointments.value[idx].attendees = [...newAppt.attendees]; 
+                showToastMsg('약속이 성공적으로 수정되었습니다.'); 
+              }
               editingApptId.value = null;
           } else {
-              appointments.value.push({ id: 'apt'+Date.now(), date: newAppt.date, time: newAppt.time || '', endTime: newAppt.endTime || '', location: newAppt.location || '', type: newAppt.type || '이벤트', title: newAppt.title, description: newAppt.description || '', targetName: newAppt.targetName, attendees: [...newAppt.attendees] }); showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
+              appointments.value.push({ 
+                id: 'apt'+Date.now(), 
+                date: newAppt.date, 
+                time: newAppt.time || '', 
+                endTime: newAppt.endTime || '', 
+                location: newAppt.location || '', 
+                type: newAppt.type || '이벤트', 
+                title: newAppt.title, 
+                description: newAppt.description || '', 
+                targetName: newAppt.targetName, 
+                attendees: [...newAppt.attendees],
+                createdBy: newAppt.type === '이벤트' ? '' : createdBy
+              }); 
+              showToastMsg(`새로운 ${newAppt.type || '이벤트'}가 등록되었습니다.`);
           }
-          newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = '';
+          newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; newAppt.createdBy = '';
       }
       function removeAppointment(id) { if (!confirm('이 약속/이벤트를 삭제하시겠습니까?')) return; appointments.value = appointments.value.filter(a => a.id !== id); showToastMsg('약속이 삭제되었습니다.'); }
       function completeAppointment(apt) {
@@ -1178,12 +1249,19 @@ document.addEventListener('DOMContentLoaded', () => {
           apt.attendees.forEach(attName => addHistoryToPerson(attName, histDate, content));
           appointments.value = appointments.value.filter(a => a.id !== apt.id); showToastMsg('✅ 완료 처리되어 참석자 히스토리에 기록되었습니다.');
       }
-      function editAppointment(apt) { editingApptId.value = apt.id; newAppt.date = apt.date; newAppt.time = apt.time || ''; newAppt.endTime = apt.endTime || ''; newAppt.location = apt.location || ''; newAppt.type = apt.type || '이벤트'; newAppt.title = apt.title; newAppt.description = apt.description || ''; newAppt.targetName = apt.targetName || ''; newAppt.attendees = [...(apt.attendees || [])]; newAppt.newAttendeeInput = ''; }
-      function cancelEditAppt() { editingApptId.value = null; newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; }
+      function editAppointment(apt) { editingApptId.value = apt.id; newAppt.date = apt.date; newAppt.time = apt.time || ''; newAppt.endTime = apt.endTime || ''; newAppt.location = apt.location || ''; newAppt.type = apt.type || '이벤트'; newAppt.title = apt.title; newAppt.description = apt.description || ''; newAppt.targetName = apt.targetName || ''; newAppt.attendees = [...(apt.attendees || [])]; newAppt.newAttendeeInput = ''; newAppt.createdBy = apt.createdBy || ''; }
+      function cancelEditAppt() { editingApptId.value = null; newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; newAppt.createdBy = ''; }
       function addAttendeeByName() {
           const name = (newAppt.newAttendeeInput || '').trim(); if (!name) return; if (newAppt.attendees.includes(name)) { newAppt.newAttendeeInput = ''; return; }
           const isMember = apptMemberNames.value.includes(name); const isRecruit = recruitNames.value.includes(name);
-          if (!isMember && !isRecruit) { const newR = { id:'r'+Date.now(), name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition() }; recruits.value.push(newR); showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`); }
+          const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
+            ? members.value.find(m => m.id === selectedMemberId.value)?.name 
+            : rootMember.value?.name || '';
+          if (!isMember && !isRecruit) { 
+            const newR = { id:'r'+Date.now(), name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId: selectedMemberId.value || 'root' }; 
+            recruits.value.push(newR); 
+            showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`); 
+          }
           newAppt.attendees.push(name); newAppt.newAttendeeInput = '';
       }
       function checkPastAppointments() {
@@ -1212,9 +1290,9 @@ document.addEventListener('DOMContentLoaded', () => {
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp}; });
-        notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n}:n);
-        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',...r, interactionHistory: ih, disposition: disp}; });
-        if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', ...a }));
+        notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
+        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
+        if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', ...a }));
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
       }
@@ -1321,9 +1399,9 @@ document.addEventListener('DOMContentLoaded', () => {
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
-        selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId,
+        selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
-        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, tabRecruitsSorted, tabUpcomingAppointments,
+        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
