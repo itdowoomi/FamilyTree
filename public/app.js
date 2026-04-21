@@ -987,14 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
                return false;
            }),
            appointments: appointments.value.filter(a => {
-               // 본인(로그인 사용자)이 포함되지 않은 약속은 표시하지 않음 (이벤트 제외)
-               if (a.type !== '이벤트' && !apptIncludesMeOrDownline(a)) return false;
-               
-               // 서브 뷰에선 선택된 멤버 서브트리에 관련된 것만 표시
-               // 작성자도 참석자로 인식하여 필터링
+               // 이벤트, 약속 모두: 서브트리 멤버가 참여하는 모든 것을 표시
+               // 작성자, 대상자, 참석자 중 하나라도 서브트리에 속하면 표시
                if (a.createdBy && selectedNames.has(a.createdBy)) return true;
                if (a.targetName && selectedNames.has(a.targetName)) return true;
                if ((a.attendees || []).some(n => selectedNames.has(n))) return true;
+               
                return false;
            }),
            notes: notes.value.filter(n => {
