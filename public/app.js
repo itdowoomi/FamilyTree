@@ -63,7 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
       const defaultDisposition = () => ({ relationScore: 0, market: '', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false });
-      const defaultRoot = () => ({ id:'root', recruitId: null, name:'방동혁 (Don Bang)', email:'donghyukbang@gmail.com', major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() });
+      const defaultRoot = () => {
+        const email = currentUser.value && currentUser.value.email ? currentUser.value.email : 'example@gmail.com';
+        return { id:'root', recruitId: null, name:'방동혁 (Don Bang)', email, major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() };
+      };
 
       const header = reactive(defaultHeader());
       const members = ref([
@@ -82,7 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const newNote = ref('');
       const showShareModal = ref(false);
+      const showSubTreeShareModal = ref(false);
       const shareInput = reactive({ email: '', role: 'editor' });
+      const subTreeShareInput = reactive({ email: '', role: 'editor', includeData: true });
       const toast = reactive({ msg:'', type:'success', visible:false });
       let toastTimer = null, autoTimer = null;
       const isDirty = ref(false);
@@ -453,6 +458,117 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); }
       };
 
+      // ── SubTree Sharing ──
+      const shareSubTree = async () => {
+        if (!selectedMemberId.value || selectedMemberId.value === 'root') {
+          return showToastMsg('서브 트리를 공유하려면 먼저 멤버를 선택하세요.', 'error');
+        }
+        const trimmedEmail = (subTreeShareInput.email || '').trim().toLowerCase();
+        if (!trimmedEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedEmail)) {
+          return showToastMsg('올바른 이메일을 입력하세요.', 'error');
+        }
+        if (currentUser.value.email && trimmedEmail === currentUser.value.email.toLowerCase()) {
+          return showToastMsg('본인 이메일은 추가할 수 없습니다.', 'error');
+        }
+
+        try {
+          // 선택된 멤버 이하의 서브 트리 수집
+          const subRoot = members.value.find(m => m.id === selectedMemberId.value);
+          if (!subRoot) return showToastMsg('멤버를 찾을 수 없습니다.', 'error');
+
+          const ids = new Set();
+          function collectSubtree(id) {
+            ids.add(id);
+            members.value.filter(m => m.parentId === id).forEach(m => collectSubtree(m.id));
+          }
+          collectSubtree(selectedMemberId.value);
+
+          const subMembers = members.value.filter(m => ids.has(m.id)).map(m => 
+            m.id === selectedMemberId.value ? { ...m, parentId: null } : { ...m }
+          );
+
+          // 서브 트리 데이터 수집
+          const subRecruits = subTreeShareInput.includeData ? recruits.value.filter(r => {
+            const linkedMember = members.value.find(m => m.recruitId === r.id);
+            return linkedMember && ids.has(linkedMember.id);
+          }) : [];
+
+          const subAppointments = subTreeShareInput.includeData ? appointments.value.filter(apt => {
+            const hasTargetInSubtree = apt.targetName && subMembers.some(m => m.name === apt.targetName);
+            const hasAttendeeInSubtree = apt.attendees && apt.attendees.some(name => subMembers.some(m => m.name === name));
+            return hasTargetInSubtree || hasAttendeeInSubtree;
+          }) : [];
+
+          // 새로운 공유 트리 생성
+          const newTreeId = 'shared_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+          const originalRoot = members.value.find(m => !m.parentId);
+          const newHeader = {
+            ...header,
+            id: subRoot.status === 'root' ? header.id : '',
+            rank: subRoot.status === 'root' ? header.rank : subRoot.status,
+            fd: originalRoot ? originalRoot.name : header.fd,
+            sfd: header.fd || header.sfd,
+            dd: header.sfd || header.dd,
+            efd: header.dd || header.efd
+          };
+
+          const sharedTreeData = {
+            name: `${subRoot.name} 서브 트리 (공유)`,
+            updatedAt: new Date().toLocaleString('ko-KR'),
+            updatedAtMs: Date.now(),
+            savedByUid: currentUser.value.uid,
+            savedByEmail: currentUser.value.email || '',
+            memberCount: subMembers.length,
+            data: {
+              header: newHeader,
+              members: JSON.parse(JSON.stringify(subMembers)),
+              notes: subTreeShareInput.includeData ? JSON.parse(JSON.stringify(notes.value)) : [],
+              recruits: JSON.parse(JSON.stringify(subRecruits)),
+              appointments: JSON.parse(JSON.stringify(subAppointments)),
+              recruitPosition: recruitPosition.value,
+              notesPosition: notesPosition.value,
+              memberInfoPosition: memberInfoPosition.value,
+              appointmentPosition: appointmentPosition.value,
+              nodeWidth: nodeWidth.value,
+              nodeBaseHeight: nodeBaseHeight.value,
+              nodeFontSize: nodeFontSize.value,
+              nodeLineGap: nodeLineGap.value,
+              notePanelWidth: notePanelWidth.value,
+              legendConfig: JSON.parse(JSON.stringify(legendConfig.value))
+            },
+            ownerId: currentUser.value.uid,
+            ownerEmail: currentUser.value.email || '',
+            sharedEmails: [trimmedEmail],
+            sharePermissions: {
+              [trimmedEmail]: { role: subTreeShareInput.role || 'editor', scope: 'subtree' }
+            },
+            isSubTree: true,
+            parentTreeId: currentTreeId.value,
+            subTreeRootMemberId: selectedMemberId.value,
+            subTreeRootMemberName: subRoot.name
+          };
+
+          const ref = doc(db, getTreesPath(), newTreeId);
+          await setDoc(ref, sharedTreeData);
+
+          showToastMsg(`🔗 ${subRoot.name} 서브 트리가 ${trimmedEmail}님에게 공유되었습니다!`);
+          showSubTreeShareModal.value = false;
+          subTreeShareInput.email = '';
+          subTreeShareInput.role = 'editor';
+          subTreeShareInput.includeData = true;
+        } catch (e) {
+          console.error(e);
+          showToastMsg('서브 트리 공유 실패', 'error');
+        }
+      };
+
+      const openSubTreeShareModal = () => {
+        if (!selectedMemberId.value || selectedMemberId.value === 'root') {
+          return showToastMsg('서브 트리를 공유하려면 먼저 root가 아닌 멤버를 선택하세요.', 'error');
+        }
+        showSubTreeShareModal.value = true;
+      };
+
       // ── Permission computeds ──
       const currentIsOwner = computed(() => {
         const m = currentTreeMeta.value;
@@ -739,7 +855,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!rootMember.value) return;
           const loginEmail = currentUser.value && currentUser.value.email;
           if (!loginEmail) return;
-          if (!rootMember.value.email || !String(rootMember.value.email).trim()) {
+          // 항상 로그인 이메일로 업데이트 (example@gmail.com 이거나 비어있으면)
+          if (!rootMember.value.email || !String(rootMember.value.email).trim() || rootMember.value.email === 'example@gmail.com') {
               rootMember.value.email = loginEmail;
           }
       }
@@ -1573,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return {
         currentUser, isDashboard, savedTrees, sharedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
-        addShare, removeShare, changeShareRole,
+        addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput,
         focusRootId, zoomLevel, panX, panY,

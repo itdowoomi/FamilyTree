@@ -128,6 +128,37 @@
     </div>
   </div>
 
+  <!-- 서브 트리 공유 모달 -->
+  <div v-if="showSubTreeShareModal" class="share-modal-overlay" @click.self="showSubTreeShareModal=false">
+    <div class="share-modal">
+      <div class="share-modal-header">
+        <span>🌳 서브 트리 공유</span>
+        <button class="share-modal-close" @click="showSubTreeShareModal=false">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-modal-hint">
+          <strong>{{ selectedMember ? selectedMember.name : '' }}</strong> 이하의 서브 트리를 다른 사용자와 공유합니다.<br>
+          공유된 사용자는 해당 멤버를 루트로 하는 독립적인 트리를 관리할 수 있습니다.<br>
+          모든 멤버 정보, Recruit, 약속 등이 함께 공유됩니다.
+        </div>
+        <div class="share-add-row">
+          <input type="email" v-model="subTreeShareInput.email" class="form-input" placeholder="공유할 이메일 (example@gmail.com)" style="flex:1;font-family:'JetBrains Mono',monospace;" @keyup.enter="shareSubTree()">
+          <select v-model="subTreeShareInput.role" class="form-select" style="width:100px;">
+            <option value="editor">편집</option>
+            <option value="viewer">보기</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" v-model="subTreeShareInput.includeData" style="accent-color:var(--navy);">
+            Recruit, 약속, 메모 데이터 포함
+          </label>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:8px 14px;" @click="shareSubTree()">🔗 서브 트리 공유하기</button>
+      </div>
+    </div>
+  </div>
+
   <div class="tree-panel" v-if="currentUser && !isDashboard">
 
     <div v-if="focusRootId" class="focus-banner">
@@ -256,6 +287,11 @@
               <div class="mem-info-edit-row">
                   <label class="mem-info-edit-label">✉ 이메일</label>
                   <input type="email" v-model.lazy="selectedMember.email" class="mem-info-edit-input" placeholder="example@gmail.com">
+              </div>
+              <div v-if="selectedMember && selectedMember.id !== 'root'" class="mem-info-edit-row" style="margin-top:8px;">
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
+                      🌳 {{ selectedMember.name }} 서브 트리 공유
+                  </button>
               </div>
             </div>
             <div>
@@ -462,6 +498,11 @@
               <div class="mem-info-edit-row">
                   <label class="mem-info-edit-label">✉ 이메일</label>
                   <input type="email" v-model.lazy="selectedMember.email" class="mem-info-edit-input" placeholder="example@gmail.com">
+              </div>
+              <div v-if="selectedMember && selectedMember.id !== 'root'" class="mem-info-edit-row" style="margin-top:8px;">
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
+                      🌳 {{ selectedMember.name }} 서브 트리 공유
+                  </button>
               </div>
             </div>
             <div>
