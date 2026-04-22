@@ -439,27 +439,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // 약속 동기화: 양방향 병합 (upsert 전략)
-            //   - 부모의 기존 약속 유지
-            //   - 서브에 있던 약속 중 부모에 없는 것 추가
+            //   - 부모의 약속 중 "서브트리와 관련된 것"만 서브로 전파
+            //     (타겟/참석자/작성자가 서브 멤버에 있거나, 이벤트 타입인 경우)
+            //   - 서브에 있던 약속 중 부모에 없는 것(서브에서 새로 추가된 약속)은 유지
             //   - 타임스탬프 기반으로 최신 버전 우선
             const existingSubApts = subTreeData.data.appointments || [];
             const parentApts = appointments.value || [];
+            const subMemberNamesForApts = new Set(subMembers.map(m => m.name));
+            const isRelevantToSubtree = (apt) => {
+              if (!apt) return false;
+              if (apt.type === '이벤트') return true;
+              if (apt.targetName && subMemberNamesForApts.has(apt.targetName)) return true;
+              if (apt.attendees && apt.attendees.some(n => subMemberNamesForApts.has(n))) return true;
+              if (apt.createdBy && subMemberNamesForApts.has(apt.createdBy)) return true;
+              return false;
+            };
+            const parentIdSet = new Set(parentApts.map(a => a.id));
             const aptMap = new Map();
-            
-            // 기존 서브 약속 먼저 로드
+
+            // 기존 서브 약속: 부모에도 있던 항목은 그대로 두고(관련 여부는 부모 쪽에서 다시 판별),
+            // 부모에 없는 항목(서브에서 고유하게 추가된 약속)은 보존
             existingSubApts.forEach(apt => {
-              aptMap.set(apt.id, { ...apt, _source: 'sub' });
+              if (!parentIdSet.has(apt.id)) {
+                aptMap.set(apt.id, { ...apt, _source: 'sub' });
+              }
             });
-            
-            // 부모 약속으로 업데이트 (최신 것 우선)
-            parentApts.forEach(apt => {
+
+            // 부모 약속 중 서브트리와 관련된 것만 병합 (최신 버전 우선)
+            parentApts.filter(isRelevantToSubtree).forEach(apt => {
               const existing = aptMap.get(apt.id);
-              if (!existing || !apt.updatedAt || !existing.updatedAt || 
+              if (!existing || !apt.updatedAt || !existing.updatedAt ||
                   new Date(apt.updatedAt) >= new Date(existing.updatedAt)) {
                 aptMap.set(apt.id, { ...apt, _source: 'parent' });
               }
             });
-            
+
             const mergedApts = Array.from(aptMap.values());
 
             // 메모 동기화: 양방향 병합
@@ -852,15 +866,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // ── 신원(identity) 계산: 접속한 사용자에 대응되는 멤버 ──
       const meMember = computed(() => {
         const myEmail = (currentUser.value?.email || '').toLowerCase();
-        if (!myEmail) return null;
-        // 1) 트리 내에서 이메일이 일치하는 멤버
-        const byEmail = members.value.find(m => (m.email || '').toLowerCase() === myEmail);
-        if (byEmail) return byEmail;
-        // 2) 트리 소유자(=본인)인 경우 root 멤버
+        // 1) 서브 트리에서는 공유받은 모든 사용자가 "서브 트리 루트" 관점으로 동일하게 보이도록
+        //    루트 멤버를 "본인"으로 간주한다. (여러 사람에게 공유되었을 때 표시 일관성 확보)
+        //    예) 김은숙 서브 트리를 김은숙 본인/박철수/다른 하위 누구에게 공유하더라도
+        //        모두 메인 트리에서 '김은숙'을 클릭했을 때와 동일한 약속·메모가 보임.
+        if (currentTreeMeta.value && currentTreeMeta.value.isSubTree) {
+          return rootMember.value || null;
+        }
+        // 2) 트리 내에서 이메일이 일치하는 멤버
+        if (myEmail) {
+          const byEmail = members.value.find(m => (m.email || '').toLowerCase() === myEmail);
+          if (byEmail) return byEmail;
+        }
+        // 3) 트리 소유자(=본인)인 경우 root 멤버
         if (currentTreeMeta.value && currentUser.value && currentTreeMeta.value.ownerId === currentUser.value.uid) {
           return rootMember.value || null;
         }
-        // 3) 로컬(클라우드 미저장) 상태일 땐 root가 본인
+        // 4) 로컬(클라우드 미저장) 상태일 땐 root가 본인
         if (!currentTreeId.value) return rootMember.value || null;
         return null;
       });
