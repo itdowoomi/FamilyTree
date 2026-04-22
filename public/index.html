@@ -1062,6 +1062,7 @@
                         <th style="width:180px">구분</th>
                         <th style="width:130px;text-align:right">포인트</th>
                         <th style="width:160px">금액</th>
+                        <th style="width:110px;text-align:left;padding-left:6px;">비율</th>
                         <th>내용</th>
                         <th style="width:80px;text-align:center">삭제</th>
                       </tr>
@@ -1081,6 +1082,13 @@
                         <td>
                           <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
                             :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
+                        </td>
+                        <td style="padding:4px 6px;vertical-align:middle;">
+                          <template v-if="getPointHistPct(m, h) > 0">
+                            <div class="point-bar-track" style="margin:0 0 2px;"><div class="point-bar-fill" :style="{width: getPointHistPct(m, h) + '%'}"></div></div>
+                            <div class="point-bar-pct">{{ getPointHistPct(m, h).toFixed(1) }}%</div>
+                          </template>
+                          <span v-else style="font-size:10px;color:#ccc;">—</span>
                         </td>
                         <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
                         <td style="text-align:center"><button class="btn-sm-danger" @click="removeHistoryItem(m.id,h.id)">✕</button></td>
