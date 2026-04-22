@@ -1109,23 +1109,21 @@
             <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
           </div>
           <div class="side-hist-add">
-            <div style="display:flex;gap:5px;">
-              <input class="history-date-input" style="flex:0 0 120px;" v-model="newHist.date" placeholder="날짜(MM/DD/YY)">
-              <select v-model="newHist.type" style="flex:1;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:3px;">
+            <div style="display:flex;gap:4px;">
+              <input class="history-date-input" style="flex:0 0 96px;" v-model="newHist.date" placeholder="MM/DD/YY">
+              <select v-model="newHist.type" style="flex:0 0 82px;font-size:10px;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-family:inherit;">
                 <option value="History">히스토리</option>
                 <option value="Issue Paid">Issue Paid</option>
                 <option value="Pending">Pending</option>
               </select>
-            </div>
-            <div style="display:flex;gap:5px;">
-              <input type="number" style="flex:0 0 90px;font-family:'JetBrains Mono',monospace;text-align:right;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
+              <input type="number" style="flex:0 0 54px;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 4px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
                 v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(sideHistMember.id)">
-              <input type="number" style="flex:1;font-family:'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
-                v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : newHist.type" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
+              <input type="number" style="flex:1;font-family:'JetBrains Mono',monospace;padding:2px 4px;border:1px solid var(--border);border-radius:3px;font-size:11px;min-width:0;"
+                v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : '$'" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
             </div>
-            <div style="display:flex;gap:5px;">
+            <div style="display:flex;gap:4px;">
               <input class="history-content-input" v-model="newHist.content" placeholder="내용 입력" @keyup.enter="addHistoryItem(sideHistMember.id)" style="flex:1;">
-              <button class="btn btn-primary" style="padding:3px 14px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addHistoryItem(sideHistMember.id)">+ 추가</button>
+              <button class="btn btn-primary" style="padding:2px 12px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addHistoryItem(sideHistMember.id)">+ 추가</button>
             </div>
           </div>
         </template>
@@ -1203,21 +1201,21 @@
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeMemberInfo"> 인쇄 포함 (멤버 히스토리)</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1150px;">
+          <table class="member-table" style="font-size:12px;min-width:950px;">
             <colgroup>
-              <col style="width:110px">
-              <col style="width:100px">
+              <col style="width:85px">
               <col style="width:90px">
-              <col style="width:90px">
-              <col style="width:90px">
-              <col style="width:90px">
-              <col style="width:165px">
-              <col style="width:120px">
-              <col style="width:65px">
-              <col style="width:140px">
-              <col style="width:75px">
-              <col style="width:95px">
-              <col style="width:60px">
+              <col style="width:70px">
+              <col style="width:70px">
+              <col style="width:70px">
+              <col style="width:68px">
+              <col style="width:148px">
+              <col style="width:108px">
+              <col style="width:48px">
+              <col style="width:118px">
+              <col style="width:62px">
+              <col style="width:68px">
+              <col style="width:50px">
               <col>
             </colgroup>
             <thead>
@@ -1229,66 +1227,66 @@
                 <th>직장</th>
                 <th>관계</th>
                 <th>생년월일/나이</th>
-                <th style="min-width:170px;">만난 시기</th>
+                <th>만난 시기</th>
                 <th style="text-align:center">성별</th>
-                <th style="text-align:center">적합도 / Total 수입</th>
-                <th style="text-align:center">기본성향</th>
-                <th style="text-align:center">상담 히스토리</th>
-                <th style="text-align:center">작업</th>
+                <th style="text-align:center">적합도 / Total</th>
+                <th style="text-align:center">성향</th>
+                <th style="text-align:center">상담</th>
+                <th style="text-align:center">삭제</th>
                 <th></th>
               </tr>
             </thead>
             <tbody v-for="m in tabMembers" :key="m.id">
               <tr>
-                <td style="cursor:pointer;" @click="onNodeClick(m)">
-                    <span style="font-weight:600; color:var(--navy); text-decoration:underline;" title="클릭하여 정보 패널 열기">{{m.name}}</span>
+                <td style="cursor:pointer;font-size:11px;" @click="onNodeClick(m)">
+                  <span style="font-weight:600;color:var(--navy);text-decoration:underline;" title="클릭하여 정보 패널 열기">{{m.name}}</span>
                 </td>
-                <td>{{m.status==='root' ? '최상위(Root)' : m.status}}</td>
-                <td><input v-model.lazy="m.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
-                <td><input v-model.lazy="m.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
-                <td><input v-model.lazy="m.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
-                <td><input v-model.lazy="m.relation" class="form-input" style="padding:2px 5px" placeholder="관계"></td>
+                <td style="font-size:11px;">{{m.status==='root' ? '최상위' : m.status}}</td>
+                <td><input v-model.lazy="m.major" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="전공"></td>
+                <td><input v-model.lazy="m.job" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="직업"></td>
+                <td><input v-model.lazy="m.company" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="직장"></td>
+                <td><input v-model.lazy="m.relation" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="관계"></td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="text" v-model.lazy="m.birthDate" @change="m.age=calcAge($event.target.value)" class="form-input" style="padding:2px 5px;width:95px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM-DD">
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <input type="text" v-model.lazy="m.birthDate" @change="m.age=calcAge($event.target.value)" class="form-input" style="padding:2px 3px;width:86px;font-family:monospace;font-size:10.5px;" placeholder="YYYY-MM-DD">
                     <div style="display:flex;align-items:center;gap:2px;">
-                      <input type="number" v-model.lazy="m.age" class="form-input" style="padding:2px 4px;width:45px;" placeholder="나이">
+                      <input type="number" v-model.lazy="m.age" class="form-input" style="padding:2px 3px;width:36px;" placeholder="나이">
                       <span style="font-size:10px;color:var(--muted)">세</span>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 5px;width:75px;font-family:monospace;font-size:11px;" placeholder="YYYY-MM">
-                    <span v-if="calcPeriod(m.meetDate)" style="font-size:10px;color:var(--muted);white-space:nowrap;">{{ calcPeriod(m.meetDate) }}</span>
+                  <div style="display:flex;align-items:center;gap:3px;">
+                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 3px;width:65px;font-family:monospace;font-size:10.5px;" placeholder="YYYY-MM">
+                    <span v-if="calcPeriod(m.meetDate)" style="font-size:9.5px;color:var(--muted);white-space:nowrap;">{{ calcPeriod(m.meetDate) }}</span>
                   </div>
                 </td>
-                <td style="text-align:center"><select v-model="m.gender" class="form-select" style="padding:2px 5px"><option value="남">남</option><option value="여">여</option></select></td>
-                <td style="padding-right:15px;">
-                  <div style="display:grid; grid-template-columns: 1fr 50px; gap:8px; align-items:center;">
+                <td style="text-align:center"><select v-model="m.gender" class="form-select" style="padding:2px 3px;font-size:11px;"><option value="남">남</option><option value="여">여</option></select></td>
+                <td style="padding:3px 4px;">
+                  <div style="display:grid; grid-template-columns: 1fr 44px; gap:5px; align-items:center;">
                     <div style="text-align:right;">
                       <template v-if="['Serious', 'Potential'].includes(m.status)">
-                        <input type="number" v-model.number.lazy="m.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(m, false)" style="width:44px;padding:2px;margin:0;text-align:right;">
+                        <input type="number" v-model.number.lazy="m.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(m, false)" style="width:40px;padding:2px;margin:0;text-align:right;">
                       </template>
                       <template v-else>
-                        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);">
+                        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">
                           ${{ getMemberTotal(m) }}
                         </span>
                       </template>
                     </div>
-                    <div class="score-dots-wrap" style="margin-left:0;">
+                    <div class="score-dots-wrap" style="margin-left:0;width:44px;">
                       <div v-if="['Serious', 'Potential'].includes(m.status)" class="score-dots-fill" :style="{width:m.score+'%'}"></div>
                       <div v-else class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
                     </div>
                   </div>
                 </td>
                 <td style="text-align:center">
-                  <button class="btn-hist-toggle" :class="{active:expandedDispositionId===m.id}" @click="toggleDispositionPanel(m.id)">
-                    📊 평가
+                  <button class="btn-hist-toggle" :class="{active:expandedDispositionId===m.id}" @click="toggleDispositionPanel(m.id)" style="padding:2px 5px;font-size:10px;">
+                    📊
                   </button>
                 </td>
                 <td style="text-align:center">
-                  <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)">
+                  <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)" style="padding:2px 5px;font-size:10px;">
                     📋 {{ m.interactionHistory ? m.interactionHistory.length : 0 }}
                   </button>
                 </td>
