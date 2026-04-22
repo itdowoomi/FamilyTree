@@ -371,14 +371,14 @@
                   :stroke="nDivider(m.status)" stroke-width="0.8"/>
                 <text class="node-fin" :font-size="nodeFontSize-2"
                   :x="7" :y="nodeFontSize+14+nodeLineGap"
-                  :fill="nTextColor(m.status)" opacity="0.85">
+                  :fill="nTextColor(m.status)">
                   Paid: {{ fmtS(getMemberIssuePaid(m)) }}  /  Pend: {{ fmtS(getMemberPending(m)) }}
                 </text>
                 <text class="node-fin" :font-size="nodeFontSize-1" font-weight="700"
                   :x="7" :y="nodeFontSize+14+nodeLineGap*2"
                   :fill="nTextColor(m.status)">
                   Total: {{ getMemberTotal(m) }}
-                  <tspan v-if="mPtsSum(m)>0" fill="var(--gold-light)"> | Pts: {{ fmt(mPtsSum(m)) }}</tspan>
+                  <tspan v-if="mPtsSum(m)>0" fill="#ffd700" font-weight="700"> | Pts: {{ fmt(mPtsSum(m)) }}</tspan>
                 </text>
                 <line v-if="nodeNoteLines(m).length"
                   :x1="6" :y1="nodeFontSize + 14 + nodeLineGap * 2 + 6" 
