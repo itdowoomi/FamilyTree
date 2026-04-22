@@ -739,7 +739,7 @@
           </select>
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
+          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
           <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
         </div>
         <button class="btn btn-primary" style="width:100%;margin-top:2px" @click="addMember()">추가</button>
@@ -939,7 +939,7 @@
         <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
         <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
+          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
           <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
         </div>
         <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
@@ -1135,7 +1135,7 @@
           </select>
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직업</label><input v-model="newRecruit.job" class="form-input" placeholder="예: 교사"></div>
+          <div><label class="form-label">직장</label><input v-model="newRecruit.company" class="form-input" placeholder="예: 삼성전자"></div>
           <div><label class="form-label">관계</label><input v-model="newRecruit.relation" class="form-input" placeholder="예: 친구"></div>
         </div>
         <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
