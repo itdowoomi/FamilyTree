@@ -73,8 +73,10 @@ service cloud.firestore {
       allow read: if request.auth != null &&
         request.auth.token.email != null &&
         request.auth.token.email.lower() == inviteEmail;
-      // 관리자만 초대 문서를 쓸 수 있음
-      allow write: if isAdmin();
+      // 인증된 사용자는 누구나 초대 기록을 생성/수정 가능 (공유 = 초대)
+      allow create, update: if request.auth != null;
+      // 삭제는 관리자만
+      allow delete: if isAdmin();
     }
 
     // ========== 이메일 발송 (Firebase Extension: Trigger Email) ==========

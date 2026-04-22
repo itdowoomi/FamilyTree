@@ -207,6 +207,18 @@ document.addEventListener('DOMContentLoaded', () => {
               joinedMs = existing.joinedAt?.seconds ? existing.joinedAt.seconds * 1000 : Date.now();
             }
 
+            // pending 상태인데 공유받은 트리가 있으면 자동 승인 (기존 공유 사용자 소급 처리)
+            if (status === 'pending') {
+              try {
+                const sharedSnap = await getDocs(query(collection(db, getTreesPath()), where('sharedEmails', 'array-contains', email)));
+                if (!sharedSnap.empty) {
+                  await updateDoc(userRef, { status: 'approved', approvedBy: 'shared_tree', approvedAt: nowTs });
+                  await setDoc(doc(db, 'invitedEmails', email), { email, invitedBy: 'system', invitedAt: nowTs, autoDetected: true });
+                  status = 'approved';
+                }
+              } catch(e3) { console.warn('공유 트리 자동 승인 실패:', e3); }
+            }
+
             if (status === 'approved') {
               userAccessStatus.value = 'approved';
             } else if (status === 'denied') {
@@ -858,9 +870,11 @@ document.addEventListener('DOMContentLoaded', () => {
           showToastMsg(`🔗 ${trimmed} 님에게 공유되었습니다.`);
           try {
             const inviterName = currentUser.value.displayName || currentUser.value.email || '관리자';
-            const treeName = header.value?.title || 'Family Tree';
+            const inviterEmail = currentUser.value.email || '';
+            const treeName = header.title || 'Family Tree';
             await addDoc(collection(db, 'mail'), {
               to: trimmed,
+              replyTo: inviterEmail,
               message: {
                 subject: `[Family Tree] ${inviterName}님이 트리를 공유했습니다`,
                 html: `
@@ -874,7 +888,10 @@ document.addEventListener('DOMContentLoaded', () => {
                        style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">
                       Family Tree 열기
                     </a>
-                    <p style="margin-top:20px;font-size:12px;color:#999;">
+                    <p style="margin-top:16px;font-size:13px;color:#555;">
+                      문의사항은 이 이메일에 답장하시면 <b>${inviterName}</b>(${inviterEmail})님께 전달됩니다.
+                    </p>
+                    <p style="margin-top:12px;font-size:12px;color:#999;">
                       https://familytree.itdowoomi.com/
                     </p>
                   </div>
@@ -959,6 +976,13 @@ document.addEventListener('DOMContentLoaded', () => {
               if (subRoot) subRoot.email = trimmedEmail;
             }
             await updateDoc(doc(db, topPath, existingTree.id), updatePayload);
+            // 초대 선승인 + 이메일 발송
+            try { await setDoc(doc(db, 'invitedEmails', trimmedEmail), { email: trimmedEmail, invitedBy: currentUser.value.email || '', invitedAt: serverTimestamp(), treeId: existingTree.id }); } catch(e2){}
+            try {
+              const inviterName = currentUser.value.displayName || currentUser.value.email || '관리자';
+              const inviterEmail = currentUser.value.email || '';
+              await addDoc(collection(db, 'mail'), { to: trimmedEmail, replyTo: inviterEmail, message: { subject: `[Family Tree] ${inviterName}님이 서브 트리를 공유했습니다`, html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;"><h2 style="color:#1c2b4a;margin-bottom:8px;">Family Tree 초대</h2><p style="color:#444;line-height:1.7;"><b>${inviterName}</b>님이 <b>${subRoot.name}</b>의 서브 트리를 공유했습니다.<br>아래 링크로 접속하여 확인하세요.</p><a href="https://familytree.itdowoomi.com/" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Family Tree 열기</a><p style="margin-top:16px;font-size:13px;color:#555;">문의사항은 이 이메일에 답장하시면 <b>${inviterName}</b>(${inviterEmail})님께 전달됩니다.</p><p style="margin-top:12px;font-size:12px;color:#999;">https://familytree.itdowoomi.com/</p></div>` } });
+            } catch(mailErr) { console.warn('초대 메일 발송 실패:', mailErr); }
 
             showToastMsg(`🔗 기존 ${subRoot.name} 서브 트리에 ${trimmedEmail}님이 추가되었습니다!`);
             showSubTreeShareModal.value = false;
@@ -1030,6 +1054,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const ref = doc(db, getTreesPath(), newTreeId);
           await setDoc(ref, sharedTreeData);
+          // 초대 선승인 + 이메일 발송
+          try { await setDoc(doc(db, 'invitedEmails', trimmedEmail), { email: trimmedEmail, invitedBy: currentUser.value.email || '', invitedAt: serverTimestamp(), treeId: newTreeId }); } catch(e2){}
+          try {
+            const inviterName = currentUser.value.displayName || currentUser.value.email || '관리자';
+            const inviterEmail = currentUser.value.email || '';
+            await addDoc(collection(db, 'mail'), { to: trimmedEmail, replyTo: inviterEmail, message: { subject: `[Family Tree] ${inviterName}님이 서브 트리를 공유했습니다`, html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;"><h2 style="color:#1c2b4a;margin-bottom:8px;">Family Tree 초대</h2><p style="color:#444;line-height:1.7;"><b>${inviterName}</b>님이 <b>${subRoot.name}</b>의 서브 트리를 공유했습니다.<br>아래 링크로 접속하여 확인하세요.</p><a href="https://familytree.itdowoomi.com/" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Family Tree 열기</a><p style="margin-top:16px;font-size:13px;color:#555;">문의사항은 이 이메일에 답장하시면 <b>${inviterName}</b>(${inviterEmail})님께 전달됩니다.</p><p style="margin-top:12px;font-size:12px;color:#999;">https://familytree.itdowoomi.com/</p></div>` } });
+          } catch(mailErr) { console.warn('초대 메일 발송 실패:', mailErr); }
 
           // 첫 공유이므로 멤버의 실효 이메일을 대표 이메일로 동기화
           if (subRoot) subRoot.email = trimmedEmail;
