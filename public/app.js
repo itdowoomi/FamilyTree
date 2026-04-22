@@ -1611,21 +1611,29 @@ document.addEventListener('DOMContentLoaded', () => {
           showToastMsg(cur ? '약속을 다시 표시합니다.' : '약속을 확인 처리하여 디스플레이에서 숨깁니다.');
       }
       function apptDisplayTitle(apt) {
-          if (apt.location && apt.location.trim()) return '📍 ' + apt.location;
-          if ((apt.type || '이벤트') === '약속') {
+          const type = apt.type || '이벤트';
+          if (type === '약속') {
+              // 약속: 장소를 제목으로
+              if (apt.location && apt.location.trim()) return '📍 ' + apt.location;
+              // 장소가 없으면 사람 이름으로 폴백
               const ppl = (typeof apptPeopleList === 'function' ? apptPeopleList(apt) : []) || [];
               if (ppl.length) return ppl.slice(0, 2).join(', ') + (ppl.length > 2 ? ' 외' : '');
               return '(장소 미정)';
           }
-          return apt.title || '(장소 미정)';
+          // 이벤트: 이벤트 명을 제목으로
+          if (apt.title && apt.title.trim()) return apt.title;
+          if (apt.location && apt.location.trim()) return '📍 ' + apt.location;
+          return '(이벤트 명 미정)';
       }
       function apptDisplaySubtitle(apt) {
           const parts = [];
-          if ((apt.type || '이벤트') === '약속') {
+          const type = apt.type || '이벤트';
+          if (type === '약속') {
               const ppl = (typeof apptPeopleList === 'function' ? apptPeopleList(apt) : []) || [];
               if (ppl.length) parts.push('👥 ' + ppl.join(', '));
           } else {
-              if (apt.title) parts.push(apt.title);
+              // 이벤트: 제목이 메인이므로 장소와 참석자를 부제로
+              if (apt.location && apt.location.trim()) parts.push('📍 ' + apt.location);
               const names = [];
               if (apt.targetName) names.push(apt.targetName);
               if (apt.attendees && apt.attendees.length) {
