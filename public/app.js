@@ -1458,7 +1458,56 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function onRecruitInteractionChange(r) { r.interactionHistory = [...r.interactionHistory]; const m = members.value.find(x => x.recruitId === r.id); if(m) m.interactionHistory = [...r.interactionHistory]; }
       function onMemberInteractionChange(m) { m.interactionHistory = [...m.interactionHistory]; if(m.recruitId) { const r = recruits.value.find(x => x.id === m.recruitId); if(r) r.interactionHistory = [...m.interactionHistory]; } }
-      function onScoreChange(item, isRecruit = true) {}
+      function onScoreChange(item, isRecruit = true) {
+          if (!item || item.score === undefined) return;
+          
+          const score = Number(item.score) || 0;
+          let newStatus = null;
+          
+          // Automatic grade calculation based on score
+          if (score >= 85) {
+              newStatus = 'Serious';
+          } else if (score >= 60) {
+              newStatus = 'Potential';
+          }
+          
+          if (isRecruit) {
+              // For Recruit: Update recruit score and create/update linked member
+              const linkedMember = members.value.find(m => m.recruitId === item.id);
+              
+              if (newStatus && linkedMember) {
+                  // Update existing linked member's status and score
+                  linkedMember.status = newStatus;
+                  linkedMember.score = score;
+              } else if (newStatus && !linkedMember) {
+                  // Create new member with Potential/Serious status (will be auto-linked by watch)
+                  // The watch on members will handle the recruit linkage automatically
+              } else if (!newStatus && linkedMember) {
+                  // Score dropped below 60, remove member (keep recruit)
+                  if (linkedMember.parentId) {
+                      members.value.forEach(x => { if (x.parentId === linkedMember.id) x.parentId = linkedMember.parentId; });
+                      members.value = members.value.filter(m => m.id !== linkedMember.id);
+                      if (selectedMemberId.value === linkedMember.id) selectedMemberId.value = 'root';
+                  }
+              }
+          } else {
+              // For Member: Update member status and sync to linked recruit
+              if (newStatus) {
+                  item.status = newStatus;
+                  if (item.recruitId) {
+                      const r = recruits.value.find(x => x.id === item.recruitId);
+                      if (r) r.score = score;
+                  }
+              } else if (!newStatus && ['Potential', 'Serious'].includes(item.status)) {
+                  // Score dropped below 60, convert to regular status (remove recruit link)
+                  item.status = 'New(Code-in)';
+                  if (item.recruitId) {
+                      recruits.value = recruits.value.filter(r => r.id !== item.recruitId);
+                      item.recruitId = null;
+                  }
+              }
+          }
+      }
       function promoteRecruit(r) {
         const existingMemberIndex = members.value.findIndex(m => m.recruitId === r.id);
         const today = new Date(); const d = `${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}/${String(today.getFullYear()).slice(2)}`;
