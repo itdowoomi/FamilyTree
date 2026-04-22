@@ -858,6 +858,12 @@ document.addEventListener('DOMContentLoaded', () => {
           };
 
           await updateDoc(parentRef, updatedParentData);
+
+          // savedTrees 캐시를 즉시 갱신: 다음에 메인 트리를 열 때 stale 데이터를 로드하지 않도록
+          const cachedIdx = savedTrees.value.findIndex(t => t.id === subTreeData.parentTreeId);
+          if (cachedIdx >= 0) {
+            savedTrees.value[cachedIdx] = { ...savedTrees.value[cachedIdx], ...updatedParentData };
+          }
           console.log('[sync] 서브트리 변경사항이 메인 트리에 반영되었습니다.');
         } catch (e) {
           console.error('[sync to parent] failed', e);
@@ -2395,7 +2401,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSubTreeForSelectedMember();
       });
 
-      watch([header,members,notes,recruits,appointments,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
+      watch([header,members,notes,recruits,appointments,deletedAptIds,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
         if (applyingRemote) return;
         if (currentIsReadOnly.value) return;
         if(!isDashboard.value) {
