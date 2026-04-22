@@ -733,23 +733,13 @@
       <div class="add-form">
         <h4>+ 멤버 추가</h4>
         <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
-        <div class="form-row"><label class="form-label">이메일</label><input type="email" v-model="nm.email" class="form-input" placeholder="example@gmail.com" @keyup.enter="addMember()"></div>
-        <div class="form-row"><label class="form-label">상태</label>
-          <select v-model="nm.status" class="form-select">
-            <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </div>
         <div class="form-row"><label class="form-label">상위 멤버</label>
           <select v-model="nm.parentId" class="form-select">
             <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">전공</label><input v-model="nm.major" class="form-input" placeholder="예: 경영학"></div>
           <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성"></div>
           <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
         </div>
         <button class="btn btn-primary" style="width:100%;margin-top:2px" @click="addMember()">추가</button>
@@ -793,7 +783,7 @@
                 <th>직장</th>
                 <th>관계</th>
                 <th>생년월일/나이</th>
-                <th>만난 시기</th>
+                <th style="min-width:170px;">만난 시기</th>
                 <th style="text-align:center">성별</th>
                 <th style="text-align:center">적합도 / Total 수입</th>
                 <th style="text-align:center">기본성향</th>
@@ -871,6 +861,10 @@
                       </div>
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
+                       <div style="width:110px;">
+                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
+                          <input type="number" v-model.number="m.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(m, false)">
+                       </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
                           <input type="number" v-model.number="m.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(m, false)">
@@ -896,10 +890,6 @@
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.pma" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> PMA</label>
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.entrepreneur" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 기업가형</label>
                           </div>
-                       </div>
-                       <div style="width:110px;">
-                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
-                          <input type="number" v-model.number="m.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(m, false)">
                        </div>
                     </div>
                   </div>
@@ -949,20 +939,8 @@
         <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
         <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">전공</label><input v-model="nm.major" class="form-input" placeholder="예: 경영학"></div>
           <div><label class="form-label">직업</label><input v-model="nm.job" class="form-input" placeholder="예: 교사"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성"></div>
           <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 70px;gap:6px">
-          <div><label class="form-label">생년월일</label><input type="text" v-model="nm.birthDate" class="form-input" placeholder="YYYY-MM-DD" @change="nm.age=calcAge($event.target.value)"></div>
-          <div><label class="form-label">나이</label><input type="number" v-model.number="nm.age" class="form-input" placeholder="나이"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">성별</label><select v-model="nm.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
-          <div><label class="form-label">적합도</label><input type="number" v-model.number="nm.score" class="form-input" placeholder="0" @change="onScoreChange(nm, false)"></div>
         </div>
         <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
       </div>
@@ -1005,7 +983,7 @@
                 <th>직장</th>
                 <th>관계</th>
                 <th>생년월일/나이</th>
-                <th>만난 시기</th>
+                <th style="min-width:170px;">만난 시기</th>
                 <th style="text-align:center">성별</th>
                 <th style="text-align:center">적합도</th>
                 <th style="text-align:center">기본성향</th>
@@ -1074,6 +1052,10 @@
                       </div>
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
+                       <div style="width:110px;">
+                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
+                          <input type="number" v-model.number="r.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(r, true)">
+                       </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
                           <input type="number" v-model.number="r.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(r, true)">
@@ -1099,10 +1081,6 @@
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.pma" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> PMA</label>
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.entrepreneur" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 기업가형</label>
                           </div>
-                       </div>
-                       <div style="width:110px;">
-                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
-                          <input type="number" v-model.number="r.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(r, true)">
                        </div>
                     </div>
                   </div>
@@ -1150,7 +1128,6 @@
         <div class="add-form" style="width:230px;">
         <h4>+ Recruit 추가</h4>
         <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
-        <div class="form-row"><label class="form-label">이메일</label><input type="email" v-model="newRecruit.email" class="form-input" placeholder="example@gmail.com" @keyup.enter="addRecruit()"></div>
         <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
           <select v-model="newRecruit.parentId" class="form-select">
             <option value="">— 기본: 작성자 —</option>
@@ -1158,20 +1135,8 @@
           </select>
         </div>
         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">전공</label><input v-model="newRecruit.major" class="form-input" placeholder="예: 경영학"></div>
           <div><label class="form-label">직업</label><input v-model="newRecruit.job" class="form-input" placeholder="예: 교사"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="newRecruit.company" class="form-input" placeholder="예: 삼성전자"></div>
           <div><label class="form-label">관계</label><input v-model="newRecruit.relation" class="form-input" placeholder="예: 친구"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 70px;gap:6px">
-          <div><label class="form-label">생년월일</label><input type="text" v-model="newRecruit.birthDate" class="form-input" placeholder="YYYY-MM-DD" @change="newRecruit.age=calcAge($event.target.value)"></div>
-          <div><label class="form-label">나이</label><input type="number" v-model.number="newRecruit.age" class="form-input" placeholder="나이" @keyup.enter="addRecruit()"></div>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">성별</label><select v-model="newRecruit.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select></div>
-          <div><label class="form-label">적합도 (0~100)</label><input type="number" v-model.number="newRecruit.score" class="form-input" placeholder="0" min="0" max="100" @keyup.enter="addRecruit()"></div>
         </div>
         <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
       </div>
