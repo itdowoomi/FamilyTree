@@ -993,6 +993,7 @@
             <col style="width:124px">
             <col style="width:148px">
             <col style="width:136px">
+            <col style="width:170px">
             <col style="width:128px">
             <col style="width:104px">
             <col style="width:88px">
@@ -1006,6 +1007,7 @@
               <th style="text-align:right;padding-right:8px">Pts 🔒</th>
               <th style="text-align:right;padding-right:8px">Issue Paid 🔒</th>
               <th style="text-align:right;padding-right:8px">Pending 🔒</th>
+              <th style="text-align:center">적합도 / Total 수입</th>
               <th style="text-align:center">히스토리(포인트/실적)</th>
               <th style="text-align:center">포커스</th>
               <th style="text-align:center">삭제</th>
@@ -1030,6 +1032,18 @@
               <td><input type="text" :value="fmt(mPtsSum(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
               <td><input type="text" :value="fmt(getMemberIssuePaid(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
               <td><input type="text" :value="fmt(getMemberPending(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+              <td style="padding:4px 10px;">
+                <div style="display:grid;grid-template-columns:1fr 50px;gap:8px;align-items:center;">
+                  <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">
+                    <template v-if="['Serious','Potential'].includes(m.status)">{{ m.score || 0 }}</template>
+                    <template v-else>${{ getMemberTotal(m) }}</template>
+                  </div>
+                  <div class="score-dots-wrap" style="margin-left:0;">
+                    <div v-if="['Serious','Potential'].includes(m.status)" class="score-dots-fill" :style="{width:(m.score||0)+'%'}"></div>
+                    <div v-else class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
+                  </div>
+                </div>
+              </td>
               <td style="text-align:center">
                 <button class="btn-hist-toggle" :class="{active:expandedMemberId===m.id}" @click="toggleHistoryPanel(m.id)">
                   📋 {{ m.history ? m.history.length : 0 }}
@@ -1046,7 +1060,7 @@
               <td></td>
             </tr>
             <tr v-if="expandedMemberId===m.id">
-              <td colspan="10" style="padding:0;background:var(--cream);">
+              <td colspan="11" style="padding:0;background:var(--cream);">
                 <div class="history-panel">
                   <div class="history-panel-header">
                     <div>
@@ -1062,8 +1076,8 @@
                         <th style="width:180px">구분</th>
                         <th style="width:130px;text-align:right">포인트</th>
                         <th style="width:160px">금액</th>
-                        <th style="width:110px;text-align:left;padding-left:6px;">비율</th>
                         <th>내용</th>
+                        <th style="width:110px;text-align:left;padding-left:6px;">비율</th>
                         <th style="width:80px;text-align:center">삭제</th>
                       </tr>
                     </thead>
@@ -1083,6 +1097,7 @@
                           <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
                             :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
                         </td>
+                        <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
                         <td style="padding:4px 6px;vertical-align:middle;">
                           <template v-if="getPointHistPct(m, h) > 0">
                             <div class="point-bar-track" style="margin:0 0 2px;"><div class="point-bar-fill" :style="{width: getPointHistPct(m, h) + '%'}"></div></div>
@@ -1090,7 +1105,6 @@
                           </template>
                           <span v-else style="font-size:10px;color:#ccc;">—</span>
                         </td>
-                        <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
                         <td style="text-align:center"><button class="btn-sm-danger" @click="removeHistoryItem(m.id,h.id)">✕</button></td>
                       </tr>
                     </tbody>
