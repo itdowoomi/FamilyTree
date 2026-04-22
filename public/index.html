@@ -329,7 +329,7 @@
         </div>
       </div>
       <div class="doc-header-right">
-        <div>As of {{ header.asOf }}</div>
+        <div>As of {{ header.asOf || new Date().toLocaleDateString('ko-KR') }}</div>
         <div class="save-status" :class="getSaveStatusClass()">
           <div class="save-dot"></div>
           <span>{{ getSaveStatusText() }}</span>
@@ -1464,7 +1464,11 @@
               <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
               <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
               <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
-              <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+              <div class="form-row grid4-full">
+                <label class="form-label">기준일 (As of)</label>
+                <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
+                <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
+              </div>
             </template>
 
             <!-- 서브 트리 뷰: 선택된 멤버의 기본정보를 편집 -->
@@ -1481,7 +1485,11 @@
               </div>
               <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
               <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
-              <div class="form-row"><label class="form-label">기준일 (As of)</label><input v-model="header.asOf" class="form-input"></div>
+              <div class="form-row grid4-full">
+                <label class="form-label">기준일 (As of)</label>
+                <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
+                <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
+              </div>
               <div class="form-row"><label class="form-label">전공</label><input v-model="selectedMember.major" class="form-input"></div>
               <div class="form-row"><label class="form-label">직업</label><input v-model="selectedMember.job" class="form-input"></div>
               <div class="form-row"><label class="form-label">직장</label><input v-model="selectedMember.company" class="form-input"></div>
