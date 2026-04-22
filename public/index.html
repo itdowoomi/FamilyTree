@@ -389,8 +389,9 @@
                   :x="lineObj.isExtra ? nodeWidth - 7 : 7"
                   :text-anchor="lineObj.isExtra ? 'end' : 'start'"
                   :y="nodeFontSize + 14 + nodeLineGap * 2 + 6 + 12 + li*nodeLineGap"
-                  :fill="lineObj.isExtra ? 'var(--navy)' : '#ffffff'" 
-                  :font-weight="lineObj.isExtra ? '700' : 'normal'">{{ lineObj.text }}</text>
+                  :fill="lineObj.isExtra ? '#ffffff' : nTextColor(m.status)" 
+                  :font-weight="lineObj.isExtra ? '700' : 'normal'"
+                  opacity="0.85">{{ lineObj.text }}</text>
               </g>
             </svg>
           </div>
