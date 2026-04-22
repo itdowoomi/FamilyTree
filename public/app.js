@@ -1654,6 +1654,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return all.sort((a, b) => parseDateForSort(b.date) - parseDateForSort(a.date)).slice(0, 10);
       });
+      const recentTeamInteractions = computed(() => {
+        const all = [];
+        for (const m of tabMembers.value) {
+          if (m.interactionHistory) {
+            for (const h of m.interactionHistory) {
+              all.push({ ...h, _memberName: m.name, _member: m });
+            }
+          }
+        }
+        return all.sort((a, b) => parseDateForSort(b.date) - parseDateForSort(a.date)).slice(0, 10);
+      });
       const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>(b.score||0)-(a.score||0)));
       const tabNotes = computed(() => tabContext.value.notes || notes.value);
       const tabUpcomingAppointments = computed(() => {
@@ -2443,7 +2454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
-        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
+        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView,
         teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
