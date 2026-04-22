@@ -204,8 +204,16 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .member-table input.form-input,.member-table select.form-select{width:100%;padding:2px 4px;}
 
 /* ─── ADD FORM ─── */
-.add-form{width:220px;flex-shrink:0;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);height:fit-content;}
+.add-form{width:460px;flex-shrink:0;align-self:flex-start;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);display:flex;flex-direction:column;}
 .add-form h4{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;margin-bottom:9px;}
+/* ─── SIDE HISTORY PANEL ─── */
+.side-hist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--navy);}
+.side-hist-name{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
+.side-hist-sub{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-top:2px;}
+.side-hist-close{background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0;font-family:inherit;transition:all .15s;}
+.side-hist-close:hover{color:var(--navy);border-color:var(--navy);}
+.side-hist-list{overflow-y:auto;max-height:calc(100vh - 320px);margin:0 -10px;padding:0 10px 4px 10px;min-height:60px;}
+.side-hist-add{flex-shrink:0;border-top:1px solid var(--border);padding-top:9px;margin-top:6px;display:flex;flex-direction:column;gap:5px;}
 .form-row{margin-bottom:7px;}
 .form-label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.4px;text-transform:uppercase;}
 .form-input,.form-select,.form-textarea{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--white);color:var(--text);transition:border-color .2s;}

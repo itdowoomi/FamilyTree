@@ -1059,91 +1059,94 @@
               </td>
               <td></td>
             </tr>
-            <tr v-if="expandedMemberId===m.id" class="history-panel-expanded-row">
-              <td colspan="11" style="padding:0;">
-                <div class="history-panel">
-                  <div class="history-panel-header">
-                    <div>
-                      <span class="history-panel-title">💰 {{ m.name }} — 포인트 및 실적 히스토리</span>
-                      <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 체크된 항목이 노드에 최근 5개까지 표시됩니다</span>
-                    </div>
-                  </div>
-                  <table class="history-table" v-if="m.history&&m.history.length">
-                    <thead>
-                      <tr>
-                        <th style="width:46px;text-align:center">표시</th>
-                        <th style="width:160px">날짜</th>
-                        <th style="width:180px">구분</th>
-                        <th style="width:130px;text-align:right">포인트</th>
-                        <th style="width:160px">금액</th>
-                        <th>내용</th>
-                        <th style="width:110px;text-align:left;padding-left:6px;">비율</th>
-                        <th style="width:80px;text-align:center">삭제</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="h in m.history" :key="h.id">
-                        <td style="text-align:center"><input type="checkbox" class="show-check" v-model="h.show"></td>
-                        <td><input class="history-date-input" v-model.lazy="h.date" placeholder="MM/DD/YY" @change="m.history=[...m.history]"></td>
-                        <td>
-                          <select v-model="h.type" class="form-select" style="padding:2px;font-size:10px;">
-                            <option value="History">히스토리</option>
-                            <option value="Issue Paid">Issue Paid</option>
-                            <option value="Pending">Pending</option>
-                          </select>
-                        </td>
-                        <td><input type="number" class="history-content-input" style="text-align:right;font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.point" placeholder="Pts"></td>
-                        <td>
-                          <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
-                            :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
-                        </td>
-                        <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
-                        <td style="padding:4px 6px;vertical-align:middle;">
-                          <template v-if="getPointHistPct(m, h) > 0">
-                            <div class="point-bar-track" style="margin:0 0 2px;"><div class="point-bar-fill" :style="{width: getPointHistPct(m, h) + '%'}"></div></div>
-                            <div class="point-bar-pct">{{ getPointHistPct(m, h).toFixed(1) }}%</div>
-                          </template>
-                          <span v-else style="font-size:10px;color:#ccc;">—</span>
-                        </td>
-                        <td style="text-align:center"><button class="btn-sm-danger" @click="removeHistoryItem(m.id,h.id)">✕</button></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-                  <div class="hist-add-row">
-                    <input class="history-date-input" style="width:160px;" v-model="newHist.date" placeholder="날짜(MM/DD/YY)">
-                    <select v-model="newHist.type" style="width:180px;flex-shrink:0;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:3px;">
-                      <option value="History">히스토리</option>
-                      <option value="Issue Paid">Issue Paid</option>
-                      <option value="Pending">Pending</option>
-                    </select>
-                    <input type="number" style="width:128px;flex-shrink:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
-                      v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(m.id)">
-                    <input type="number" style="width:160px;flex-shrink:0;font-family:'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
-                      v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : newHist.type" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(m.id)">
-                    <input class="history-content-input" v-model="newHist.content" placeholder="내용 입력" @keyup.enter="addHistoryItem(m.id)">
-                    <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0" @click="addHistoryItem(m.id)">+ 추가</button>
-                  </div>
-                </div>
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
 
+      <!-- 오른쪽 사이드 패널: 선택 시 히스토리, 미선택 시 멤버 추가 -->
       <div class="add-form">
-        <h4>+ 멤버 추가</h4>
-        <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
-        <div class="form-row"><label class="form-label">상위 멤버</label>
-          <select v-model="nm.parentId" class="form-select">
-            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
-          <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
-        </div>
-        <button class="btn btn-primary" style="width:100%;margin-top:2px" @click="addMember()">추가</button>
+        <!-- 히스토리 모드 -->
+        <template v-if="sideHistMember">
+          <div class="side-hist-header">
+            <div style="flex:1;min-width:0;">
+              <div class="side-hist-name">💰 {{ sideHistMember.name }}</div>
+              <div class="side-hist-sub">포인트 및 실적 히스토리</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">✓ 체크된 항목이 노드에 최근 5개까지 표시됩니다</div>
+            </div>
+            <button @click="toggleHistoryPanel(sideHistMember.id)" class="side-hist-close">✕ 닫기</button>
+          </div>
+          <div class="side-hist-list">
+            <table class="history-table" v-if="sideHistMember.history && sideHistMember.history.length">
+              <thead>
+                <tr>
+                  <th style="width:28px;text-align:center">표시</th>
+                  <th style="width:90px">날짜</th>
+                  <th style="width:95px">구분</th>
+                  <th style="width:68px;text-align:right">Pts</th>
+                  <th style="width:80px">금액</th>
+                  <th>내용</th>
+                  <th style="width:36px;text-align:center">삭제</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="h in sideHistMember.history" :key="h.id">
+                  <td style="text-align:center"><input type="checkbox" class="show-check" v-model="h.show"></td>
+                  <td><input class="history-date-input" style="width:100%;" v-model.lazy="h.date" placeholder="MM/DD/YY" @change="sideHistMember.history=[...sideHistMember.history]"></td>
+                  <td>
+                    <select v-model="h.type" class="form-select" style="padding:2px;font-size:10px;width:100%;">
+                      <option value="History">히스토리</option>
+                      <option value="Issue Paid">Issue Paid</option>
+                      <option value="Pending">Pending</option>
+                    </select>
+                  </td>
+                  <td><input type="number" class="history-content-input" style="text-align:right;font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.point" placeholder="Pts"></td>
+                  <td>
+                    <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
+                      :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
+                  </td>
+                  <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
+                  <td style="text-align:center"><button class="btn-sm-danger" @click="removeHistoryItem(sideHistMember.id, h.id)">✕</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
+          </div>
+          <div class="side-hist-add">
+            <div style="display:flex;gap:5px;">
+              <input class="history-date-input" style="flex:0 0 120px;" v-model="newHist.date" placeholder="날짜(MM/DD/YY)">
+              <select v-model="newHist.type" style="flex:1;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:3px;">
+                <option value="History">히스토리</option>
+                <option value="Issue Paid">Issue Paid</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:5px;">
+              <input type="number" style="flex:0 0 90px;font-family:'JetBrains Mono',monospace;text-align:right;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
+                v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(sideHistMember.id)">
+              <input type="number" style="flex:1;font-family:'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:3px;"
+                v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : newHist.type" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
+            </div>
+            <div style="display:flex;gap:5px;">
+              <input class="history-content-input" v-model="newHist.content" placeholder="내용 입력" @keyup.enter="addHistoryItem(sideHistMember.id)" style="flex:1;">
+              <button class="btn btn-primary" style="padding:3px 14px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addHistoryItem(sideHistMember.id)">+ 추가</button>
+            </div>
+          </div>
+        </template>
+        <!-- 기본 멤버 추가 폼 -->
+        <template v-else>
+          <h4>+ 멤버 추가</h4>
+          <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+          <div class="form-row"><label class="form-label">상위 멤버</label>
+            <select v-model="nm.parentId" class="form-select">
+              <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+          </div>
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
+            <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:2px" @click="addMember()">추가</button>
+        </template>
       </div>
     </div>
 
@@ -1252,102 +1255,110 @@
                 </td>
                 <td></td>
               </tr>
-              <tr v-if="expandedDispositionId===m.id" class="history-panel-expanded-row">
-                <td colspan="14" style="padding:0;">
-                  <div class="history-panel">
-                    <div class="history-panel-header">
-                      <div>
-                        <span class="history-panel-title">📊 {{ m.name }} — 기본성향 평가</span>
-                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 항목을 변경하면 적합도가 자동으로 계산되어 적용됩니다.</span>
-                      </div>
-                    </div>
-                    <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
-                       <div style="width:110px;">
-                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
-                          <input type="number" v-model.number="m.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(m, false)">
-                       </div>
-                       <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">친밀도 (1~50점)</label>
-                          <input type="number" v-model.number="m.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(m, false)">
-                       </div>
-                       <div style="width:90px;">
-                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
-                          <input type="number" v-model.number="m.disposition.friendScore" min="1" max="10" class="form-input" @change="calcDisposition(m, false)">
-                       </div>
-                       <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">Market</label>
-                          <select v-model="m.disposition.market" class="form-select" @change="calcDisposition(m, false)">
-                             <option value="">선택</option>
-                             <option value="L">L (10점)</option>
-                             <option value="M">M (8점)</option>
-                             <option value="S">S (6점)</option>
-                          </select>
-                       </div>
-                       <div style="flex:1;">
-                          <label class="form-label" style="margin-bottom:6px;">체크리스트 (각 10점)</label>
-                          <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; padding-bottom:3px;">
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.married" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 결혼</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.child" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 자녀</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.house" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 주택</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.income" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 인컴</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.ambition" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 야심</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.dissatisfied" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 불만족</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.pma" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> PMA</label>
-                             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.entrepreneur" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 기업가형</label>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="expandedInteractionId===m.id" class="history-panel-expanded-row">
-                <td colspan="14" style="padding:0;">
-                  <div class="history-panel">
-                    <div class="history-panel-header">
-                      <div>
-                        <span class="history-panel-title">📝 {{ m.name }} — 상담/관리 기록</span>
-                        <span style="font-size:10px;color:var(--muted);margin-left:8px;">✓ 멤버 정보 패널에서 조회할 수 있습니다.</span>
-                      </div>
-                    </div>
-                    <table class="history-table" v-if="m.interactionHistory&&m.interactionHistory.length">
-                      <thead>
-                        <tr>
-                          <th style="width:160px">날짜</th>
-                          <th>상담 및 관리 내용</th>
-                          <th style="width:80px;text-align:center">삭제</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="ih in m.interactionHistory" :key="ih.id">
-                          <td><input class="history-date-input" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onMemberInteractionChange(m)"></td>
-                          <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onMemberInteractionChange(m)"></td>
-                          <td style="text-align:center"><button class="btn-sm-danger" @click="removeInteractionItem(m.id,ih.id)">✕</button></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-                    <div class="hist-add-row">
-                      <input class="history-date-input" style="width:160px;" v-model="newInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addInteractionItem(m.id)">
-                      <input class="history-content-input" v-model="newInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addInteractionItem(m.id)">
-                      <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0" @click="addInteractionItem(m.id)">+ 추가</button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
       </div>
-      
-      <div class="add-form" style="width:230px;">
-        <h4>+ 멤버 정보 등록</h4>
-        <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
-        <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
-          <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
-        </div>
-        <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
+
+      <!-- 오른쪽 사이드 패널: 선택 시 히스토리/성향, 미선택 시 멤버 등록 -->
+      <div class="add-form">
+        <!-- 기본성향 모드 -->
+        <template v-if="sideDispositionMember">
+          <div class="side-hist-header">
+            <div style="flex:1;min-width:0;">
+              <div class="side-hist-name">📊 {{ sideDispositionMember.name }}</div>
+              <div class="side-hist-sub">기본성향 평가</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">✓ 항목을 변경하면 적합도가 자동으로 계산되어 적용됩니다.</div>
+            </div>
+            <button @click="toggleDispositionPanel(sideDispositionMember.id)" class="side-hist-close">✕ 닫기</button>
+          </div>
+          <div class="side-hist-list" style="overflow-y:visible;">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0 8px 0;">
+              <div style="min-width:100px;flex:0 0 auto;">
+                <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
+                <input type="number" v-model.number="sideDispositionMember.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(sideDispositionMember, false)">
+              </div>
+              <div style="min-width:90px;flex:0 0 auto;">
+                <label class="form-label" style="margin-bottom:4px;">친밀도 (1~50점)</label>
+                <input type="number" v-model.number="sideDispositionMember.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(sideDispositionMember, false)">
+              </div>
+              <div style="min-width:80px;flex:0 0 auto;">
+                <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
+                <input type="number" v-model.number="sideDispositionMember.disposition.friendScore" min="1" max="10" class="form-input" @change="calcDisposition(sideDispositionMember, false)">
+              </div>
+              <div style="min-width:90px;flex:0 0 auto;">
+                <label class="form-label" style="margin-bottom:4px;">Market</label>
+                <select v-model="sideDispositionMember.disposition.market" class="form-select" @change="calcDisposition(sideDispositionMember, false)">
+                  <option value="">선택</option>
+                  <option value="L">L (10점)</option>
+                  <option value="M">M (8점)</option>
+                  <option value="S">S (6점)</option>
+                </select>
+              </div>
+              <div style="width:100%;margin-top:4px;">
+                <label class="form-label" style="margin-bottom:6px;">체크리스트 (각 10점)</label>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;padding-top:2px;">
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.married" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 결혼</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.child" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 자녀</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.house" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 주택</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.income" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 인컴</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.ambition" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 야심</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.dissatisfied" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 불만족</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.pma" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> PMA</label>
+                  <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="sideDispositionMember.disposition.entrepreneur" @change="calcDisposition(sideDispositionMember, false)" style="accent-color:var(--navy);"> 기업가형</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+        <!-- 상담/관리 기록 모드 -->
+        <template v-else-if="sideInteractionMember">
+          <div class="side-hist-header">
+            <div style="flex:1;min-width:0;">
+              <div class="side-hist-name">📝 {{ sideInteractionMember.name }}</div>
+              <div class="side-hist-sub">상담 / 관리 기록</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">✓ 멤버 정보 패널에서도 조회할 수 있습니다.</div>
+            </div>
+            <button @click="toggleInteractionPanel(sideInteractionMember.id)" class="side-hist-close">✕ 닫기</button>
+          </div>
+          <div class="side-hist-list">
+            <table class="history-table" v-if="sideInteractionMember.interactionHistory && sideInteractionMember.interactionHistory.length">
+              <thead>
+                <tr>
+                  <th style="width:110px">날짜</th>
+                  <th>상담 및 관리 내용</th>
+                  <th style="width:36px;text-align:center">삭제</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="ih in sideInteractionMember.interactionHistory" :key="ih.id">
+                  <td><input class="history-date-input" style="width:100%;" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onMemberInteractionChange(sideInteractionMember)"></td>
+                  <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onMemberInteractionChange(sideInteractionMember)"></td>
+                  <td style="text-align:center"><button class="btn-sm-danger" @click="removeInteractionItem(sideInteractionMember.id, ih.id)">✕</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
+          </div>
+          <div class="side-hist-add">
+            <div style="display:flex;gap:5px;">
+              <input class="history-date-input" style="flex:0 0 120px;" v-model="newInteraction.date" placeholder="날짜(MM/DD/YY)" @keyup.enter="addInteractionItem(sideInteractionMember.id)">
+              <input class="history-content-input" v-model="newInteraction.content" placeholder="상담 및 관리 내용 입력" @keyup.enter="addInteractionItem(sideInteractionMember.id)" style="flex:1;">
+              <button class="btn btn-primary" style="padding:3px 12px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addInteractionItem(sideInteractionMember.id)">+ 추가</button>
+            </div>
+          </div>
+        </template>
+        <!-- 기본 멤버 등록 폼 -->
+        <template v-else>
+          <h4>+ 멤버 정보 등록</h4>
+          <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+          <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
+            <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
+        </template>
       </div>
     </div>
 
