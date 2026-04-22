@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
-      const defaultDisposition = () => ({ relationScore: 0, market: '', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false });
+      const defaultDisposition = () => ({ relationScore: 0, market: '', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 0 });
       const defaultRoot = () => {
         const email = currentUser.value && currentUser.value.email ? currentUser.value.email : 'example@gmail.com';
         return { id:'root', recruitId: null, name:'방동혁 (Don Bang)', email, major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() };
@@ -1277,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   
                   if (!m.disposition) m.disposition = defaultDisposition();
                   if (!r.disposition) r.disposition = defaultDisposition();
-                  const dispKeys = ['relationScore', 'market', 'married', 'child', 'house', 'income', 'ambition', 'dissatisfied', 'pma', 'entrepreneur'];
+                  const dispKeys = ['relationScore', 'market', 'married', 'child', 'house', 'income', 'ambition', 'dissatisfied', 'pma', 'entrepreneur', 'prejudice'];
                   dispKeys.forEach(k => { if(m.disposition[k] !== r.disposition[k]) m.disposition[k] = r.disposition[k]; });
               }
           });
@@ -1300,7 +1300,8 @@ document.addEventListener('DOMContentLoaded', () => {
                       recruits.value.push({ id: newRId, name: m.name, major: m.major || '', job: m.job || '', company: m.company || '', relation: m.relation || '', meetDate: m.meetDate || '', period: '', gender: m.gender || '남', score: m.score || (m.status === 'Serious' ? 75 : 60), birthDate: m.birthDate || '', age: m.age || '', show: true, interactionHistory: [...(m.interactionHistory || [])], disposition: m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition() });
                   }
               } else if (!isPotentialOrSerious && m.recruitId) {
-                  recruits.value = recruits.value.filter(r => r.id !== m.recruitId); m.recruitId = null;
+                  // Member no longer Potential/Serious: disconnect link only, keep recruit
+                  m.recruitId = null;
               }
 
               if(m.recruitId) {
@@ -1308,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   if(r) {
                       if(r.name !== m.name) r.name = m.name; if(r.major !== m.major) r.major = m.major; if(r.job !== m.job) r.job = m.job; if(r.company !== m.company) r.company = m.company; if(r.relation !== m.relation) r.relation = m.relation; if(r.meetDate !== m.meetDate) r.meetDate = m.meetDate; if(r.birthDate !== m.birthDate) r.birthDate = m.birthDate; if(r.age !== m.age) r.age = m.age; if(r.gender !== m.gender) r.gender = m.gender; if(r.score !== m.score) r.score = m.score;
                       if (!m.disposition) m.disposition = defaultDisposition(); if (!r.disposition) r.disposition = defaultDisposition();
-                      const dispKeys = ['relationScore', 'market', 'married', 'child', 'house', 'income', 'ambition', 'dissatisfied', 'pma', 'entrepreneur'];
+                      const dispKeys = ['relationScore', 'market', 'married', 'child', 'house', 'income', 'ambition', 'dissatisfied', 'pma', 'entrepreneur', 'prejudice'];
                       dispKeys.forEach(k => { if(r.disposition[k] !== m.disposition[k]) r.disposition[k] = m.disposition[k]; });
                   }
               }
@@ -1385,6 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!item.disposition) return; let total = 0; total += parseInt(item.disposition.relationScore) || 0;
           if (item.disposition.market === 'L') total += 10; else if (item.disposition.market === 'M') total += 8; else if (item.disposition.market === 'S') total += 6;
           ['married', 'child', 'house', 'income', 'ambition', 'dissatisfied', 'pma', 'entrepreneur'].forEach(k => { if (item.disposition[k]) total += 10; });
+          total -= parseInt(item.disposition.prejudice) || 0;
           item.score = Math.min(100, Math.max(0, total)); onScoreChange(item, isRecruit);
       }
       function zoomIn(){ zoomLevel.value=Math.min(3,+(zoomLevel.value+0.15).toFixed(2)); }
@@ -1511,11 +1513,14 @@ document.addEventListener('DOMContentLoaded', () => {
                       if (r) r.score = score;
                   }
               } else if (!newStatus && ['Potential', 'Serious'].includes(item.status)) {
-                  // Score dropped below 60, convert to regular status (remove recruit link)
-                  item.status = 'New(Code-in)';
-                  if (item.recruitId) {
-                      recruits.value = recruits.value.filter(r => r.id !== item.recruitId);
-                      item.recruitId = null;
+                  // Score dropped below 60: remove member from tree, keep recruit (same as recruit-side behavior)
+                  if (item.parentId) {
+                      members.value.forEach(x => { if (x.parentId === item.id) x.parentId = item.parentId; });
+                      members.value = members.value.filter(m => m.id !== item.id);
+                      if (selectedMemberId.value === item.id) selectedMemberId.value = 'root';
+                      if (expandedMemberId.value === item.id) expandedMemberId.value = null;
+                      if (expandedInteractionId.value === item.id) expandedInteractionId.value = null;
+                      if (expandedDispositionId.value === item.id) expandedDispositionId.value = null;
                   }
               }
           }

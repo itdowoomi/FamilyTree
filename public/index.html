@@ -872,8 +872,8 @@
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
                        <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
-                          <input type="number" v-model.number="m.disposition.relationScore" min="1" max="10" class="form-input" @change="calcDisposition(m, false)">
+                          <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
+                          <input type="number" v-model.number="m.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(m, false)">
                        </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">Market</label>
@@ -896,6 +896,10 @@
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.pma" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> PMA</label>
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="m.disposition.entrepreneur" @change="calcDisposition(m, false)" style="accent-color:var(--navy);"> 기업가형</label>
                           </div>
+                       </div>
+                       <div style="width:110px;">
+                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
+                          <input type="number" v-model.number="m.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(m, false)">
                        </div>
                     </div>
                   </div>
@@ -1071,8 +1075,8 @@
                     </div>
                     <div style="display: flex; gap: 15px; align-items: flex-end; padding:4px 0 8px 0;">
                        <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
-                          <input type="number" v-model.number="r.disposition.relationScore" min="1" max="10" class="form-input" @change="calcDisposition(r, true)">
+                          <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
+                          <input type="number" v-model.number="r.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(r, true)">
                        </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">Market</label>
@@ -1095,6 +1099,10 @@
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.pma" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> PMA</label>
                              <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" v-model="r.disposition.entrepreneur" @change="calcDisposition(r, true)" style="accent-color:var(--gold);"> 기업가형</label>
                           </div>
+                       </div>
+                       <div style="width:110px;">
+                          <label class="form-label" style="margin-bottom:4px;color:#c0392b;">편견 차감 (0~100점)</label>
+                          <input type="number" v-model.number="r.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(r, true)">
                        </div>
                     </div>
                   </div>
