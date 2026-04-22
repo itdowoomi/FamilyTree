@@ -273,7 +273,7 @@
                   <template v-if="selectedMember.age">{{ selectedMember.age }}세<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
-                  <template v-if="selectedMember.email"><a :href="'mailto:'+selectedMember.email" class="mem-info-email" :title="selectedMember.email">✉ {{ selectedMember.email }}</a><span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMemberEffectiveEmail"><a :href="'mailto:'+selectedMemberEffectiveEmail" class="mem-info-email" :title="selectedMemberEffectiveEmail">✉ {{ selectedMemberEffectiveEmail }}</a><span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
                     적합도 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
@@ -281,14 +281,23 @@
                     Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
                   </template>
               </div>
-              <div class="mem-info-edit-row">
-                  <label class="mem-info-edit-label">✉ 이메일</label>
-                  <input type="email" v-model.lazy="selectedMember.email" class="mem-info-edit-input" placeholder="example@gmail.com">
-              </div>
               <div v-if="selectedMember && selectedMember.id !== 'root'" class="mem-info-edit-row" style="margin-top:8px;">
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
+              </div>
+              <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
+                  <div v-for="em in subTreeSharesForSelected.sharedEmails" :key="em" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;font-size:11px;">
+                      <span style="font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="em">
+                          <span v-if="em === subTreeSharesForSelected.primaryEmail" style="display:inline-block;background:#1c2b4a;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:4px;">대표</span>
+                          {{ em }}
+                      </span>
+                      <span style="flex-shrink:0;display:flex;gap:6px;">
+                          <a v-if="em !== subTreeSharesForSelected.primaryEmail" href="#" @click.prevent="setSubTreeShareePrimary(em)" style="font-size:10px;color:#4a5a7a;text-decoration:underline;">대표로</a>
+                          <a v-if="currentIsOwner" href="#" @click.prevent="removeSubTreeSharee(em)" style="font-size:10px;color:#c0392b;text-decoration:underline;" title="공유 해제">✕ 해제</a>
+                      </span>
+                  </div>
               </div>
             </div>
             <div>
@@ -485,7 +494,7 @@
                   <template v-if="selectedMember.age">{{ selectedMember.age }}세<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.gender">{{ selectedMember.gender }}<span class="mem-info-dot">·</span></template>
                   <template v-if="selectedMember.meetDate">만남 {{ selectedMember.meetDate }}<span class="mem-info-dot">·</span></template>
-                  <template v-if="selectedMember.email"><a :href="'mailto:'+selectedMember.email" class="mem-info-email" :title="selectedMember.email">✉ {{ selectedMember.email }}</a><span class="mem-info-dot">·</span></template>
+                  <template v-if="selectedMemberEffectiveEmail"><a :href="'mailto:'+selectedMemberEffectiveEmail" class="mem-info-email" :title="selectedMemberEffectiveEmail">✉ {{ selectedMemberEffectiveEmail }}</a><span class="mem-info-dot">·</span></template>
                   <template v-if="['Serious', 'Potential'].includes(selectedMember.status)">
                     적합도 <span class="mem-score-val">{{ selectedMember.score || 0 }}</span>
                   </template>
@@ -493,14 +502,23 @@
                     Total <span class="mem-total-val">${{ getMemberTotal(selectedMember) }}</span>
                   </template>
               </div>
-              <div class="mem-info-edit-row">
-                  <label class="mem-info-edit-label">✉ 이메일</label>
-                  <input type="email" v-model.lazy="selectedMember.email" class="mem-info-edit-input" placeholder="example@gmail.com">
-              </div>
               <div v-if="selectedMember && selectedMember.id !== 'root'" class="mem-info-edit-row" style="margin-top:8px;">
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
+              </div>
+              <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
+                  <div v-for="em in subTreeSharesForSelected.sharedEmails" :key="em" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;font-size:11px;">
+                      <span style="font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="em">
+                          <span v-if="em === subTreeSharesForSelected.primaryEmail" style="display:inline-block;background:#1c2b4a;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:4px;">대표</span>
+                          {{ em }}
+                      </span>
+                      <span style="flex-shrink:0;display:flex;gap:6px;">
+                          <a v-if="em !== subTreeSharesForSelected.primaryEmail" href="#" @click.prevent="setSubTreeShareePrimary(em)" style="font-size:10px;color:#4a5a7a;text-decoration:underline;">대표로</a>
+                          <a v-if="currentIsOwner" href="#" @click.prevent="removeSubTreeSharee(em)" style="font-size:10px;color:#c0392b;text-decoration:underline;" title="공유 해제">✕ 해제</a>
+                      </span>
+                  </div>
               </div>
             </div>
             <div>

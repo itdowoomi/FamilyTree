@@ -86,6 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const showSubTreeShareModal = ref(false);
       const shareInput = reactive({ email: '', role: 'editor' });
       const subTreeShareInput = reactive({ email: '', role: 'editor', includeData: true });
+      // 선택된 멤버의 서브트리 공유 정보 (우측 패널에 표시/관리용)
+      const subTreeSharesForSelected = ref({ treeId: null, sharedEmails: [], sharePermissions: {}, primaryEmail: '' });
       const toast = reactive({ msg:'', type:'success', visible:false });
       let toastTimer = null, autoTimer = null;
       const isDirty = ref(false);
@@ -769,12 +771,19 @@ document.addEventListener('DOMContentLoaded', () => {
             existingEmails.add(trimmedEmail);
             const perms = { ...(existingData.sharePermissions || {}) };
             perms[trimmedEmail] = { role: subTreeShareInput.role || 'editor', scope: 'subtree' };
-            
-            await updateDoc(doc(db, topPath, existingTree.id), { sharedEmails: Array.from(existingEmails), sharePermissions: perms });
+
+            const updatePayload = { sharedEmails: Array.from(existingEmails), sharePermissions: perms };
+            // 기존 대표 이메일이 없으면 현재 추가되는 이메일을 대표로 자동 설정
+            if (!existingData.primaryShareEmail) {
+              updatePayload.primaryShareEmail = trimmedEmail;
+              if (subRoot) subRoot.email = trimmedEmail;
+            }
+            await updateDoc(doc(db, topPath, existingTree.id), updatePayload);
 
             showToastMsg(`🔗 기존 ${subRoot.name} 서브 트리에 ${trimmedEmail}님이 추가되었습니다!`);
             showSubTreeShareModal.value = false;
             subTreeShareInput.email = '';
+            await fetchSubTreeForSelectedMember();
             return;
           }
 
@@ -835,15 +844,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ownerId: currentUser.value.uid, ownerEmail: currentUser.value.email || '',
             sharedEmails: [trimmedEmail],
             sharePermissions: { [trimmedEmail]: { role: subTreeShareInput.role || 'editor', scope: 'subtree' } },
+            primaryShareEmail: trimmedEmail,
             isSubTree: true, parentTreeId: currentTreeId.value, subTreeRootMemberId: selectedMemberId.value, subTreeRootMemberName: subRoot.name
           };
 
           const ref = doc(db, getTreesPath(), newTreeId);
           await setDoc(ref, sharedTreeData);
 
+          // 첫 공유이므로 멤버의 실효 이메일을 대표 이메일로 동기화
+          if (subRoot) subRoot.email = trimmedEmail;
+
           showToastMsg(`🔗 ${subRoot.name} 서브 트리가 ${trimmedEmail}님에게 공유되었습니다!`);
           showSubTreeShareModal.value = false;
           subTreeShareInput.email = ''; subTreeShareInput.role = 'editor'; subTreeShareInput.includeData = true;
+          await fetchSubTreeForSelectedMember();
         } catch (e) { console.error(e); showToastMsg('서브 트리 공유 실패', 'error'); }
       };
 
@@ -851,6 +865,89 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedMemberId.value || selectedMemberId.value === 'root') return showToastMsg('서브 트리를 공유하려면 먼저 root가 아닌 멤버를 선택하세요.', 'error');
         showSubTreeShareModal.value = true;
       };
+
+      // ── 선택된 멤버에 대응되는 서브 트리 공유 정보 조회/관리 ──
+      const fetchSubTreeForSelectedMember = async () => {
+        subTreeSharesForSelected.value = { treeId: null, sharedEmails: [], sharePermissions: {}, primaryEmail: '' };
+        if (!selectedMemberId.value || selectedMemberId.value === 'root') return;
+        if (!currentTreeId.value || !currentUser.value) return;
+        try {
+          const topPath = getTreesPath();
+          const col = collection(db, topPath);
+          const snap = await getDocs(query(col,
+            where('parentTreeId', '==', currentTreeId.value),
+            where('subTreeRootMemberId', '==', selectedMemberId.value),
+            where('ownerId', '==', currentUser.value.uid)
+          ));
+          if (snap.empty) return;
+          const d = snap.docs[0];
+          const data = d.data();
+          const emails = Array.isArray(data.sharedEmails) ? data.sharedEmails : [];
+          subTreeSharesForSelected.value = {
+            treeId: d.id,
+            sharedEmails: emails,
+            sharePermissions: data.sharePermissions || {},
+            primaryEmail: data.primaryShareEmail || emails[0] || ''
+          };
+        } catch (e) { console.error('[fetchSubTreeForSelectedMember] failed', e); }
+      };
+
+      const removeSubTreeSharee = async (email) => {
+        const info = subTreeSharesForSelected.value;
+        if (!info.treeId) return;
+        if (!confirm(`${email} 님의 공유를 해제하시겠습니까?`)) return;
+        try {
+          const topPath = getTreesPath();
+          const refDoc = doc(db, topPath, info.treeId);
+          const snap = await getDoc(refDoc);
+          if (!snap.exists()) return;
+          const data = snap.data();
+          const newEmails = (data.sharedEmails || []).filter(e => e !== email);
+          const newPerms = { ...(data.sharePermissions || {}) };
+          delete newPerms[email];
+          let newPrimary = data.primaryShareEmail || '';
+          if (newPrimary === email || !newPrimary) newPrimary = newEmails[0] || '';
+          await updateDoc(refDoc, {
+            sharedEmails: newEmails,
+            sharePermissions: newPerms,
+            primaryShareEmail: newPrimary
+          });
+          // 멤버 이메일도 대표 이메일로 동기화
+          const m = members.value.find(x => x.id === selectedMemberId.value);
+          if (m) m.email = newPrimary;
+          showToastMsg(`${email} 님의 공유가 해제되었습니다.`);
+          await fetchSubTreeForSelectedMember();
+          if (newEmails.length === 0) {
+            // 공유 대상이 아무도 없으면 서브 트리 문서 자체 삭제 (권한: 소유자만)
+            try { await deleteDoc(refDoc); } catch (_) {}
+          }
+        } catch (e) { console.error(e); showToastMsg('공유 해제 실패', 'error'); }
+      };
+
+      const setSubTreeShareePrimary = async (email) => {
+        const info = subTreeSharesForSelected.value;
+        if (!info.treeId) return;
+        try {
+          const topPath = getTreesPath();
+          const refDoc = doc(db, topPath, info.treeId);
+          await updateDoc(refDoc, { primaryShareEmail: email });
+          // 멤버 이메일도 대표 이메일로 동기화
+          const m = members.value.find(x => x.id === selectedMemberId.value);
+          if (m) m.email = email;
+          showToastMsg(`${email} 이(가) 대표 이메일로 설정되었습니다.`);
+          await fetchSubTreeForSelectedMember();
+        } catch (e) { console.error(e); showToastMsg('대표 이메일 설정 실패', 'error'); }
+      };
+
+      // 우측 패널 등에서 표시할 "멤버의 실효 이메일"
+      //  - 해당 멤버에 대한 서브 트리 공유가 있으면 대표 이메일
+      //  - 없으면 멤버 레코드에 저장된 이메일
+      const selectedMemberEffectiveEmail = computed(() => {
+        const s = subTreeSharesForSelected.value;
+        if (s && s.primaryEmail) return s.primaryEmail;
+        if (s && s.sharedEmails && s.sharedEmails.length) return s.sharedEmails[0];
+        return (selectedMember.value && selectedMember.value.email) || '';
+      });
 
       const currentIsOwner = computed(() => !!(currentTreeMeta.value && currentUser.value && currentTreeMeta.value.ownerId === currentUser.value.uid));
       const currentIsEditor = computed(() => {
@@ -1639,7 +1736,12 @@ document.addEventListener('DOMContentLoaded', () => {
       function confirmPrint(){ const frame=document.getElementById('preview-frame'); if(frame&&frame.contentWindow){ let ps=frame.contentDocument.getElementById('print-page-style'); if(!ps){ps=frame.contentDocument.createElement('style');ps.id='print-page-style';frame.contentDocument.head.appendChild(ps);} ps.textContent=`@page{margin:0;size:letter ${printLandscape.value?'landscape':'portrait'};}`;frame.contentWindow.print(); } }
 
       onMounted(()=>{ initAuth(); });
-      
+
+      // 선택된 멤버가 바뀔 때마다 해당 멤버의 서브 트리 공유 정보를 다시 읽어온다.
+      watch([selectedMemberId, currentTreeId, currentUser], () => {
+        fetchSubTreeForSelectedMember();
+      });
+
       watch([header,members,notes,recruits,appointments,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
         if (applyingRemote) return;
         if (currentIsReadOnly.value) return;
@@ -1654,6 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser, isDashboard, savedTrees, sharedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
         addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
+        subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
