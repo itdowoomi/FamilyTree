@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
-      const defaultDisposition = () => ({ relationScore: 0, friendScore: 0, market: '', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 0 });
+      const defaultDisposition = () => ({ relationScore: 15, friendScore: 7, market: 'S', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 30 });
       const defaultRoot = () => {
         const email = currentUser.value && currentUser.value.email ? currentUser.value.email : 'example@gmail.com';
         return { id:'root', recruitId: null, name:'방동혁 (Don Bang)', email, major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() };
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const newRecruitInteraction = reactive({ date:'', content:'' });
       const newAppt = reactive({ date: '', time: '', endTime: '', location: '', type: '이벤트', title: '', description: '', targetName: '', attendees: [], newAttendeeInput: '', createdBy: '' });
 
-      const nm = reactive({ name:'', email:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'root', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
+      const nm = reactive({ name:'', email:'', major:'', job:'', company:'', status:'New(Code-in)', parentId:'', birthDate:'', age:'', meetDate:'', relation:'', gender:'남', score:0 });
 
       const nodeWidth = ref(155), nodeBaseHeight = ref(58), nodeFontSize = ref(10), nodeLineGap = ref(11);
       const widthLocked = ref(false), heightLocked = ref(false), fontLocked = ref(false), lineGapLocked = ref(false);
@@ -1402,7 +1402,8 @@ document.addEventListener('DOMContentLoaded', () => {
       function addMember(){
         if(!nm.name.trim()) return;
         const newId = 'm'+Date.now();
-        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId:nm.parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition() });
+        const parentId = nm.parentId || focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
+        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition() });
         nm.name=''; nm.email=''; nm.major=''; nm.job=''; nm.company=''; nm.birthDate=''; nm.age=''; nm.meetDate=''; nm.relation=''; nm.gender='남'; nm.score=0;
         showToastMsg(`✅ 멤버가 추가되었습니다.`);
       }
@@ -1484,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   linkedMember.status = newStatus;
                   linkedMember.score = score;
               } else if (newStatus && !linkedMember) {
-                  const pId = focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
+                  const pId = item.parentId || focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
                   if (pId) {
                       const newMemberId = 'm' + Date.now() + Math.random().toString(36).substring(2, 7);
                       members.value.push({
@@ -1534,7 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existingMemberIndex !== -1) {
             members.value[existingMemberIndex].recruitId = null; members.value[existingMemberIndex].status = 'New(Code-in)'; members.value[existingMemberIndex].interactionHistory.push({ id: 'ih' + Date.now(), date: d, content: '정식 멤버로 승급됨' }); targetMemberId = members.value[existingMemberIndex].id;
         } else {
-            const pId = focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null; if(!pId) { showToastMsg('상위 멤버가 없습니다.', 'error'); return; }
+            const pId = r.parentId || focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null; if(!pId) { showToastMsg('상위 멤버가 없습니다.', 'error'); return; }
             targetMemberId = 'm' + Date.now();
             const mappedInteractions = (r.interactionHistory || []).map(h => ({ id: 'ih' + Date.now() + Math.random(), date: h.date, content: h.content })); mappedInteractions.push({ id: 'ih' + Date.now(), date: d, content: 'Recruit 리스트에서 정식 멤버로 승급됨' });
             members.value.push({ id: targetMemberId, recruitId: null, name: r.name, email: r.email || '', major: r.major || '', job: r.job || '', company: r.company || '', status: 'New(Code-in)', parentId: pId, history: [], interactionHistory: mappedInteractions, issuePaid: 0, pending: 0, birthDate: r.birthDate || '', age: r.age || '', meetDate: r.meetDate || '', relation: r.relation || '', gender: r.gender || '남', score: r.score, disposition: r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition() });
