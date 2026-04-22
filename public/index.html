@@ -1169,8 +1169,8 @@
       </div>
     </div>
 
-    <div v-if="tab==='appointments'" class="tab-content">
-      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
+    <div v-if="tab==='appointments'" class="tab-content" style="overflow-x:hidden;">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
           <span class="notes-pos-label">패널 표시 위치</span>
           <label class="pos-radio"><input type="radio" v-model="appointmentPosition" value="none"> 숨기기</label>
