@@ -229,8 +229,8 @@
 
       <div v-if="appointmentPosition==='left'" class="side-panel left appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="tabUpcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
-        <div v-for="apt in tabUpcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+        <div v-if="visibleSidebarAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in visibleSidebarAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
             <div class="appt-top-row">
                 <div class="appt-date-block">
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
@@ -238,22 +238,9 @@
                 </div>
                 <span v-if="apt.time" class="appt-time-big">{{ apt.endTime ? apt.time + '~' + apt.endTime : apt.time }}</span>
             </div>
-            <div v-if="(apt.type||'이벤트')==='약속'" class="appt-people-big">
-                <template v-for="(person, idx) in apptPeopleList(apt)" :key="idx"><span v-if="idx>0">, </span>{{ person }}<span class="ppl-title" v-if="getPersonTitle(person)">({{ getPersonTitle(person) }})</span></template>
-            </div>
-            <div v-else class="appt-title-big">{{ apt.title }}</div>
+            <div class="appt-title-big">{{ apptDisplayTitle(apt) }}</div>
+            <div class="appt-subtitle-people" v-if="apptDisplaySubtitle(apt)">{{ apptDisplaySubtitle(apt) }}</div>
             <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
-            <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
-            <template v-if="(apt.type||'이벤트')!=='약속'">
-                <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
-                    <span class="appt-attendee-tag">멤버</span>
-                    <span class="appt-attendee-names">{{ apt.attendees.filter(n=>apptMemberNames.includes(n)).join(', ') }}</span>
-                </div>
-                <div v-if="(apt.targetName && !apptMemberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!apptMemberNames.includes(n)).length" class="appt-attendee-row">
-                    <span class="appt-attendee-tag new">신규</span>
-                    <span class="appt-attendee-names">{{ [...(apt.targetName && !apptMemberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!apptMemberNames.includes(n))].join(', ') }}</span>
-                </div>
-            </template>
         </div>
       </div>
 
@@ -450,8 +437,8 @@
 
       <div v-if="appointmentPosition==='right'" class="side-panel right appointment-panel" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title orange">📅 약속 / 이벤트 관리</div>
-        <div v-if="tabUpcomingAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
-        <div v-for="apt in tabUpcomingAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
+        <div v-if="visibleSidebarAppointments.length===0" class="appt-empty">예정된 약속 없음</div>
+        <div v-for="apt in visibleSidebarAppointments" :key="apt.id" class="appt-item" :class="{meet: (apt.type||'이벤트')==='약속'}">
             <div class="appt-top-row">
                 <div class="appt-date-block">
                     <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}">{{ apt.type || '이벤트' }}</span>
@@ -459,22 +446,9 @@
                 </div>
                 <span v-if="apt.time" class="appt-time-big">{{ apt.endTime ? apt.time + '~' + apt.endTime : apt.time }}</span>
             </div>
-            <div v-if="(apt.type||'이벤트')==='약속'" class="appt-people-big">
-                <template v-for="(person, idx) in apptPeopleList(apt)" :key="idx"><span v-if="idx>0">, </span>{{ person }}<span class="ppl-title" v-if="getPersonTitle(person)">({{ getPersonTitle(person) }})</span></template>
-            </div>
-            <div v-else class="appt-title-big">{{ apt.title }}</div>
+            <div class="appt-title-big">{{ apptDisplayTitle(apt) }}</div>
+            <div class="appt-subtitle-people" v-if="apptDisplaySubtitle(apt)">{{ apptDisplaySubtitle(apt) }}</div>
             <div v-if="apt.description" class="appt-desc">{{ apt.description }}</div>
-            <div v-if="apt.location" class="appt-location-big">{{ apt.location }}</div>
-            <template v-if="(apt.type||'이벤트')!=='약속'">
-                <div v-if="apt.attendees && apt.attendees.filter(n=>apptMemberNames.includes(n)).length" class="appt-attendee-row">
-                    <span class="appt-attendee-tag">멤버</span>
-                    <span class="appt-attendee-names">{{ apt.attendees.filter(n=>apptMemberNames.includes(n)).join(', ') }}</span>
-                </div>
-                <div v-if="(apt.targetName && !apptMemberNames.includes(apt.targetName)) || apt.attendees.filter(n=>!apptMemberNames.includes(n)).length" class="appt-attendee-row">
-                    <span class="appt-attendee-tag new">신규</span>
-                    <span class="appt-attendee-names">{{ [...(apt.targetName && !apptMemberNames.includes(apt.targetName) && !apt.attendees.includes(apt.targetName) ? [apt.targetName] : []), ...apt.attendees.filter(n=>!apptMemberNames.includes(n))].join(', ') }}</span>
-                </div>
-            </template>
         </div>
       </div>
 
@@ -1221,17 +1195,23 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="apt in tabUpcomingAppointments" :key="apt.id">
+              <tr v-for="apt in tabUpcomingAppointments" :key="apt.id" :class="{'appt-row-confirmed': apt.confirmed}">
                 <td>
-                  <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
+                  <span v-if="!apt.confirmed" class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
+                  <span v-else style="font-size:10px;color:var(--muted);font-style:italic;">숨김</span>
                 </td>
-                <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.date }}</td>
-                <td style="font-family:'JetBrains Mono',monospace;">{{ apt.time ? (apt.endTime ? apt.time + ' ~ ' + apt.endTime : apt.time) : '-' }}</td>
-                <td :style="{color: (apt.type||'이벤트')==='약속' ? 'var(--navy)' : '#a14200', fontWeight:600}">{{ apt.title }}</td>
-                <td style="font-size:11px;color:var(--text);">{{ apt.description || '-' }}</td>
-                <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
-                <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ apt.confirmed ? '—' : apt.date }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;">{{ apt.confirmed ? '—' : (apt.time ? (apt.endTime ? apt.time + ' ~ ' + apt.endTime : apt.time) : '-') }}</td>
+                <td :style="{color: apt.confirmed ? 'var(--muted)' : ((apt.type||'이벤트')==='약속' ? 'var(--navy)' : '#a14200'), fontWeight: apt.confirmed ? 400 : 600}">{{ apt.confirmed ? '—' : apt.title }}</td>
+                <td style="font-size:11px;color:var(--text);">{{ apt.confirmed ? '—' : (apt.description || '-') }}</td>
+                <td style="color:var(--navy-light);font-size:11px;">{{ apt.confirmed ? '—' : (apt.location || '-') }}</td>
+                <td style="font-size:11px;color:var(--muted);">{{ apt.confirmed ? '—' : (apt.attendees.join(', ') || '-') }}</td>
                 <td style="text-align:center; white-space:nowrap;">
+                  <button
+                    :class="apt.confirmed ? 'btn-sm-danger' : 'btn-sm-primary'"
+                    @click="toggleApptConfirmed(apt)"
+                    style="margin-right:4px;"
+                    :title="apt.confirmed ? '다시 디스플레이에 표시합니다' : '확인 처리: 디스플레이에서 숨깁니다'">{{ apt.confirmed ? '표시' : '확인' }}</button>
                   <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:4px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
                   <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
                   <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>

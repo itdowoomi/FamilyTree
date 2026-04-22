@@ -116,6 +116,9 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .appt-item.meet .appt-desc{border-left-color:#d2d9e6;}
 .appt-location-big{font-size:11px;color:var(--navy-light);margin-bottom:4px;font-weight:500;}
 .appt-location-big::before{content:"📍 ";opacity:.7;}
+.appt-subtitle-people{font-size:10.5px;color:var(--muted);line-height:1.35;margin:-1px 0 3px 0;letter-spacing:.1px;word-break:keep-all;}
+tr.appt-row-confirmed td{background:#fbfbfc;}
+tr.appt-row-confirmed td:not(:nth-last-child(-n+2)){opacity:.45;color:var(--muted) !important;}
 .appt-attendee-row{display:flex;gap:5px;align-items:baseline;font-size:10px;line-height:1.45;padding:1px 0 1px 2px;}
 .appt-attendee-tag{font-size:8.5px;font-weight:700;letter-spacing:.3px;color:var(--navy);text-transform:uppercase;flex-shrink:0;min-width:54px;}
 .appt-attendee-tag.new{color:#d35400;}

@@ -1134,6 +1134,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return d >= today;
         }).sort((a,b) => new Date(a.date.replace(/[-./]/g, '/')) - new Date(b.date.replace(/[-./]/g, '/')));
       });
+      // 사이드바 디스플레이 패널에 보여줄 약속: 확인(confirmed)된 항목은 숨김
+      const visibleSidebarAppointments = computed(() => {
+        return tabUpcomingAppointments.value.filter(a => !a.confirmed);
+      });
 
       const availableStatuses = computed(() => STATUSES.filter(s => legendConfig.value.items[s] && legendConfig.value.items[s].show));
       const PAGE_W_PX = computed(() => printLandscape.value ? 979 : 739);
@@ -1587,6 +1591,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: newAppt.description || '',
                 targetName: newAppt.targetName,
                 attendees: [...newAppt.attendees],
+                confirmed: false,
                 createdBy: newAppt.type === '이벤트' ? '' : createdBy,
                 createdByEmail: newAppt.type === '이벤트' ? '' : createdByEmail,
                 createdAt: new Date().toISOString(),
@@ -1597,6 +1602,39 @@ document.addEventListener('DOMContentLoaded', () => {
           newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; newAppt.createdBy = '';
       }
       function removeAppointment(id) { if (!confirm('이 약속/이벤트를 삭제하시겠습니까?')) return; appointments.value = appointments.value.filter(a => a.id !== id); showToastMsg('약속이 삭제되었습니다.'); }
+      function toggleApptConfirmed(apt) {
+          const idx = appointments.value.findIndex(a => a.id === apt.id);
+          if (idx === -1) return;
+          const cur = !!appointments.value[idx].confirmed;
+          appointments.value[idx].confirmed = !cur;
+          appointments.value[idx].updatedAt = new Date().toISOString();
+          showToastMsg(cur ? '약속을 다시 표시합니다.' : '약속을 확인 처리하여 디스플레이에서 숨깁니다.');
+      }
+      function apptDisplayTitle(apt) {
+          if (apt.location && apt.location.trim()) return '📍 ' + apt.location;
+          if ((apt.type || '이벤트') === '약속') {
+              const ppl = (typeof apptPeopleList === 'function' ? apptPeopleList(apt) : []) || [];
+              if (ppl.length) return ppl.slice(0, 2).join(', ') + (ppl.length > 2 ? ' 외' : '');
+              return '(장소 미정)';
+          }
+          return apt.title || '(장소 미정)';
+      }
+      function apptDisplaySubtitle(apt) {
+          const parts = [];
+          if ((apt.type || '이벤트') === '약속') {
+              const ppl = (typeof apptPeopleList === 'function' ? apptPeopleList(apt) : []) || [];
+              if (ppl.length) parts.push('👥 ' + ppl.join(', '));
+          } else {
+              if (apt.title) parts.push(apt.title);
+              const names = [];
+              if (apt.targetName) names.push(apt.targetName);
+              if (apt.attendees && apt.attendees.length) {
+                  apt.attendees.forEach(n => { if (!names.includes(n)) names.push(n); });
+              }
+              if (names.length) parts.push('👥 ' + names.join(', '));
+          }
+          return parts.join(' · ');
+      }
       function completeAppointment(apt) {
           const aptDate = new Date(apt.date.replace(/[-./]/g, '/')); const histDate = `${String(aptDate.getMonth()+1).padStart(2,'0')}/${String(aptDate.getDate()).padStart(2,'0')}/${String(aptDate.getFullYear()).slice(2)}`; const typeLabel = apt.type || '약속/행사';
           let extraBits = []; if(apt.time) extraBits.push(apt.endTime ? apt.time + '~' + apt.endTime : apt.time); if(apt.location) extraBits.push('@'+apt.location);
@@ -1648,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
         if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
-        if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', ...a }));
+        if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
       }
@@ -1774,6 +1812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
+        toggleApptConfirmed, apptDisplayTitle, apptDisplaySubtitle, visibleSidebarAppointments,
         addNote, onNodeClick, getRecruitMeta, zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd,
         quickSave, exportJSON, exportSubJSON, importJSON, doPrint, confirmPrint, getToastClass, getSaveStatusClass, getSaveStatusText,
         printIncludeNotes, printIncludeRecruit, printIncludeAppointment, printIncludeMemberInfo, printIncludePointHistory,
