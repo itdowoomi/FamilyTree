@@ -795,7 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
               daysInfo: (s !== 'approved' && s !== 'denied') ? (remaining > 0 ? `유예 ${remaining}일` : '만료') : ''
             };
           }).sort((a,b) => (b.joinedAt?.seconds||0) - (a.joinedAt?.seconds||0));
-          console.log('[DEBUG] fetchRegisteredUsers:', mapped.length, '명, statuses:', mapped.map(u => `${u.email}:${u.status}`));
           registeredUsers.value = mapped;
         } catch (e) { console.error('사용자 목록 로드 실패:', e); }
       };
@@ -945,20 +944,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); showToastMsg('삭제 실패', 'error'); }
       };
 
-      const adminTabUsers = ref([]);
-      const updateAdminTabUsers = () => {
+      const adminTabUsers = computed(() => {
         const tab = adminTab.value;
         const users = registeredUsers.value;
-        let result;
-        if (tab === 'pending') result = users.filter(u => !u.status || u.status === 'pending');
-        else if (tab === 'manager') result = users.filter(u => u.status === 'manager');
-        else if (tab === 'approved') result = users.filter(u => u.status === 'approved');
-        else if (tab === 'denied') result = users.filter(u => u.status === 'denied');
-        else result = [];
-        console.log('[DEBUG] updateAdminTabUsers tab:', tab, '전체:', users.length, '결과:', result.length);
-        adminTabUsers.value = result;
-      };
-      watch([adminTab, registeredUsers], updateAdminTabUsers, { immediate: true });
+        if (tab === 'pending') return users.filter(u => !u.status || u.status === 'pending');
+        if (tab === 'manager') return users.filter(u => u.status === 'manager');
+        if (tab === 'approved') return users.filter(u => u.status === 'approved');
+        if (tab === 'denied') return users.filter(u => u.status === 'denied');
+        return [];
+      });
 
       const adminPendingCount = computed(() => registeredUsers.value.filter(u => !u.status || u.status === 'pending').length);
 
