@@ -1405,10 +1405,16 @@ document.addEventListener('DOMContentLoaded', () => {
       function removeMember(id){
         if(focusRootId.value===id) clearFocus();
         const m=members.value.find(x=>x.id===id); if(!m||!m.parentId)return;
+        // Potential/Serious 멤버 삭제 시 연결된 Recruit도 함께 삭제 (양방향 동기화)
+        const hadLinkedRecruit = !!m.recruitId;
+        if (m.recruitId) {
+          recruits.value = recruits.value.filter(r => r.id !== m.recruitId);
+        }
         members.value.forEach(x=>{ if(x.parentId===id) x.parentId=m.parentId; });
         members.value=members.value.filter(x=>x.id!==id);
         if(selectedMemberId.value===id) selectedMemberId.value='root';
         if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null;
+        if (hadLinkedRecruit) showToastMsg(`[${m.name}]님이 멤버와 Recruit 리스트에서 모두 삭제되었습니다.`);
       }
       function parentOpts(ex){
         const excludeIds=new Set([ex]); const chMap={}; members.value.forEach(m=>chMap[m.id]=[]);
@@ -1504,7 +1510,24 @@ document.addEventListener('DOMContentLoaded', () => {
         recruits.value.push(newR);
         newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
       }
-      function removeRecruit(id){ recruits.value=recruits.value.filter(r=>r.id!==id); }
+      function removeRecruit(id){
+        // Potential/Serious 멤버와 연결된 Recruit 삭제 시 연결된 멤버도 함께 삭제 (양방향 동기화)
+        const linkedMember = members.value.find(m => m.recruitId === id);
+        const recruitName = (recruits.value.find(r => r.id === id) || {}).name || '';
+        if (linkedMember && linkedMember.parentId) {
+          // 연결 멤버의 자식들을 부모로 재연결 후 멤버 삭제
+          if (focusRootId.value === linkedMember.id) clearFocus();
+          const parentId = linkedMember.parentId;
+          members.value.forEach(x => { if (x.parentId === linkedMember.id) x.parentId = parentId; });
+          members.value = members.value.filter(m => m.id !== linkedMember.id);
+          if (selectedMemberId.value === linkedMember.id) selectedMemberId.value = 'root';
+          if (expandedMemberId.value === linkedMember.id) expandedMemberId.value = null;
+          if (expandedInteractionId.value === linkedMember.id) expandedInteractionId.value = null;
+          if (expandedDispositionId.value === linkedMember.id) expandedDispositionId.value = null;
+        }
+        recruits.value = recruits.value.filter(r => r.id !== id);
+        if (linkedMember) showToastMsg(`[${recruitName || linkedMember.name}]님이 Recruit 리스트와 멤버에서 모두 삭제되었습니다.`);
+      }
       function addNote(){
         if(!newNote.text.trim())return;
         const createdBy = meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
