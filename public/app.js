@@ -71,8 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
       const defaultDisposition = () => ({ relationScore: 15, friendScore: 7, market: 'S', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 30 });
       const defaultRoot = () => {
-        const email = currentUser.value && currentUser.value.email ? currentUser.value.email : 'example@gmail.com';
-        return { id:'root', recruitId: null, name:'방동혁 (Don Bang)', email, major:'교육학', job:'Logistics', company:'삼양 Logistics', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:51, meetDate:'1975', gender:'남', birthDate:'1975-01-01', disposition: defaultDisposition() };
+        // 로그인한 사용자 정보 기반으로 Root 멤버 생성 (하드코딩 개인정보 제거)
+        const u = currentUser.value;
+        const email = u && u.email ? u.email : '';
+        const name = (u && u.displayName) ? u.displayName : (email ? email.split('@')[0] : '');
+        return { id:'root', recruitId: null, name, email, major:'', job:'', company:'', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:'', meetDate:'', gender:'', birthDate:'', disposition: defaultDisposition() };
       };
 
       const header = reactive(defaultHeader());
@@ -344,7 +347,15 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTreeId.value = 'tree_' + Date.now();
         Object.assign(header, defaultHeader());
         const root = defaultRoot();
-        if (currentUser.value && currentUser.value.email) root.email = currentUser.value.email;
+        // 로그인한 사용자 정보로 Root 이름/이메일 확정 반영 (displayName → 없으면 이메일 local-part)
+        if (currentUser.value) {
+          if (currentUser.value.email) root.email = currentUser.value.email;
+          if (currentUser.value.displayName) {
+            root.name = currentUser.value.displayName;
+          } else if (currentUser.value.email && !root.name) {
+            root.name = currentUser.value.email.split('@')[0];
+          }
+        }
         members.value = [root];
         notes.value = [];
         recruits.value = [];
