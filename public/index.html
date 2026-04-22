@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <div v-if="currentUser && isDashboard && (userAccessStatus === 'admin' || userAccessStatus === 'approved' || userAccessStatus === 'grace')" class="full-overlay" style="background:#f1f3f5; justify-content: flex-start; padding-top: 60px; overflow-y:auto;">
+  <div v-if="currentUser && isDashboard && ['admin','manager','approved','grace'].includes(userAccessStatus)" class="full-overlay" style="background:#f1f3f5; justify-content: flex-start; padding-top: 60px; overflow-y:auto;">
     <div class="dashboard-header">
       <h1>내 트리 목록 (Dashboard)</h1>
       <div class="user-profile">
@@ -85,6 +85,18 @@
           <span>총 멤버 수: {{ tree.memberCount }}명</span>
           <span v-if="tree.sharedEmails && tree.sharedEmails.length" class="tree-card-shared-chip">🔗 {{ tree.sharedEmails.length }}명 공유중</span>
         </div>
+        <div style="margin-top:10px;" @click.stop>
+          <button v-if="!tree.supportRequested"
+            @click.stop="requestSupport(tree.id, tree.name)"
+            style="font-size:11px;padding:3px 10px;border:1px solid #aaa;border-radius:4px;background:#f8f8f8;color:#666;cursor:pointer;">
+            🔧 기술 지원 요청
+          </button>
+          <button v-else
+            @click.stop="endSupportRequest(tree.id)"
+            style="font-size:11px;padding:3px 10px;border:1px solid #e55;border-radius:4px;background:#fff0f0;color:#e55;cursor:pointer;font-weight:600;">
+            🔧 지원 요청 중 (종료)
+          </button>
+        </div>
         <button class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
       </div>
     </div>
@@ -109,9 +121,9 @@
       <div v-if="showAdminPanel" style="width:100%;max-width:900px;margin-top:8px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
         <!-- 탭 + 일괄 처리 버튼 -->
         <div style="display:flex;align-items:center;gap:0;border-bottom:1.5px solid #e0e0e0;background:#fafaf7;">
-          <button v-for="tab in [{k:'pending',l:'대기중'},{k:'approved',l:'승인됨'},{k:'denied',l:'비승인'}]" :key="tab.k"
+          <button v-for="tab in [{k:'pending',l:'대기중'},{k:'manager',l:'관리자'},{k:'approved',l:'승인됨'},{k:'denied',l:'비승인'}]" :key="tab.k"
             @click="adminTab=tab.k; adminSelectedUids=[]"
-            :style="{padding:'9px 20px',border:'none',borderBottom: adminTab===tab.k ? '2px solid #1c2b4a' : '2px solid transparent',background:'transparent',fontWeight:adminTab===tab.k?700:400,color:adminTab===tab.k?'#1c2b4a':'#888',cursor:'pointer',fontSize:'13px'}">
+            :style="{padding:'9px 18px',border:'none',borderBottom: adminTab===tab.k ? '2px solid #1c2b4a' : '2px solid transparent',background:'transparent',fontWeight:adminTab===tab.k?700:400,color:adminTab===tab.k?'#1c2b4a':'#888',cursor:'pointer',fontSize:'13px'}">
             {{ tab.l }}
             <span style="font-size:11px;margin-left:4px;color:inherit;opacity:.7;">
               ({{ registeredUsers.filter(u => tab.k==='pending' ? (!u.status||u.status==='pending') : u.status===tab.k).length }})
@@ -144,6 +156,7 @@
               <th style="padding:8px 10px;font-weight:600;color:#555;">가입일</th>
               <th style="padding:8px 10px;font-weight:600;color:#555;">최근 로그인</th>
               <th v-if="adminTab==='pending'" style="padding:8px 10px;font-weight:600;color:#555;">유예기간</th>
+              <th v-if="adminTab==='manager'" style="padding:8px 10px;font-weight:600;color:#555;">승인일</th>
               <th style="padding:8px 10px;text-align:right;font-weight:600;color:#555;">관리</th>
             </tr>
           </thead>
@@ -166,11 +179,22 @@
               <td v-if="adminTab==='pending'" style="padding:7px 10px;">
                 <span :style="{fontSize:'11px',fontWeight:600,color: u.daysInfo==='만료' ? '#c0392b' : '#f39c12'}">{{ u.daysInfo }}</span>
               </td>
+              <td v-if="adminTab==='manager'" style="padding:7px 10px;font-size:11px;color:#555;">
+                {{ u.approvedAt?.toDate?.()?.toLocaleDateString('ko-KR') || '-' }}
+              </td>
               <td style="padding:7px 10px;text-align:right;">
-                <div v-if="u.email!==currentUser.email.toLowerCase()" style="display:flex;gap:4px;justify-content:flex-end;">
-                  <button v-if="adminTab!=='approved'" @click="approveUser(u.uid)"
+                <div v-if="u.email!==currentUser.email.toLowerCase()" style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;">
+                  <button v-if="adminTab!=='manager'" @click="approveAsManager(u.uid)"
+                    style="font-size:11px;padding:3px 9px;border:1px solid #1c2b4a;border-radius:4px;background:#eef1f8;color:#1c2b4a;cursor:pointer;font-weight:600;">
+                    관리자로
+                  </button>
+                  <button v-if="adminTab!=='approved' && adminTab!=='manager'" @click="approveUser(u.uid)"
                     style="font-size:11px;padding:3px 9px;border:1px solid #27ae60;border-radius:4px;background:#f0fff4;color:#27ae60;cursor:pointer;">
                     승인
+                  </button>
+                  <button v-if="adminTab==='manager'" @click="approveUser(u.uid)"
+                    style="font-size:11px;padding:3px 9px;border:1px solid #27ae60;border-radius:4px;background:#f0fff4;color:#27ae60;cursor:pointer;">
+                    일반으로
                   </button>
                   <button v-if="adminTab!=='denied'" @click="denyUser(u.uid)"
                     style="font-size:11px;padding:3px 9px;border:1px solid #e55;border-radius:4px;background:#fff5f5;color:#e55;cursor:pointer;">
@@ -184,12 +208,55 @@
               </td>
             </tr>
             <tr v-if="adminTabUsers.length===0">
-              <td :colspan="adminTab==='pending' ? 7 : 6" style="padding:16px;text-align:center;color:#aaa;">
-                {{ adminTab==='pending' ? '대기중인 사용자가 없습니다.' : adminTab==='approved' ? '승인된 사용자가 없습니다.' : '비승인된 사용자가 없습니다.' }}
+              <td :colspan="['pending','manager'].includes(adminTab) ? 7 : 6" style="padding:16px;text-align:center;color:#aaa;">
+                {{ adminTab==='pending' ? '대기중인 사용자가 없습니다.' : adminTab==='manager' ? '관리자 그룹에 사용자가 없습니다.' : adminTab==='approved' ? '승인된 사용자가 없습니다.' : '비승인된 사용자가 없습니다.' }}
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </template>
+
+    <!-- 슈퍼 관리자: 기술 지원 요청된 트리 -->
+    <template v-if="isAdmin">
+      <div class="dashboard-section-title" style="margin-top:28px;display:flex;align-items:center;gap:10px;">
+        🆘 기술 지원 요청된 트리
+        <button @click="fetchSavedTrees()" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;color:#555;">새로고침</button>
+        <span v-if="supportRequestedTrees.length > 0" style="font-size:11px;background:#e55;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">{{ supportRequestedTrees.length }}건</span>
+      </div>
+      <div v-if="supportRequestedTrees.length > 0" class="tree-grid" style="max-width:1000px;">
+        <div v-for="tree in supportRequestedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)"
+          style="border-color:#e55;border-width:2px;background:#fff8f8;cursor:pointer;">
+          <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
+          <div class="tree-card-meta">
+            <span style="color:#c0392b;font-weight:600;">요청자: {{ tree.ownerEmail || '—' }}</span>
+            <span>마지막 수정: {{ tree.updatedAt }}</span>
+            <span>멤버 수: {{ tree.memberCount }}명</span>
+          </div>
+        </div>
+      </div>
+      <div v-else style="margin-top:6px;margin-bottom:8px;color:var(--muted);font-size:13px;">
+        현재 기술 지원 요청이 없습니다.
+      </div>
+    </template>
+
+    <!-- 앱 사용 초대장 발송 (관리자 그룹 전용) -->
+    <template v-if="isManager">
+      <div class="dashboard-section-title" style="margin-top:28px;">📨 앱 사용 초대장 발송</div>
+      <div style="width:100%;max-width:1000px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:4px;">
+        <p style="font-size:13px;color:#555;margin-bottom:12px;line-height:1.6;">
+          초대받은 사람은 Google 계정으로 로그인 후 바로 <b>자신만의 패밀리 트리</b>를 만들 수 있습니다.<br>
+          트리 공유와 달리 독립적인 사용 권한을 부여합니다.
+        </p>
+        <div style="display:flex;gap:8px;max-width:480px;">
+          <input v-model="appInviteEmail" type="email" placeholder="초대할 이메일 주소"
+            @keyup.enter="sendAppInvite(appInviteEmail)"
+            style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+          <button @click="sendAppInvite(appInviteEmail)"
+            style="padding:8px 20px;background:#1c2b4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">
+            초대장 발송
+          </button>
+        </div>
       </div>
     </template>
 

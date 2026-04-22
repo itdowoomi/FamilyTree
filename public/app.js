@@ -61,10 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentTreeId = ref(null);
       const registeredUsers = ref([]);
       const showAdminPanel = ref(false);
-      const userAccessStatus = ref(null); // null=확인중 | 'admin' | 'approved' | 'grace' | 'denied' | 'expired'
-      const userGraceDays = ref(0); // 가입 후 경과 일수 (grace 상태일 때만 의미 있음)
+      const userAccessStatus = ref(null); // null=확인중 | 'admin' | 'manager' | 'approved' | 'grace' | 'denied' | 'expired'
+      const userGraceDays = ref(0);
       const adminTab = ref('pending');
       const adminSelectedUids = ref([]);
+      const appInviteEmail = ref('');
 
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
@@ -151,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const getLegacyTreesPath = (uid) => getCollectionPath(uid, 'trees');
 
       const sharedTrees = ref([]);
+      const supportRequestedTrees = ref([]); // 기술 지원 요청된 트리 (관리자용)
       const currentTreeMeta = ref(null);
       let unsubTreeDoc = null;
       let lastLocalSaveMs = 0;
@@ -221,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (status === 'approved') {
               userAccessStatus.value = 'approved';
+            } else if (status === 'manager') {
+              userAccessStatus.value = 'manager';
             } else if (status === 'denied') {
               userAccessStatus.value = 'denied';
               return;
@@ -319,6 +323,17 @@ document.addEventListener('DOMContentLoaded', () => {
               .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
           } else {
             sharedTrees.value = [];
+          }
+
+          // 슈퍼 관리자: 기술 지원 요청된 트리만 조회
+          if (ADMIN_EMAILS.includes(email)) {
+            try {
+              const supportSnap = await getDocs(query(col, where('supportRequested', '==', true)));
+              supportRequestedTrees.value = supportSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(t => t.ownerId !== currentUser.value.uid)
+                .sort((a,b) => (b.supportRequestedAt?.seconds||0) - (a.supportRequestedAt?.seconds||0));
+            } catch(e2) { console.warn('지원 요청 트리 조회 실패:', e2); }
           }
         } catch (e) {
           console.error("Error fetching trees:", e);
@@ -760,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const isAdmin = computed(() => ADMIN_EMAILS.includes((currentUser.value?.email || '').toLowerCase()));
+      const isManager = computed(() => ['admin', 'manager'].includes(userAccessStatus.value));
 
       const fetchRegisteredUsers = async () => {
         if (!isAdmin.value) return;
@@ -826,6 +842,97 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); showToastMsg('일괄 비승인 실패', 'error'); }
       };
 
+      const approveAsManager = async (uid) => {
+        if (!isAdmin.value) return;
+        try {
+          await updateDoc(doc(db, 'registeredUsers', uid), { status: 'manager', approvedAt: serverTimestamp(), approvedBy: currentUser.value.email || '' });
+          await fetchRegisteredUsers();
+          showToastMsg('관리자 그룹으로 승인되었습니다.');
+        } catch (e) { console.error(e); showToastMsg('승인 실패', 'error'); }
+      };
+
+      const requestSupport = async (treeId, treeName) => {
+        if (!currentUser.value) return;
+        try {
+          await updateDoc(doc(db, getTreesPath(), treeId), {
+            supportRequested: true,
+            supportRequestedAt: serverTimestamp(),
+            supportRequestedBy: currentUser.value.uid
+          });
+          try {
+            const requesterName = currentUser.value.displayName || currentUser.value.email || '사용자';
+            await addDoc(collection(db, 'mail'), {
+              to: ADMIN_EMAILS,
+              message: {
+                subject: `[Family Tree] 기술 지원 요청: ${treeName || treeId}`,
+                html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
+                  <h2 style="color:#1c2b4a;margin-bottom:8px;">기술 지원 요청</h2>
+                  <p style="color:#444;line-height:1.7;">
+                    <b>${requesterName}</b>(${currentUser.value.email})님이 기술 지원을 요청했습니다.<br>
+                    트리: <b>${treeName || treeId}</b>
+                  </p>
+                  <a href="https://familytree.itdowoomi.com/" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">
+                    Family Tree 열기
+                  </a>
+                </div>`
+              }
+            });
+          } catch(mailErr) { console.warn('지원 요청 알림 실패:', mailErr); }
+          await fetchSavedTrees();
+          showToastMsg('기술 지원이 요청되었습니다. 관리자에게 알림이 전송됩니다.');
+        } catch(e) { console.error(e); showToastMsg('요청 실패', 'error'); }
+      };
+
+      const endSupportRequest = async (treeId) => {
+        if (!currentUser.value) return;
+        try {
+          await updateDoc(doc(db, getTreesPath(), treeId), {
+            supportRequested: false,
+            supportRequestedAt: null,
+            supportRequestedBy: null
+          });
+          await fetchSavedTrees();
+          showToastMsg('기술 지원 요청이 종료되었습니다.');
+        } catch(e) { console.error(e); showToastMsg('종료 실패', 'error'); }
+      };
+
+      const sendAppInvite = async (email) => {
+        const trimmed = (email || '').trim().toLowerCase();
+        if (!trimmed || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) return showToastMsg('올바른 이메일을 입력하세요.', 'error');
+        if (currentUser.value?.email && trimmed === currentUser.value.email.toLowerCase()) return showToastMsg('본인 이메일은 초대할 수 없습니다.', 'error');
+        try {
+          await setDoc(doc(db, 'invitedEmails', trimmed), { email: trimmed, invitedBy: currentUser.value.email || '', invitedAt: serverTimestamp(), type: 'app_invite' });
+          const inviterName = currentUser.value.displayName || currentUser.value.email || '관리자';
+          const inviterEmail = currentUser.value.email || '';
+          await addDoc(collection(db, 'mail'), {
+            to: trimmed,
+            replyTo: inviterEmail,
+            message: {
+              subject: `[Family Tree] ${inviterName}님이 Family Tree에 초대했습니다`,
+              html: `
+                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
+                  <h2 style="color:#1c2b4a;margin-bottom:8px;">Family Tree 초대</h2>
+                  <p style="color:#444;line-height:1.7;">
+                    <b>${inviterName}</b>님이 <b>Family Tree</b> 사용을 초대했습니다.<br>
+                    Google 계정으로 로그인하면 나만의 패밀리 트리를 만들 수 있습니다.
+                  </p>
+                  <a href="https://familytree.itdowoomi.com/"
+                     style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">
+                    Family Tree 시작하기
+                  </a>
+                  <p style="margin-top:16px;font-size:13px;color:#555;">
+                    문의사항은 이 이메일에 답장하시면 <b>${inviterName}</b>(${inviterEmail})님께 전달됩니다.
+                  </p>
+                  <p style="margin-top:12px;font-size:12px;color:#999;">https://familytree.itdowoomi.com/</p>
+                </div>
+              `
+            }
+          });
+          appInviteEmail.value = '';
+          showToastMsg(`${trimmed} 님께 초대장을 발송했습니다.`);
+        } catch (e) { console.error(e); showToastMsg('초대 발송 실패', 'error'); }
+      };
+
       const deleteRegisteredUser = async (uid, email) => {
         if (!isAdmin.value) return;
         if (!confirm(`${email} 사용자를 목록에서 삭제하시겠습니까?`)) return;
@@ -838,6 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const adminTabUsers = computed(() => registeredUsers.value.filter(u => {
         if (adminTab.value === 'pending') return !u.status || u.status === 'pending';
+        if (adminTab.value === 'manager') return u.status === 'manager';
         if (adminTab.value === 'approved') return u.status === 'approved';
         if (adminTab.value === 'denied') return u.status === 'denied';
         return false;
@@ -2102,9 +2210,10 @@ document.addEventListener('DOMContentLoaded', () => {
       },{deep:true});
 
       return {
-        currentUser, isDashboard, savedTrees, sharedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
-        isAdmin, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount,
-        fetchRegisteredUsers, approveUser, denyUser, bulkApprove, bulkDeny, deleteRegisteredUser,
+        currentUser, isDashboard, savedTrees, sharedTrees, supportRequestedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
+        isAdmin, isManager, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount,
+        fetchRegisteredUsers, approveUser, approveAsManager, denyUser, bulkApprove, bulkDeny, deleteRegisteredUser,
+        appInviteEmail, sendAppInvite, requestSupport, endSupportRequest,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
         addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
         subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,

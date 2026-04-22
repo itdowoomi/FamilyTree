@@ -23,10 +23,11 @@ service cloud.firestore {
     
     // ========== 트리 접근 규칙 ==========
     match /trees/{treeId} {
-      // 읽기: 소유자 또는 공유된 사용자
+      // 읽기: 소유자, 공유된 사용자, 또는 기술 지원 요청된 트리만 슈퍼 관리자 접근
       allow read: if request.auth != null && (
         resource.data.ownerId == request.auth.uid ||
-        isSharedUser(resource.data)
+        isSharedUser(resource.data) ||
+        (isAdmin() && resource.data.supportRequested == true)
       );
       
       // 생성: 인증된 사용자 (자기 자신을 owner로 설정)
