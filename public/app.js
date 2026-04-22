@@ -944,17 +944,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); showToastMsg('삭제 실패', 'error'); }
       };
 
-      const adminTabUsers = computed(() => {
-        const tab = adminTab.value;
-        const users = registeredUsers.value;
-        if (tab === 'pending') return users.filter(u => !u.status || u.status === 'pending');
-        if (tab === 'manager') return users.filter(u => u.status === 'manager');
-        if (tab === 'approved') return users.filter(u => u.status === 'approved');
-        if (tab === 'denied') return users.filter(u => u.status === 'denied');
+      // status 값이 공백/대소문자/null로 들어와도 안전하게 정규화
+      function _normStatus(s) { return (typeof s === 'string' ? s.trim().toLowerCase() : ''); }
+      // 단일 진실 소스: 탭 카운트와 리스트 모두 이 함수를 사용 → 필터 불일치 방지
+      function adminUsersForTab(tabKey) {
+        const users = Array.isArray(registeredUsers.value) ? registeredUsers.value : [];
+        if (tabKey === 'pending') return users.filter(u => { const s = _normStatus(u.status); return !s || s === 'pending'; });
+        if (tabKey === 'manager') return users.filter(u => _normStatus(u.status) === 'manager');
+        if (tabKey === 'approved') return users.filter(u => _normStatus(u.status) === 'approved');
+        if (tabKey === 'denied')   return users.filter(u => _normStatus(u.status) === 'denied');
         return [];
-      });
+      }
+      const adminTabUsers = computed(() => adminUsersForTab(adminTab.value));
 
-      const adminPendingCount = computed(() => registeredUsers.value.filter(u => !u.status || u.status === 'pending').length);
+      const adminPendingCount = computed(() => adminUsersForTab('pending').length);
 
       const addShare = async (email, role) => {
         if (!currentTreeId.value || !currentUser.value) return;
@@ -2214,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return {
         currentUser, isDashboard, savedTrees, sharedTrees, supportRequestedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
-        isAdmin, isManager, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount,
+        isAdmin, isManager, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount, adminUsersForTab,
         fetchRegisteredUsers, approveUser, approveAsManager, denyUser, bulkApprove, bulkDeny, deleteRegisteredUser,
         appInviteEmail, sendAppInvite, requestSupport, endSupportRequest,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,

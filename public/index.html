@@ -180,7 +180,7 @@
           대기 {{ adminPendingCount }}명
         </span>
       </div>
-      <div v-if="showAdminPanel" style="width:100%;max-width:900px;margin-top:8px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+      <div v-if="showAdminPanel" style="width:100%;max-width:900px;margin-top:8px;margin-bottom:40px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow-x:auto;min-height:120px;">
         <!-- 탭 + 일괄 처리 버튼 -->
         <div style="display:flex;align-items:center;gap:0;border-bottom:1.5px solid #e0e0e0;background:#fafaf7;">
           <button v-for="tab in [{k:'pending',l:'대기중'},{k:'manager',l:'관리자'},{k:'approved',l:'승인됨'},{k:'denied',l:'비승인'}]" :key="tab.k"
@@ -188,7 +188,7 @@
             :style="{padding:'9px 18px',border:'none',borderBottom: adminTab===tab.k ? '2px solid #1c2b4a' : '2px solid transparent',background:'transparent',fontWeight:adminTab===tab.k?700:400,color:adminTab===tab.k?'#1c2b4a':'#888',cursor:'pointer',fontSize:'13px'}">
             {{ tab.l }}
             <span style="font-size:11px;margin-left:4px;color:inherit;opacity:.7;">
-              ({{ registeredUsers.filter(u => tab.k==='pending' ? (!u.status||u.status==='pending') : u.status===tab.k).length }})
+              ({{ adminUsersForTab(tab.k).length }})
             </span>
           </button>
           <div style="flex:1;"></div>
