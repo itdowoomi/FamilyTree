@@ -866,8 +866,12 @@
                           <input type="number" v-model.number="m.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(m, false)">
                        </div>
                        <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
+                          <label class="form-label" style="margin-bottom:4px;">친밀도 (1~50점)</label>
                           <input type="number" v-model.number="m.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(m, false)">
+                       </div>
+                       <div style="width:90px;">
+                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
+                          <input type="number" v-model.number="m.disposition.friendScore" min="1" max="10" class="form-input" @change="calcDisposition(m, false)">
                        </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">Market</label>
@@ -1057,8 +1061,12 @@
                           <input type="number" v-model.number="r.disposition.prejudice" min="0" max="100" class="form-input" style="border-color:#c0392b;" @change="calcDisposition(r, true)">
                        </div>
                        <div style="width:100px;">
-                          <label class="form-label" style="margin-bottom:4px;">관계-친밀도 (1~50점)</label>
+                          <label class="form-label" style="margin-bottom:4px;">친밀도 (1~50점)</label>
                           <input type="number" v-model.number="r.disposition.relationScore" min="1" max="50" class="form-input" @change="calcDisposition(r, true)">
+                       </div>
+                       <div style="width:90px;">
+                          <label class="form-label" style="margin-bottom:4px;">관계 (1~10점)</label>
+                          <input type="number" v-model.number="r.disposition.friendScore" min="1" max="10" class="form-input" @change="calcDisposition(r, true)">
                        </div>
                        <div style="width:100px;">
                           <label class="form-label" style="margin-bottom:4px;">Market</label>
@@ -1153,18 +1161,18 @@
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeAppointment"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1060px;">
+          <table class="member-table" style="font-size:12px;width:100%;table-layout:auto;">
             <thead>
               <tr>
-                <th style="width:60px">구분</th>
-                <th style="width:95px">날짜</th>
-                <th style="width:110px">시간 (시작~종료)</th>
-                <th style="width:150px">이벤트 명 / 만날 사람·고객</th>
-                <th style="width:170px">내용</th>
-                <th style="width:110px">장소</th>
-                <th style="width:150px">함께 참석</th>
-                <th style="width:175px;text-align:center;white-space:nowrap;">작업</th>
-                <th></th>
+                <th style="min-width:55px;">구분</th>
+                <th style="min-width:85px;">날짜</th>
+                <th style="min-width:100px;">시간 (시작~종료)</th>
+                <th style="min-width:130px;">이벤트 명 / 만날 사람·고객</th>
+                <th style="min-width:140px;">내용</th>
+                <th style="min-width:90px;">장소</th>
+                <th style="min-width:120px;">함께 참석</th>
+                <th style="min-width:165px;text-align:center;white-space:nowrap;">작업</th>
+                <th style="width:100%;"></th>
               </tr>
             </thead>
             <tbody>

@@ -349,7 +349,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 /* Appointment Registration Form */
 /* 창이 허용하면 더 넓어지고, 좁아져도 가로 스크롤 없이 줄어듦.
    basic(내용) 컬럼만 flex로 확장, 멤버/Recruit 컬럼은 고정 폭 유지. */
-.apt-form { flex: 1 1 430px; min-width: 0; max-width: 820px; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
+.apt-form { flex: 0 0 auto; width: fit-content; min-width: 0; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
 .apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 7px; flex-shrink:0;}
 .apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(170px, 1fr) 125px 125px; gap: 7px; min-height: 0; min-width: 0; }
 .apt-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 5px; overflow-y: auto; padding-right: 2px;}
