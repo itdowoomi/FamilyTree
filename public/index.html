@@ -987,9 +987,9 @@
       <div class="member-list" style="flex:55 1 0%;">
         <table class="member-table">
           <colgroup>
-            <col style="width:150px">
-            <col style="width:95px">
-            <col style="width:95px">
+            <col style="width:100px">
+            <col style="width:100px">
+            <col style="width:100px">
             <col style="width:75px">
             <col style="width:88px">
             <col style="width:80px">
@@ -1193,7 +1193,7 @@
     </div>
 
     <div v-if="tab==='memberInfo'" class="tab-content">
-      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
+      <div style="flex:60 1 0%;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
           <span class="notes-pos-label">패널 표시 위치</span>
           <label class="pos-radio"><input type="radio" v-model="memberInfoPosition" value="none"> 숨기기</label>
@@ -1303,7 +1303,7 @@
       </div>
 
       <!-- 오른쪽 사이드 패널: 선택 시 히스토리/성향, 미선택 시 멤버 등록 -->
-      <div class="add-form">
+      <div class="add-form" style="flex:40 1 0%;width:auto;min-width:260px;">
         <!-- 기본성향 모드 -->
         <template v-if="sideDispositionMember">
           <div class="side-hist-header">
@@ -1390,16 +1390,44 @@
             </div>
           </div>
         </template>
-        <!-- 기본 멤버 등록 폼 -->
+        <!-- 기본 모드: 2단 레이아웃 (팀 최근 실적 5 | 멤버 추가) -->
         <template v-else>
-          <h4>+ 멤버 정보 등록</h4>
-          <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
-          <div class="form-row"><label class="form-label">상위</label><select v-model="nm.parentId" class="form-select"><option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option></select></div>
-          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <div><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
-            <div><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+          <div style="display:grid;grid-template-columns:1fr 164px;gap:0;min-height:0;">
+            <!-- ① 팀 최근 실적 1~5 -->
+            <div style="padding-right:12px;border-right:1px solid var(--border);">
+              <div class="mem-hist-section-title">💰 팀 최근 실적 <span style="font-weight:400;color:var(--muted);">(최근 5)</span></div>
+              <div class="mem-hist-list" style="margin-top:0;">
+                <template v-if="recentTeamHistory.length > 0">
+                  <div v-for="h in recentTeamHistory.slice(0,5)" :key="h._member.id+'_'+h.id+'_c'" class="point-bar-item">
+                    <div class="point-bar-row-1">
+                      <span class="point-bar-date">{{ h.date || '—' }}</span>
+                      <span class="team-hist-name">{{ h._memberName }}</span>
+                      <span class="point-bar-content">{{ h.content }}</span>
+                      <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
+                    </div>
+                    <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-track">
+                      <div class="point-bar-fill" :style="{width: getPointHistPct(h._member, h) + '%'}"></div>
+                    </div>
+                    <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-pct">{{ getPointHistPct(h._member, h).toFixed(1) }}%</div>
+                  </div>
+                </template>
+                <div v-else class="mem-hist-empty">기록이 없습니다.</div>
+              </div>
+            </div>
+            <!-- ② 멤버 추가 폼 -->
+            <div style="padding-left:12px;">
+              <h4>+ 멤버 추가</h4>
+              <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+              <div class="form-row"><label class="form-label">상위</label>
+                <select v-model="nm.parentId" class="form-select">
+                  <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+                </select>
+              </div>
+              <div class="form-row"><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
+              <div class="form-row"><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px;" @click="addMember()">등록</button>
+            </div>
           </div>
-          <button class="btn btn-primary" style="width:100%" @click="addMember()">등록</button>
         </template>
       </div>
     </div>
