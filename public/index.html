@@ -16,6 +16,57 @@
     <div class="login-box">
       <h1>Family Tree Manager</h1>
       <p>클라우드 환경에서 당신만의 패밀리 트리를<br>안전하게 무제한으로 저장하고 관리하세요.<br> IT DOWOOMI - HYUKI 제공</p>
+
+      <!-- 이메일 로그인/회원가입 탭 -->
+      <div style="display:flex;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+        <button @click="emailLoginMode='login';emailLoginError=''" :style="emailLoginMode!=='register'?'background:#1c2b4a;color:#fff;font-weight:600;':'background:#f8f8f8;color:#555;'" style="flex:1;padding:9px;border:none;cursor:pointer;font-size:13px;transition:all .2s;">로그인</button>
+        <button @click="emailLoginMode='register';emailLoginError=''" :style="emailLoginMode==='register'?'background:#1c2b4a;color:#fff;font-weight:600;':'background:#f8f8f8;color:#555;'" style="flex:1;padding:9px;border:none;border-left:1px solid #e0e0e0;cursor:pointer;font-size:13px;transition:all .2s;">회원가입</button>
+      </div>
+
+      <!-- 이메일 입력 -->
+      <input v-model="emailForm.email" type="email" placeholder="이메일" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none;"
+        @keyup.enter="emailLoginMode==='login'?loginWithEmail():(emailLoginMode==='register'?registerWithEmail():resetPassword())">
+
+      <!-- 비밀번호 (reset 모드 제외) -->
+      <input v-if="emailLoginMode!=='reset'" v-model="emailForm.password" type="password" placeholder="비밀번호 (6자 이상)" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none;"
+        @keyup.enter="emailLoginMode==='login'?loginWithEmail():registerWithEmail()">
+
+      <!-- 비밀번호 확인 (register 모드) -->
+      <input v-if="emailLoginMode==='register'" v-model="emailForm.confirm" type="password" placeholder="비밀번호 확인" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none;"
+        @keyup.enter="registerWithEmail">
+
+      <!-- 에러 메시지 -->
+      <div v-if="emailLoginError" style="color:#c0392b;font-size:12px;margin-bottom:10px;text-align:left;background:#fff0f0;padding:8px 10px;border-radius:6px;border:1px solid #f5c6c6;">{{ emailLoginError }}</div>
+
+      <!-- 로그인 버튼 -->
+      <button v-if="emailLoginMode==='login'" @click="loginWithEmail" :disabled="emailLoginLoading" style="width:100%;padding:10px;background:#1c2b4a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;opacity:1;transition:opacity .2s;" :style="emailLoginLoading?'opacity:0.6;cursor:not-allowed;':''">
+        {{ emailLoginLoading ? '로그인 중...' : '이메일로 로그인' }}
+      </button>
+
+      <!-- 회원가입 버튼 -->
+      <button v-if="emailLoginMode==='register'" @click="registerWithEmail" :disabled="emailLoginLoading" style="width:100%;padding:10px;background:#1c2b4a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;" :style="emailLoginLoading?'opacity:0.6;cursor:not-allowed;':''">
+        {{ emailLoginLoading ? '가입 중...' : '회원가입' }}
+      </button>
+
+      <!-- 비밀번호 재설정 버튼 -->
+      <button v-if="emailLoginMode==='reset'" @click="resetPassword" :disabled="emailLoginLoading" style="width:100%;padding:10px;background:#1c2b4a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;" :style="emailLoginLoading?'opacity:0.6;cursor:not-allowed;':''">
+        {{ emailLoginLoading ? '발송 중...' : '비밀번호 재설정 메일 발송' }}
+      </button>
+
+      <!-- 비밀번호 찾기 / 돌아가기 링크 -->
+      <div style="text-align:right;margin-bottom:4px;">
+        <a v-if="emailLoginMode==='login'" href="#" @click.prevent="emailLoginMode='reset';emailLoginError=''" style="font-size:12px;color:#888;text-decoration:none;border-bottom:1px solid #ccc;">비밀번호를 잊으셨나요?</a>
+        <a v-if="emailLoginMode==='reset'" href="#" @click.prevent="emailLoginMode='login';emailLoginError=''" style="font-size:12px;color:#888;text-decoration:none;border-bottom:1px solid #ccc;">← 로그인으로 돌아가기</a>
+      </div>
+
+      <!-- 구분선 -->
+      <div style="display:flex;align-items:center;gap:12px;margin:16px 0;color:#bbb;font-size:12px;">
+        <div style="flex:1;height:1px;background:#e8e8e8;"></div>
+        <span>또는</span>
+        <div style="flex:1;height:1px;background:#e8e8e8;"></div>
+      </div>
+
+      <!-- Google 로그인 -->
       <button class="btn-google" @click="loginWithGoogle">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18px" height="18px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
         Google 계정으로 로그인
@@ -54,7 +105,7 @@
     <div class="dashboard-header">
       <h1>내 트리 목록 (Dashboard)</h1>
       <div class="user-profile">
-        <span>{{ currentUser.displayName }} 님</span>
+        <span>{{ currentUser.displayName || currentUser.email }} 님</span>
         <button class="btn-logout" @click="logout">로그아웃</button>
       </div>
     </div>
@@ -85,17 +136,22 @@
           <span>총 멤버 수: {{ tree.memberCount }}명</span>
           <span v-if="tree.sharedEmails && tree.sharedEmails.length" class="tree-card-shared-chip">🔗 {{ tree.sharedEmails.length }}명 공유중</span>
         </div>
-        <div style="margin-top:10px;" @click.stop>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;" @click.stop>
           <button v-if="!tree.supportRequested"
-            @click.stop="requestSupport(tree.id, tree.name)"
+            @click.stop="openSupportRequestModal(tree)"
             style="font-size:11px;padding:3px 10px;border:1px solid #aaa;border-radius:4px;background:#f8f8f8;color:#666;cursor:pointer;">
             🔧 기술 지원 요청
           </button>
-          <button v-else
-            @click.stop="endSupportRequest(tree.id)"
-            style="font-size:11px;padding:3px 10px;border:1px solid #e55;border-radius:4px;background:#fff0f0;color:#e55;cursor:pointer;font-weight:600;">
-            🔧 지원 요청 중 (종료)
-          </button>
+          <template v-else>
+            <button @click.stop="openSupportRequestModal(tree)"
+              style="font-size:11px;padding:3px 10px;border:1px solid #e55;border-radius:4px;background:#fff0f0;color:#e55;cursor:pointer;font-weight:600;">
+              🔧 요청 내용 보기/수정
+            </button>
+            <button @click.stop="endSupportRequest(tree.id)"
+              style="font-size:11px;padding:3px 10px;border:1px solid #888;border-radius:4px;background:#fff;color:#555;cursor:pointer;">
+              종료
+            </button>
+          </template>
         </div>
         <button class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
       </div>
@@ -152,13 +208,27 @@
         <span v-if="supportRequestedTrees.length > 0" style="font-size:11px;background:#e55;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">{{ supportRequestedTrees.length }}건</span>
       </div>
       <div v-if="supportRequestedTrees.length > 0" class="tree-grid" style="max-width:1000px;">
-        <div v-for="tree in supportRequestedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)"
+        <div v-for="tree in supportRequestedTrees" :key="tree.id" class="tree-card" @click="openSupportDetailModal(tree)"
           style="border-color:#e55;border-width:2px;background:#fff8f8;cursor:pointer;">
-          <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
+          <div class="tree-card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span>{{ tree.name || '제목 없는 트리' }}</span>
+            <span v-if="tree.supportRequestSubject" style="font-size:12px;font-weight:600;color:#c0392b;">— {{ tree.supportRequestSubject }}</span>
+          </div>
           <div class="tree-card-meta">
-            <span style="color:#c0392b;font-weight:600;">요청자: {{ tree.ownerEmail || '—' }}</span>
-            <span>마지막 수정: {{ tree.updatedAt }}</span>
-            <span>멤버 수: {{ tree.memberCount }}명</span>
+            <span style="color:#c0392b;font-weight:700;">
+              요청자: {{ tree.supportRequesterName || tree.ownerEmail || '—' }}
+              <span v-if="tree.supportRequesterEmail" style="color:#888;font-weight:500;">({{ tree.supportRequesterEmail }})</span>
+            </span>
+            <span v-if="tree.supportRequestedAt" style="font-size:11.5px;color:#888;">
+              요청 시각: {{ new Date((tree.supportRequestedAt.seconds||0)*1000).toLocaleString('ko-KR') }}
+            </span>
+            <span v-if="tree.supportRequestMessage"
+              style="margin-top:4px;padding:6px 10px;background:#fff;border:1px solid #f0d3d3;border-radius:4px;color:#333;font-size:12px;line-height:1.5;max-height:56px;overflow:hidden;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
+              {{ tree.supportRequestMessage }}
+            </span>
+            <span v-else style="color:#aaa;font-style:italic;font-size:11.5px;">요청 내용이 작성되지 않았습니다.</span>
+            <span style="font-size:11px;color:#888;">멤버 수: {{ tree.memberCount }}명 · 마지막 수정: {{ tree.updatedAt }}</span>
+            <span style="font-size:11px;color:#1c2b4a;font-weight:700;margin-top:2px;">▶ 클릭하여 상세 보기</span>
           </div>
         </div>
       </div>
@@ -360,6 +430,108 @@
           </label>
         </div>
         <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:8px 14px;" @click="shareSubTree()">🔗 서브 트리 공유하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기술 지원 요청 작성 모달 (사용자) -->
+  <div v-if="showSupportRequestModal" class="share-modal-overlay" @click.self="showSupportRequestModal=false">
+    <div class="share-modal" style="width:560px;">
+      <div class="share-modal-header">
+        <span>🆘 기술 지원 요청</span>
+        <button class="share-modal-close" @click="showSupportRequestModal=false">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-modal-hint">
+          요청하실 트리: <b>{{ supportRequestForm.treeName }}</b><br>
+          관리자에게 문제가 되는 부분을 이메일처럼 작성해 주세요. 요청 내용은 관리자 대시보드와 이메일로 전달됩니다.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;font-weight:700;color:#555;letter-spacing:.4px;text-transform:uppercase;">제목</label>
+          <input type="text" v-model="supportRequestForm.subject" class="form-input"
+            placeholder="예) 트리 저장이 안 됩니다" maxlength="120"
+            style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;font-weight:700;color:#555;letter-spacing:.4px;text-transform:uppercase;">요청 내용 <span style="color:#e55;">*</span></label>
+          <textarea v-model="supportRequestForm.message" rows="8" maxlength="4000"
+            placeholder="어떤 상황에서 어떤 증상이 발생했는지 최대한 자세히 적어주세요.&#10;예) 새 멤버를 추가한 뒤 저장 버튼을 누르면 '권한 오류' 메시지가 나타납니다."
+            style="padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;line-height:1.6;resize:vertical;outline:none;font-family:inherit;"></textarea>
+          <div style="font-size:10.5px;color:#999;text-align:right;">
+            {{ (supportRequestForm.message || '').length }} / 4000자
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+          <button @click="showSupportRequestModal=false"
+            style="padding:8px 16px;background:#fff;color:#555;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:13px;">
+            취소
+          </button>
+          <button @click="submitSupportRequest()"
+            style="padding:8px 20px;background:#c0392b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;">
+            ✉️ 요청 전송
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기술 지원 요청 상세 모달 (관리자) -->
+  <div v-if="showSupportDetailModal && selectedSupportRequest" class="share-modal-overlay" @click.self="showSupportDetailModal=false">
+    <div class="share-modal" style="width:620px;">
+      <div class="share-modal-header" style="background:#fff6f3;color:#c0392b;">
+        <span>🆘 기술 지원 요청 상세</span>
+        <button class="share-modal-close" @click="showSupportDetailModal=false">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div style="display:flex;flex-direction:column;gap:10px;background:#fafaf7;border:1px solid #ececec;border-radius:6px;padding:12px 14px;">
+          <div style="display:flex;gap:10px;">
+            <div style="min-width:64px;font-size:11px;font-weight:700;color:#888;letter-spacing:.3px;text-transform:uppercase;padding-top:2px;">요청자</div>
+            <div style="flex:1;font-size:13px;color:#1c2b4a;font-weight:700;">
+              {{ selectedSupportRequest.supportRequesterName || selectedSupportRequest.ownerEmail || '—' }}
+              <span v-if="selectedSupportRequest.supportRequesterEmail" style="color:#666;font-weight:500;font-family:'JetBrains Mono',monospace;font-size:12px;">
+                &lt;{{ selectedSupportRequest.supportRequesterEmail }}&gt;
+              </span>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div style="min-width:64px;font-size:11px;font-weight:700;color:#888;letter-spacing:.3px;text-transform:uppercase;padding-top:2px;">트리</div>
+            <div style="flex:1;font-size:13px;color:#333;">{{ selectedSupportRequest.name || '제목 없는 트리' }}
+              <span style="color:#888;font-size:11.5px;margin-left:4px;">(멤버 {{ selectedSupportRequest.memberCount }}명)</span>
+            </div>
+          </div>
+          <div v-if="selectedSupportRequest.supportRequestedAt" style="display:flex;gap:10px;">
+            <div style="min-width:64px;font-size:11px;font-weight:700;color:#888;letter-spacing:.3px;text-transform:uppercase;padding-top:2px;">요청시각</div>
+            <div style="flex:1;font-size:12.5px;color:#555;">
+              {{ new Date(((selectedSupportRequest.supportRequestedAt||{}).seconds||0)*1000).toLocaleString('ko-KR') }}
+            </div>
+          </div>
+          <div v-if="selectedSupportRequest.supportRequestSubject" style="display:flex;gap:10px;">
+            <div style="min-width:64px;font-size:11px;font-weight:700;color:#888;letter-spacing:.3px;text-transform:uppercase;padding-top:2px;">제목</div>
+            <div style="flex:1;font-size:14px;color:#c0392b;font-weight:700;">{{ selectedSupportRequest.supportRequestSubject }}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:11px;font-weight:700;color:#555;letter-spacing:.4px;text-transform:uppercase;">요청 내용</div>
+          <div v-if="selectedSupportRequest.supportRequestMessage"
+            style="padding:14px 16px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;color:#222;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto;">{{ selectedSupportRequest.supportRequestMessage }}</div>
+          <div v-else style="padding:14px 16px;background:#fff;border:1px dashed #ccc;border-radius:6px;font-size:12.5px;color:#aaa;font-style:italic;">
+            요청 내용이 작성되지 않았습니다. (구버전에서 요청된 건일 수 있습니다.)
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap;">
+          <button @click="endSupportRequest(selectedSupportRequest.id)"
+            style="padding:8px 14px;background:#fff;color:#c0392b;border:1px solid #c0392b;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600;">
+            ✅ 요청 종료 처리
+          </button>
+          <button @click="showSupportDetailModal=false"
+            style="padding:8px 14px;background:#fff;color:#555;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:12.5px;">
+            닫기
+          </button>
+          <button @click="openSupportRequestTree(selectedSupportRequest)"
+            style="padding:8px 18px;background:#1c2b4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:700;">
+            🌳 트리 열기
+          </button>
+        </div>
       </div>
     </div>
   </div>

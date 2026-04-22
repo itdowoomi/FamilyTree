@@ -1,17 +1,24 @@
 // Firebase Firestore Security Rules
-// 배포: Firebase Console → Firestore Database → 규칙 (Rules) 탭에 복사 → 게시(Publish)
+// 배포: Firebase Console → Firestore Database → 규칙(Rules) 탭에 복사 → 게시(Publish)
+//  또는: firebase deploy --only firestore:rules
 //
 // ● 요구 사항
 //   - 모든 사용자는 Google 로그인(또는 익명 로그인) 상태여야 읽기/쓰기 가능
 //   - 자신이 소유(ownerId)이거나 공유(sharedEmails)된 트리만 읽기 가능
 //   - 편집 권한(sharePermissions.{email}.role == "editor")을 가진 사용자만 쓰기 가능
-//   - 소유자는 삭제까지 가능
+//   - 소유자 또는 관리자는 삭제까지 가능
+//   - 관리자(ADMIN_EMAILS)는 registeredUsers 전체 조회/승인 가능
+//
+// 변경 이력
+//   - registeredUsers / invitedEmails / mail 컬렉션 규칙 신설
+//   - trees 컬렉션 read 규칙에 resource == null 허용 추가
+//     (신규 트리 onSnapshot / saveToCloud 내부 getDoc 호환)
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 공통 함수
+    // ── 공통 함수 ──
     function isSignedIn() {
       return request.auth != null;
     }
@@ -19,6 +26,12 @@ service cloud.firestore {
       return request.auth.token.email != null
         ? request.auth.token.email.lower()
         : '';
+    }
+    function isAdmin() {
+      return isSignedIn() && emailLower() in [
+        'donghyukbang@gmail.com',
+        'dhbang@itdowoomi.com'
+      ];
     }
     function isOwner(data) {
       return isSignedIn() && data.ownerId == request.auth.uid;
@@ -40,37 +53,75 @@ service cloud.firestore {
 
     // ── 최상위 trees 컬렉션 (FamilyTreeApp 표준 경로) ──
     match /trees/{treeId} {
-      allow read:   if isReader(resource.data);
+      // resource == null : 아직 생성되지 않은 신규 트리의 존재 체크 및 onSnapshot 허용
+      allow read:   if isAdmin()
+                    || resource == null
+                    || isReader(resource.data);
 
       // 최초 생성: 본인이 소유자일 때만
       allow create: if isSignedIn()
                     && request.resource.data.ownerId == request.auth.uid;
 
-      // 수정: 소유자 또는 편집자 역할
-      allow update: if isEditor(resource.data)
-                    // 공유 설정은 소유자만 변경 가능
-                    && (isOwner(resource.data) || (
-                        request.resource.data.ownerId == resource.data.ownerId &&
-                        request.resource.data.sharedEmails == resource.data.sharedEmails &&
-                        request.resource.data.sharePermissions == resource.data.sharePermissions
-                    ));
+      // 수정: 관리자는 전체 허용 / 편집자는 공유 설정 변경 불가
+      allow update: if isAdmin()
+                    || (
+                      isEditor(resource.data)
+                      && (
+                        isOwner(resource.data)
+                        || (
+                          request.resource.data.ownerId == resource.data.ownerId &&
+                          request.resource.data.sharedEmails == resource.data.sharedEmails &&
+                          request.resource.data.sharePermissions == resource.data.sharePermissions
+                        )
+                      )
+                    );
 
-      // 삭제: 소유자만
-      allow delete: if isOwner(resource.data);
+      // 삭제: 소유자 또는 관리자
+      allow delete: if isAdmin() || isOwner(resource.data);
     }
 
-    // ── (선택) 과거 경로 호환: /artifacts/{appId}/trees/{treeId} ──
+    // ── (선택) Canvas 경로: /artifacts/{appId}/trees/{treeId} ──
     match /artifacts/{appId}/trees/{treeId} {
-      allow read:   if isReader(resource.data);
+      allow read:   if isAdmin() || resource == null || isReader(resource.data);
       allow create: if isSignedIn()
                     && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isEditor(resource.data);
-      allow delete: if isOwner(resource.data);
+      allow update: if isAdmin() || isEditor(resource.data);
+      allow delete: if isAdmin() || isOwner(resource.data);
     }
 
     // ── (선택) 레거시 사용자별 경로 마이그레이션용 ──
     match /users/{userId}/trees/{treeId} {
       allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ── 가입 사용자 (registeredUsers) ──
+    // 본인: 본인 문서 조회/생성/갱신
+    // 관리자: 전체 조회(list)/수정/삭제 (가입 사용자 승인·비승인용)
+    match /registeredUsers/{uid} {
+      allow get:    if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list:   if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == uid
+                    && request.resource.data.uid == uid;
+      allow update: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == uid);
+      allow delete: if isAdmin();
+    }
+
+    // ── 초대 이메일 (invitedEmails) ──
+    // 문서 ID = 이메일(lower). 본인 이메일 확인 + 관리자 조회,
+    // 공유/초대 플로우에서 본인이 초대 레코드를 쓸 수 있음.
+    match /invitedEmails/{email} {
+      allow get:    if isSignedIn() && (email == emailLower() || isAdmin());
+      allow list:   if isAdmin();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // ── 이메일 큐 (mail) — Firebase Trigger Email 확장 호환 ──
+    // 로그인 사용자는 쓰기 가능, 읽기는 관리자만.
+    match /mail/{mailId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
   }
 }

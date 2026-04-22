@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +66,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const adminTab = ref('pending');
       const adminSelectedUids = ref([]);
       const appInviteEmail = ref('');
+
+      // ── 이메일 로그인 폼 상태 ──
+      const emailLoginMode = ref('login'); // 'login' | 'register' | 'reset'
+      const emailForm = reactive({ email: '', password: '', confirm: '' });
+      const emailLoginError = ref('');
+      const emailLoginLoading = ref(false);
+
+      // ── 기술 지원 요청 모달 상태 ──
+      // 사용자: 요청 내용(제목/본문) 작성용
+      const showSupportRequestModal = ref(false);
+      const supportRequestForm = reactive({ treeId: '', treeName: '', subject: '', message: '' });
+      // 관리자: 요청 상세 보기용
+      const showSupportDetailModal = ref(false);
+      const selectedSupportRequest = ref(null); // 현재 상세 보고 있는 tree 객체
 
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
@@ -295,6 +309,89 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
           console.error(error);
           showToastMsg('로그인에 실패했습니다.', 'error');
+        }
+      };
+
+      const loginWithEmail = async () => {
+        emailLoginError.value = '';
+        if (!emailForm.email || !emailForm.password) {
+          emailLoginError.value = '이메일과 비밀번호를 입력하세요.';
+          return;
+        }
+        emailLoginLoading.value = true;
+        try {
+          await signInWithEmailAndPassword(auth, emailForm.email, emailForm.password);
+        } catch (error) {
+          const code = error.code;
+          if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+            emailLoginError.value = '이메일 또는 비밀번호가 올바르지 않습니다.';
+          } else if (code === 'auth/invalid-email') {
+            emailLoginError.value = '올바른 이메일 형식이 아닙니다.';
+          } else if (code === 'auth/too-many-requests') {
+            emailLoginError.value = '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
+          } else {
+            emailLoginError.value = '로그인에 실패했습니다. 다시 시도해주세요.';
+          }
+        } finally {
+          emailLoginLoading.value = false;
+        }
+      };
+
+      const registerWithEmail = async () => {
+        emailLoginError.value = '';
+        if (!emailForm.email || !emailForm.password) {
+          emailLoginError.value = '이메일과 비밀번호를 입력하세요.';
+          return;
+        }
+        if (emailForm.password !== emailForm.confirm) {
+          emailLoginError.value = '비밀번호가 일치하지 않습니다.';
+          return;
+        }
+        if (emailForm.password.length < 6) {
+          emailLoginError.value = '비밀번호는 6자 이상이어야 합니다.';
+          return;
+        }
+        emailLoginLoading.value = true;
+        try {
+          await createUserWithEmailAndPassword(auth, emailForm.email, emailForm.password);
+        } catch (error) {
+          const code = error.code;
+          if (code === 'auth/email-already-in-use') {
+            emailLoginError.value = '이미 사용 중인 이메일입니다.';
+          } else if (code === 'auth/invalid-email') {
+            emailLoginError.value = '올바른 이메일 형식이 아닙니다.';
+          } else if (code === 'auth/weak-password') {
+            emailLoginError.value = '비밀번호는 6자 이상이어야 합니다.';
+          } else {
+            emailLoginError.value = '회원가입에 실패했습니다. 다시 시도해주세요.';
+          }
+        } finally {
+          emailLoginLoading.value = false;
+        }
+      };
+
+      const resetPassword = async () => {
+        emailLoginError.value = '';
+        if (!emailForm.email) {
+          emailLoginError.value = '이메일을 입력하세요.';
+          return;
+        }
+        emailLoginLoading.value = true;
+        try {
+          await sendPasswordResetEmail(auth, emailForm.email);
+          showToastMsg('비밀번호 재설정 메일을 발송했습니다.');
+          emailLoginMode.value = 'login';
+        } catch (error) {
+          const code = error.code;
+          if (code === 'auth/user-not-found') {
+            emailLoginError.value = '등록된 이메일이 없습니다.';
+          } else if (code === 'auth/invalid-email') {
+            emailLoginError.value = '올바른 이메일 형식이 아닙니다.';
+          } else {
+            emailLoginError.value = '메일 발송에 실패했습니다.';
+          }
+        } finally {
+          emailLoginLoading.value = false;
         }
       };
 
@@ -863,26 +960,57 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); showToastMsg('승인 실패', 'error'); }
       };
 
-      const requestSupport = async (treeId, treeName) => {
+      // 사용자: "기술 지원 요청" 버튼 → 요청 내용 작성 모달 열기
+      // 기존 요청이 있으면 기존 subject/message 를 불러와 수정 가능
+      const openSupportRequestModal = (tree) => {
+        if (!tree) return;
+        supportRequestForm.treeId = tree.id;
+        supportRequestForm.treeName = tree.name || '제목 없는 트리';
+        supportRequestForm.subject = tree.supportRequestSubject || '';
+        supportRequestForm.message = tree.supportRequestMessage || '';
+        showSupportRequestModal.value = true;
+      };
+
+      // 사용자: 요청 내용 작성 후 "전송" → Firestore 업데이트 + 관리자 메일 발송
+      const submitSupportRequest = async () => {
         if (!currentUser.value) return;
+        const treeId = (supportRequestForm.treeId || '').trim();
+        if (!treeId) return showToastMsg('트리 정보가 없습니다.', 'error');
+        const subject = (supportRequestForm.subject || '').trim();
+        const message = (supportRequestForm.message || '').trim();
+        if (!message) return showToastMsg('요청 내용을 입력해 주세요.', 'error');
         try {
+          const requesterName = currentUser.value.displayName || currentUser.value.email || '사용자';
+          const requesterEmail = currentUser.value.email || '';
           await updateDoc(doc(db, getTreesPath(), treeId), {
             supportRequested: true,
             supportRequestedAt: serverTimestamp(),
-            supportRequestedBy: currentUser.value.uid
+            supportRequestedBy: currentUser.value.uid,
+            supportRequesterName: requesterName,
+            supportRequesterEmail: requesterEmail,
+            supportRequestSubject: subject,
+            supportRequestMessage: message
           });
           try {
-            const requesterName = currentUser.value.displayName || currentUser.value.email || '사용자';
+            const treeName = supportRequestForm.treeName || treeId;
+            const escapedMsg = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            const escapedSubj = (subject || '(제목 없음)').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             await addDoc(collection(db, 'mail'), {
               to: ADMIN_EMAILS,
               message: {
-                subject: `[Family Tree] 기술 지원 요청: ${treeName || treeId}`,
-                html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
-                  <h2 style="color:#1c2b4a;margin-bottom:8px;">기술 지원 요청</h2>
-                  <p style="color:#444;line-height:1.7;">
-                    <b>${requesterName}</b>(${currentUser.value.email})님이 기술 지원을 요청했습니다.<br>
-                    트리: <b>${treeName || treeId}</b>
+                subject: `[Family Tree] 기술 지원 요청: ${subject || treeName}`,
+                html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
+                  <h2 style="color:#1c2b4a;margin-bottom:8px;">🆘 기술 지원 요청</h2>
+                  <p style="color:#444;line-height:1.7;margin:0 0 12px 0;">
+                    <b>${requesterName}</b> (${requesterEmail})님이 기술 지원을 요청했습니다.<br>
+                    트리: <b>${treeName}</b>
                   </p>
+                  <div style="margin-top:12px;padding:12px 14px;background:#f7f4eb;border:1px solid #ece5cf;border-radius:6px;">
+                    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">요청 제목</div>
+                    <div style="font-size:14px;color:#1c2b4a;font-weight:700;margin-bottom:10px;">${escapedSubj}</div>
+                    <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">요청 내용</div>
+                    <div style="font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;">${escapedMsg}</div>
+                  </div>
                   <a href="https://familytree.itdowoomi.com/" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">
                     Family Tree 열기
                   </a>
@@ -890,6 +1018,11 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
           } catch(mailErr) { console.warn('지원 요청 알림 실패:', mailErr); }
+          showSupportRequestModal.value = false;
+          supportRequestForm.treeId = '';
+          supportRequestForm.treeName = '';
+          supportRequestForm.subject = '';
+          supportRequestForm.message = '';
           await fetchSavedTrees();
           showToastMsg('기술 지원이 요청되었습니다. 관리자에게 알림이 전송됩니다.');
         } catch(e) { console.error(e); showToastMsg('요청 실패', 'error'); }
@@ -901,11 +1034,34 @@ document.addEventListener('DOMContentLoaded', () => {
           await updateDoc(doc(db, getTreesPath(), treeId), {
             supportRequested: false,
             supportRequestedAt: null,
-            supportRequestedBy: null
+            supportRequestedBy: null,
+            supportRequesterName: null,
+            supportRequesterEmail: null,
+            supportRequestSubject: null,
+            supportRequestMessage: null
           });
+          // 상세 모달 닫기 (관리자가 요청 상세 모달에서 종료를 눌렀을 때를 위한 처리)
+          if (selectedSupportRequest.value && selectedSupportRequest.value.id === treeId) {
+            showSupportDetailModal.value = false;
+            selectedSupportRequest.value = null;
+          }
           await fetchSavedTrees();
           showToastMsg('기술 지원 요청이 종료되었습니다.');
         } catch(e) { console.error(e); showToastMsg('종료 실패', 'error'); }
+      };
+
+      // 관리자: 지원 요청 카드 클릭 시 상세 모달 열기
+      const openSupportDetailModal = (tree) => {
+        if (!tree) return;
+        selectedSupportRequest.value = tree;
+        showSupportDetailModal.value = true;
+      };
+
+      // 관리자: 상세 모달에서 "트리 열기" → 모달 닫고 해당 트리 로드
+      const openSupportRequestTree = (tree) => {
+        showSupportDetailModal.value = false;
+        selectedSupportRequest.value = null;
+        if (tree) loadTree(tree);
       };
 
       const sendAppInvite = async (email) => {
@@ -2230,8 +2386,12 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser, isDashboard, savedTrees, sharedTrees, supportRequestedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
         isAdmin, isManager, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount, adminUsersForTab,
         fetchRegisteredUsers, approveUser, approveAsManager, denyUser, bulkApprove, bulkDeny, deleteRegisteredUser,
-        appInviteEmail, sendAppInvite, requestSupport, endSupportRequest,
-        loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
+        appInviteEmail, sendAppInvite, endSupportRequest,
+        // 기술 지원 요청 관련 (사용자 + 관리자 모달)
+        showSupportRequestModal, supportRequestForm, openSupportRequestModal, submitSupportRequest,
+        showSupportDetailModal, selectedSupportRequest, openSupportDetailModal, openSupportRequestTree,
+        emailLoginMode, emailForm, emailLoginError, emailLoginLoading,
+        loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
         addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
         subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
