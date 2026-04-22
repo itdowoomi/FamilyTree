@@ -1,16 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Helper function to check if user's email is in sharedEmails (case-insensitive)
     function isSharedUser(treeData) {
-      return request.auth.token.email != null && 
+      return request.auth.token.email != null &&
              request.auth.token.email.lower() in treeData.sharedEmails;
     }
-    
+
     // Helper function to check if user has editor role
     function hasEditorRole(treeData) {
       return treeData.sharePermissions[request.auth.token.email.lower()].role == 'editor';
+    }
+
+    // Helper function to check if request user is an admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null && (
+        request.auth.token.email == 'donghyukbang@gmail.com' ||
+        request.auth.token.email == 'dhbang@itdowoomi.com'
+      );
     }
     
     // ========== 트리 접근 규칙 ==========
@@ -49,6 +57,32 @@ service cloud.firestore {
         request.auth.uid == userId;
     }
     
+    // ========== 가입 사용자 관리 ==========
+    match /registeredUsers/{userId} {
+      // 본인은 자신의 문서를 읽고 생성할 수 있음
+      allow read, create: if request.auth != null && request.auth.uid == userId;
+      // 본인은 자신의 문서를 업데이트할 수 있음 (lastLoginAt 등)
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // 관리자는 모든 문서를 읽고 수정/삭제할 수 있음
+      allow read, write: if isAdmin();
+    }
+
+    // ========== 초대 이메일 선승인 ==========
+    match /invitedEmails/{inviteEmail} {
+      // 인증된 사용자는 자신의 이메일로 된 초대 문서를 읽을 수 있음
+      allow read: if request.auth != null &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() == inviteEmail;
+      // 관리자만 초대 문서를 쓸 수 있음
+      allow write: if isAdmin();
+    }
+
+    // ========== 이메일 발송 (Firebase Extension: Trigger Email) ==========
+    match /mail/{mailId} {
+      // 인증된 사용자는 이메일 문서 생성 가능 (초대 메일 발송)
+      allow create: if request.auth != null;
+    }
+
     // ========== Canvas 환경용 (artifacts) ==========
     match /artifacts/{appId}/trees/{treeId} {
       allow read: if request.auth != null && (

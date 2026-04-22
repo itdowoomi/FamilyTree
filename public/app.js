@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
@@ -54,10 +54,17 @@ document.addEventListener('DOMContentLoaded', () => {
   createApp({
     setup() {
       // ── Cloud State ──
+      const ADMIN_EMAILS = ['donghyukbang@gmail.com', 'dhbang@itdowoomi.com'];
       const currentUser = ref(null);
       const isDashboard = ref(true);
       const savedTrees = ref([]);
       const currentTreeId = ref(null);
+      const registeredUsers = ref([]);
+      const showAdminPanel = ref(false);
+      const userAccessStatus = ref(null); // null=확인중 | 'admin' | 'approved' | 'grace' | 'denied' | 'expired'
+      const userGraceDays = ref(0); // 가입 후 경과 일수 (grace 상태일 때만 의미 있음)
+      const adminTab = ref('pending');
+      const adminSelectedUids = ref([]);
 
       // ── App State ──
       const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
@@ -160,14 +167,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         onAuthStateChanged(auth, async (user) => {
           currentUser.value = user;
-          if (user) {
-            if (!migrationDone) {
-              migrationDone = true;
-              await migrateLegacyTrees();
-            }
+          if (!user) { userAccessStatus.value = null; return; }
+
+          const email = (user.email || '').toLowerCase();
+          userAccessStatus.value = null; // 확인 중
+
+          if (ADMIN_EMAILS.includes(email)) {
+            userAccessStatus.value = 'admin';
+            if (!migrationDone) { migrationDone = true; await migrateLegacyTrees(); }
             fetchSavedTrees();
             if (!isDashboard.value) setRootEmailToLoginIfEmpty();
+            fetchRegisteredUsers();
+            return;
           }
+
+          try {
+            const inviteSnap = await getDoc(doc(db, 'invitedEmails', email));
+            const isInvited = inviteSnap.exists();
+            const userRef = doc(db, 'registeredUsers', user.uid);
+            const snap = await getDoc(userRef);
+            const nowTs = serverTimestamp();
+            let status, joinedMs;
+
+            if (!snap.exists()) {
+              status = isInvited ? 'approved' : 'pending';
+              const newData = { uid: user.uid, email, displayName: user.displayName || '', photoURL: user.photoURL || '', status, joinedAt: nowTs, lastLoginAt: nowTs };
+              if (isInvited) { newData.approvedBy = 'invite'; newData.approvedAt = nowTs; }
+              await setDoc(userRef, newData);
+              joinedMs = Date.now();
+            } else {
+              const existing = snap.data();
+              await updateDoc(userRef, { lastLoginAt: nowTs });
+              if (isInvited && existing.status === 'pending') {
+                await updateDoc(userRef, { status: 'approved', approvedBy: 'invite', approvedAt: nowTs });
+                status = 'approved';
+              } else {
+                status = existing.status || 'pending';
+              }
+              joinedMs = existing.joinedAt?.seconds ? existing.joinedAt.seconds * 1000 : Date.now();
+            }
+
+            if (status === 'approved') {
+              userAccessStatus.value = 'approved';
+            } else if (status === 'denied') {
+              userAccessStatus.value = 'denied';
+              return;
+            } else {
+              const daysPassed = (Date.now() - joinedMs) / (1000 * 60 * 60 * 24);
+              userGraceDays.value = Math.floor(daysPassed);
+              if (daysPassed <= 30) {
+                userAccessStatus.value = 'grace';
+              } else {
+                userAccessStatus.value = 'expired';
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn('접근 권한 확인 실패:', e);
+            userAccessStatus.value = 'grace';
+          }
+
+          if (!migrationDone) { migrationDone = true; await migrateLegacyTrees(); }
+          fetchSavedTrees();
+          if (!isDashboard.value) setRootEmailToLoginIfEmpty();
         });
       };
 
@@ -685,6 +747,92 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       };
 
+      const isAdmin = computed(() => ADMIN_EMAILS.includes((currentUser.value?.email || '').toLowerCase()));
+
+      const fetchRegisteredUsers = async () => {
+        if (!isAdmin.value) return;
+        try {
+          const now = Date.now();
+          const snap = await getDocs(collection(db, 'registeredUsers'));
+          registeredUsers.value = snap.docs.map(d => {
+            const data = d.data();
+            const joinedMs = data.joinedAt?.seconds ? data.joinedAt.seconds * 1000 : 0;
+            const daysPassed = joinedMs ? Math.floor((now - joinedMs) / (1000*60*60*24)) : 0;
+            const remaining = 30 - daysPassed;
+            const s = data.status || 'pending';
+            return {
+              uid: d.id, ...data,
+              joinedAtStr: data.joinedAt?.toDate?.()?.toLocaleDateString('ko-KR') || '-',
+              lastLoginAtStr: data.lastLoginAt?.toDate?.()?.toLocaleDateString('ko-KR') || '-',
+              daysInfo: (s !== 'approved' && s !== 'denied') ? (remaining > 0 ? `유예 ${remaining}일` : '만료') : ''
+            };
+          }).sort((a,b) => (b.joinedAt?.seconds||0) - (a.joinedAt?.seconds||0));
+        } catch (e) { console.error('사용자 목록 로드 실패:', e); }
+      };
+
+      const approveUser = async (uid) => {
+        if (!isAdmin.value) return;
+        try {
+          await updateDoc(doc(db, 'registeredUsers', uid), { status: 'approved', approvedAt: serverTimestamp(), approvedBy: currentUser.value.email || '' });
+          await fetchRegisteredUsers();
+          showToastMsg('승인되었습니다.');
+        } catch (e) { console.error(e); showToastMsg('승인 실패', 'error'); }
+      };
+
+      const denyUser = async (uid) => {
+        if (!isAdmin.value) return;
+        try {
+          await updateDoc(doc(db, 'registeredUsers', uid), { status: 'denied', deniedAt: serverTimestamp(), deniedBy: currentUser.value.email || '' });
+          await fetchRegisteredUsers();
+          showToastMsg('비승인 처리되었습니다.');
+        } catch (e) { console.error(e); showToastMsg('비승인 실패', 'error'); }
+      };
+
+      const bulkApprove = async () => {
+        if (!isAdmin.value || adminSelectedUids.value.length === 0) return;
+        const uids = [...adminSelectedUids.value];
+        try {
+          for (const uid of uids) {
+            await updateDoc(doc(db, 'registeredUsers', uid), { status: 'approved', approvedAt: serverTimestamp(), approvedBy: currentUser.value.email || '' });
+          }
+          adminSelectedUids.value = [];
+          await fetchRegisteredUsers();
+          showToastMsg(`${uids.length}명 승인 완료`);
+        } catch (e) { console.error(e); showToastMsg('일괄 승인 실패', 'error'); }
+      };
+
+      const bulkDeny = async () => {
+        if (!isAdmin.value || adminSelectedUids.value.length === 0) return;
+        const uids = [...adminSelectedUids.value];
+        try {
+          for (const uid of uids) {
+            await updateDoc(doc(db, 'registeredUsers', uid), { status: 'denied', deniedAt: serverTimestamp(), deniedBy: currentUser.value.email || '' });
+          }
+          adminSelectedUids.value = [];
+          await fetchRegisteredUsers();
+          showToastMsg(`${uids.length}명 비승인 처리 완료`);
+        } catch (e) { console.error(e); showToastMsg('일괄 비승인 실패', 'error'); }
+      };
+
+      const deleteRegisteredUser = async (uid, email) => {
+        if (!isAdmin.value) return;
+        if (!confirm(`${email} 사용자를 목록에서 삭제하시겠습니까?`)) return;
+        try {
+          await deleteDoc(doc(db, 'registeredUsers', uid));
+          registeredUsers.value = registeredUsers.value.filter(u => u.uid !== uid);
+          showToastMsg(`${email} 삭제 완료`);
+        } catch (e) { console.error(e); showToastMsg('삭제 실패', 'error'); }
+      };
+
+      const adminTabUsers = computed(() => registeredUsers.value.filter(u => {
+        if (adminTab.value === 'pending') return !u.status || u.status === 'pending';
+        if (adminTab.value === 'approved') return u.status === 'approved';
+        if (adminTab.value === 'denied') return u.status === 'denied';
+        return false;
+      }));
+
+      const adminPendingCount = computed(() => registeredUsers.value.filter(u => !u.status || u.status === 'pending').length);
+
       const addShare = async (email, role) => {
         if (!currentTreeId.value || !currentUser.value) return;
         const trimmed = (email || '').trim().toLowerCase();
@@ -703,7 +851,39 @@ document.addEventListener('DOMContentLoaded', () => {
           const perms = { ...(d.sharePermissions || {}) };
           perms[trimmed] = { role: role || 'editor', scope: 'full' };
           await updateDoc(ref, { sharedEmails: Array.from(emails), sharePermissions: perms });
+          // 초대된 이메일 선승인 처리
+          try {
+            await setDoc(doc(db, 'invitedEmails', trimmed), { email: trimmed, invitedBy: currentUser.value.email || '', invitedAt: serverTimestamp(), treeId: currentTreeId.value });
+          } catch (e2) { console.warn('초대 선승인 기록 실패:', e2); }
           showToastMsg(`🔗 ${trimmed} 님에게 공유되었습니다.`);
+          try {
+            const inviterName = currentUser.value.displayName || currentUser.value.email || '관리자';
+            const treeName = header.value?.title || 'Family Tree';
+            await addDoc(collection(db, 'mail'), {
+              to: trimmed,
+              message: {
+                subject: `[Family Tree] ${inviterName}님이 트리를 공유했습니다`,
+                html: `
+                  <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e0e0e0;border-radius:8px;">
+                    <h2 style="color:#1c2b4a;margin-bottom:8px;">Family Tree 초대</h2>
+                    <p style="color:#444;line-height:1.7;">
+                      <b>${inviterName}</b>님이 <b>${treeName}</b>을(를) 공유했습니다.<br>
+                      아래 링크로 접속하여 확인하세요.
+                    </p>
+                    <a href="https://familytree.itdowoomi.com/"
+                       style="display:inline-block;margin-top:16px;padding:12px 24px;background:#1c2b4a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">
+                      Family Tree 열기
+                    </a>
+                    <p style="margin-top:20px;font-size:12px;color:#999;">
+                      https://familytree.itdowoomi.com/
+                    </p>
+                  </div>
+                `
+              }
+            });
+          } catch (mailErr) {
+            console.warn('초대 메일 발송 실패:', mailErr);
+          }
         } catch (e) {
           console.error(e);
           showToastMsg('공유 실패', 'error');
@@ -1892,6 +2072,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       return {
         currentUser, isDashboard, savedTrees, sharedTrees, currentTreeId, currentTreeMeta, currentIsOwner, currentIsEditor, currentIsReadOnly,
+        isAdmin, registeredUsers, showAdminPanel, userAccessStatus, userGraceDays, adminTab, adminSelectedUids, adminTabUsers, adminPendingCount,
+        fetchRegisteredUsers, approveUser, denyUser, bulkApprove, bulkDeny, deleteRegisteredUser,
         loginWithGoogle, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
         addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
         subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,
