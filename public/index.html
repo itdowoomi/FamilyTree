@@ -71,7 +71,27 @@
       </span>
     </div>
 
-    <div class="dashboard-section-title">🌳 내 트리</div>
+    <!-- 앱 사용 초대장 발송 (관리자 그룹 전용) -->
+    <template v-if="isManager">
+      <div class="dashboard-section-title" style="margin-top:28px;">📨 앱 사용 초대장 발송</div>
+      <div style="width:100%;max-width:1000px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:4px;">
+        <p style="font-size:13px;color:#555;margin-bottom:12px;line-height:1.6;">
+          초대받은 사람은 Google 계정으로 로그인 후 바로 <b>자신만의 패밀리 트리</b>를 만들 수 있습니다.<br>
+          트리 공유와 달리 독립적인 사용 권한을 부여합니다.
+        </p>
+        <div style="display:flex;gap:8px;max-width:480px;">
+          <input v-model="appInviteEmail" type="email" placeholder="초대할 이메일 주소"
+            @keyup.enter="sendAppInvite(appInviteEmail)"
+            style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
+          <button @click="sendAppInvite(appInviteEmail)"
+            style="padding:8px 20px;background:#1c2b4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">
+            초대장 발송
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <div class="dashboard-section-title" style="margin-top:28px;">🌳 내 트리</div>
     <div class="tree-grid">
       <div class="tree-card tree-card-new" @click="createNewTree">
         <div class="tree-card-new-icon">＋</div>
@@ -104,6 +124,48 @@
     <div v-if="savedTrees.length === 0" style="margin-top: 20px; margin-bottom: 30px; color: var(--muted); font-size: 14px;">
       저장된 트리가 없습니다. 새로운 트리를 만들어 보세요!
     </div>
+
+    <div class="dashboard-section-title" style="margin-top:28px;">🔗 공유받은 트리</div>
+    <div v-if="sharedTrees.length === 0" style="margin-top: 8px; color: var(--muted); font-size: 13px;">
+      아직 공유받은 트리가 없습니다.
+    </div>
+    <div v-else class="tree-grid">
+      <div v-for="tree in sharedTrees" :key="tree.id" class="tree-card tree-card-shared" @click="loadTree(tree)">
+        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}
+          <span class="tree-card-role-chip" :class="{view:((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()]||{}).role!=='editor'}">
+            {{ (((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()])||{}).role === 'editor' ? '편집' : '보기' }}
+          </span>
+        </div>
+        <div class="tree-card-meta">
+          <span>소유자: {{ tree.ownerEmail || '—' }}</span>
+          <span>마지막 수정: {{ tree.updatedAt }}</span>
+          <span>총 멤버 수: {{ tree.memberCount }}명</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 슈퍼 관리자: 기술 지원 요청된 트리 -->
+    <template v-if="isAdmin">
+      <div class="dashboard-section-title" style="margin-top:28px;display:flex;align-items:center;gap:10px;">
+        🆘 기술 지원 요청된 트리
+        <button @click="fetchSavedTrees()" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;color:#555;">새로고침</button>
+        <span v-if="supportRequestedTrees.length > 0" style="font-size:11px;background:#e55;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">{{ supportRequestedTrees.length }}건</span>
+      </div>
+      <div v-if="supportRequestedTrees.length > 0" class="tree-grid" style="max-width:1000px;">
+        <div v-for="tree in supportRequestedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)"
+          style="border-color:#e55;border-width:2px;background:#fff8f8;cursor:pointer;">
+          <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
+          <div class="tree-card-meta">
+            <span style="color:#c0392b;font-weight:600;">요청자: {{ tree.ownerEmail || '—' }}</span>
+            <span>마지막 수정: {{ tree.updatedAt }}</span>
+            <span>멤버 수: {{ tree.memberCount }}명</span>
+          </div>
+        </div>
+      </div>
+      <div v-else style="margin-top:6px;margin-bottom:8px;color:var(--muted);font-size:13px;">
+        현재 기술 지원 요청이 없습니다.
+      </div>
+    </template>
 
     <!-- 관리자 전용: 가입 사용자 관리 -->
     <template v-if="isAdmin">
@@ -216,68 +278,6 @@
         </table>
       </div>
     </template>
-
-    <!-- 슈퍼 관리자: 기술 지원 요청된 트리 -->
-    <template v-if="isAdmin">
-      <div class="dashboard-section-title" style="margin-top:28px;display:flex;align-items:center;gap:10px;">
-        🆘 기술 지원 요청된 트리
-        <button @click="fetchSavedTrees()" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;color:#555;">새로고침</button>
-        <span v-if="supportRequestedTrees.length > 0" style="font-size:11px;background:#e55;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;">{{ supportRequestedTrees.length }}건</span>
-      </div>
-      <div v-if="supportRequestedTrees.length > 0" class="tree-grid" style="max-width:1000px;">
-        <div v-for="tree in supportRequestedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)"
-          style="border-color:#e55;border-width:2px;background:#fff8f8;cursor:pointer;">
-          <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
-          <div class="tree-card-meta">
-            <span style="color:#c0392b;font-weight:600;">요청자: {{ tree.ownerEmail || '—' }}</span>
-            <span>마지막 수정: {{ tree.updatedAt }}</span>
-            <span>멤버 수: {{ tree.memberCount }}명</span>
-          </div>
-        </div>
-      </div>
-      <div v-else style="margin-top:6px;margin-bottom:8px;color:var(--muted);font-size:13px;">
-        현재 기술 지원 요청이 없습니다.
-      </div>
-    </template>
-
-    <!-- 앱 사용 초대장 발송 (관리자 그룹 전용) -->
-    <template v-if="isManager">
-      <div class="dashboard-section-title" style="margin-top:28px;">📨 앱 사용 초대장 발송</div>
-      <div style="width:100%;max-width:1000px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px 20px;margin-bottom:4px;">
-        <p style="font-size:13px;color:#555;margin-bottom:12px;line-height:1.6;">
-          초대받은 사람은 Google 계정으로 로그인 후 바로 <b>자신만의 패밀리 트리</b>를 만들 수 있습니다.<br>
-          트리 공유와 달리 독립적인 사용 권한을 부여합니다.
-        </p>
-        <div style="display:flex;gap:8px;max-width:480px;">
-          <input v-model="appInviteEmail" type="email" placeholder="초대할 이메일 주소"
-            @keyup.enter="sendAppInvite(appInviteEmail)"
-            style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;">
-          <button @click="sendAppInvite(appInviteEmail)"
-            style="padding:8px 20px;background:#1c2b4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">
-            초대장 발송
-          </button>
-        </div>
-      </div>
-    </template>
-
-    <div class="dashboard-section-title" style="margin-top:28px;">🔗 공유받은 트리</div>
-    <div v-if="sharedTrees.length === 0" style="margin-top: 8px; color: var(--muted); font-size: 13px;">
-      아직 공유받은 트리가 없습니다.
-    </div>
-    <div v-else class="tree-grid">
-      <div v-for="tree in sharedTrees" :key="tree.id" class="tree-card tree-card-shared" @click="loadTree(tree)">
-        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}
-          <span class="tree-card-role-chip" :class="{view:((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()]||{}).role!=='editor'}">
-            {{ (((tree.sharePermissions||{})[(currentUser.email||'').toLowerCase()])||{}).role === 'editor' ? '편집' : '보기' }}
-          </span>
-        </div>
-        <div class="tree-card-meta">
-          <span>소유자: {{ tree.ownerEmail || '—' }}</span>
-          <span>마지막 수정: {{ tree.updatedAt }}</span>
-          <span>총 멤버 수: {{ tree.memberCount }}명</span>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div v-if="showPreview" class="preview-overlay">
