@@ -1544,9 +1544,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addRecruit(){
         if(!newRecruit.name.trim()) return;
-        const createdBy = meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
-          ? members.value.find(m => m.id === selectedMemberId.value)?.name
-          : rootMember.value?.name || '');
+        const createdBy = newRecruit.parentId
+          ? members.value.find(m => m.id === newRecruit.parentId)?.name || meName.value || ''
+          : meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
+              ? members.value.find(m => m.id === selectedMemberId.value)?.name
+              : rootMember.value?.name || '');
         const createdByEmail = (currentUser.value?.email || '').toLowerCase();
         // parentId: 선택 시 우선, 아니면 작성자(본인) 멤버, 아니면 트리 루트
         const fallbackParentId = (meMember.value && meMember.value.id) || (members.value.find(m => !m.parentId)?.id) || 'root';
