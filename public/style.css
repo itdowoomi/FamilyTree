@@ -222,6 +222,9 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .info-box-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;}
 .grid2-full{grid-column:1/-1;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px;}
+.grid4-full{grid-column:1/-1;}
+.grid4-half{grid-column:span 2;}
 .ref-list{font-size:11px;color:var(--muted);line-height:1.9;margin-top:7px;}
 
 .notes-pos-bar{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--border);flex-shrink:0;}
