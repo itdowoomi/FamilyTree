@@ -180,9 +180,9 @@
           대기 {{ adminPendingCount }}명
         </span>
       </div>
-      <div v-if="showAdminPanel" style="width:100%;max-width:900px;margin-top:8px;margin-bottom:40px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+      <div v-if="showAdminPanel" style="width:100%;max-width:900px;margin-top:8px;margin-bottom:40px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow-x:auto;min-height:720px;">
         <!-- 탭 + 일괄 처리 버튼 -->
-        <div style="display:flex;align-items:center;gap:0;border-bottom:1.5px solid #e0e0e0;background:#fafaf7;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:0;border-bottom:1.5px solid #e0e0e0;background:#fafaf7;">
           <button v-for="tab in [{k:'pending',l:'대기중'},{k:'manager',l:'관리자'},{k:'approved',l:'승인됨'},{k:'denied',l:'비승인'}]" :key="tab.k"
             @click="adminTab=tab.k; adminSelectedUids=[]"
             :style="{padding:'9px 18px',border:'none',borderBottom: adminTab===tab.k ? '2px solid #1c2b4a' : '2px solid transparent',background:'transparent',fontWeight:adminTab===tab.k?700:400,color:adminTab===tab.k?'#1c2b4a':'#888',cursor:'pointer',fontSize:'13px'}">
@@ -204,23 +204,22 @@
             </button>
           </div>
         </div>
-        <!-- 사용자 테이블 (20명 정도는 한 번에 보이도록 720px, 초과 시 내부 스크롤) -->
-        <div style="height:720px;overflow-y:auto;overflow-x:auto;">
+        <!-- 사용자 테이블 (패널 min-height:720px로 ~20명 자연 표시) -->
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead style="position:sticky;top:0;z-index:2;">
-            <tr style="background:#f8f8f6;text-align:left;box-shadow:0 1px 0 #e0e0e0;">
-              <th style="padding:8px 10px;width:36px;background:#f8f8f6;">
+          <thead>
+            <tr style="background:#f8f8f6;text-align:left;">
+              <th style="padding:8px 10px;width:36px;">
                 <input type="checkbox"
                   :checked="adminTabUsers.length > 0 && adminTabUsers.filter(u=>u.email!==currentUser.email.toLowerCase()).every(u=>adminSelectedUids.includes(u.uid))"
                   @change="e => { const targets = adminTabUsers.filter(u=>u.email!==currentUser.email.toLowerCase()); if(e.target.checked){ adminSelectedUids=[...new Set([...adminSelectedUids,...targets.map(u=>u.uid)])]; } else { adminSelectedUids=adminSelectedUids.filter(id=>!targets.find(u=>u.uid===id)); } }">
               </th>
-              <th style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">이름</th>
-              <th style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">이메일</th>
-              <th style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">가입일</th>
-              <th style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">최근 로그인</th>
-              <th v-if="adminTab==='pending'" style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">유예기간</th>
-              <th v-if="adminTab==='manager'" style="padding:8px 10px;font-weight:600;color:#555;background:#f8f8f6;">승인일</th>
-              <th style="padding:8px 10px;text-align:right;font-weight:600;color:#555;background:#f8f8f6;">관리</th>
+              <th style="padding:8px 10px;font-weight:600;color:#555;">이름</th>
+              <th style="padding:8px 10px;font-weight:600;color:#555;">이메일</th>
+              <th style="padding:8px 10px;font-weight:600;color:#555;">가입일</th>
+              <th style="padding:8px 10px;font-weight:600;color:#555;">최근 로그인</th>
+              <th v-if="adminTab==='pending'" style="padding:8px 10px;font-weight:600;color:#555;">유예기간</th>
+              <th v-if="adminTab==='manager'" style="padding:8px 10px;font-weight:600;color:#555;">승인일</th>
+              <th style="padding:8px 10px;text-align:right;font-weight:600;color:#555;">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -277,7 +276,6 @@
             </tr>
           </tbody>
         </table>
-        </div>
       </div>
     </template>
   </div>
