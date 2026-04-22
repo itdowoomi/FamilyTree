@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ]);
       const notes = ref([]);
       const appointments = ref([]);
+      const deletedAptIds = ref([]); // 삭제된 약속 ID 목록 (tombstone - 동기화 시 양방향 삭제 전파용)
       const recruits = ref([]);
       const newNote = reactive({ text: '', scope: 'all' }); // all or personal
       
@@ -653,6 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
               if (apt.createdBy && subMemberNamesForApts.has(apt.createdBy)) return true;
               return false;
             };
+
+            // tombstone: 양쪽의 삭제 마커를 합산
+            const parentDeletedIds = new Set(deletedAptIds.value || []);
+            const subDeletedIds = new Set(subTreeData.data.deletedAptIds || []);
+            const mergedDeletedIds = new Set([...parentDeletedIds, ...subDeletedIds]);
+
             const parentIdSet = new Set(parentApts.map(a => a.id));
             const aptMap = new Map();
 
@@ -673,6 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
 
+            // tombstone 적용: 삭제 마커에 있는 약속은 병합 결과에서 제거
+            mergedDeletedIds.forEach(id => aptMap.delete(id));
             const mergedApts = Array.from(aptMap.values());
 
             // 메모 동기화: 양방향 병합
@@ -715,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 notes: JSON.parse(JSON.stringify(mergedNotes)),
                 recruits: JSON.parse(JSON.stringify(subRecruits)),
                 appointments: JSON.parse(JSON.stringify(mergedApts)),
+                deletedAptIds: Array.from(mergedDeletedIds),
                 recruitPosition: recruitPosition.value,
                 notesPosition: notesPosition.value,
                 memberInfoPosition: memberInfoPosition.value,
@@ -793,21 +803,27 @@ document.addEventListener('DOMContentLoaded', () => {
           const parentExistingApts = parentData.data.appointments || [];
           const subApts = subTreeData.data.appointments || [];
           const aptMergeMap = new Map();
-          
+
           // 기존 부모 약속 먼저 로드
           parentExistingApts.forEach(apt => {
             aptMergeMap.set(apt.id, { ...apt, _source: 'parent' });
           });
-          
+
           // 서브 약속으로 업데이트 (최신 것 우선)
           subApts.forEach(apt => {
             const existing = aptMergeMap.get(apt.id);
-            if (!existing || !apt.updatedAt || !existing.updatedAt || 
+            if (!existing || !apt.updatedAt || !existing.updatedAt ||
                 new Date(apt.updatedAt) >= new Date(existing.updatedAt)) {
               aptMergeMap.set(apt.id, { ...apt, _source: 'sub' });
             }
           });
-          
+
+          // tombstone: 양쪽의 삭제 마커를 합산하여 병합 결과에서 제거
+          const parentDeletedSet = new Set(parentData.data.deletedAptIds || []);
+          const subDeletedSet = new Set(subTreeData.data.deletedAptIds || []);
+          const mergedDeletedSet = new Set([...parentDeletedSet, ...subDeletedSet]);
+          mergedDeletedSet.forEach(id => aptMergeMap.delete(id));
+
           const parentApts = Array.from(aptMergeMap.values());
 
           // ── 메모(notes): 양방향 병합 전략 ──
@@ -815,11 +831,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const parentPersonal = (parentData.data.notes || []).filter(n => n && n.scope === 'personal');
           const parentPublic = (parentData.data.notes || []).filter(n => n && n.scope !== 'personal');
           const subPublic = (subTreeData.data.notes || []).filter(n => n && n.scope !== 'personal');
-          
+
           const noteMergeMap = new Map();
           parentPublic.forEach(n => noteMergeMap.set(n.createdAt || n.text, n));
           subPublic.forEach(n => noteMergeMap.set(n.createdAt || n.text, n));
-          
+
           const parentNotes = [...parentPersonal, ...Array.from(noteMergeMap.values())];
 
           // 메인 트리 업데이트
@@ -836,6 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
               members: parentMembers,
               recruits: parentRecruits,
               appointments: parentApts,
+              deletedAptIds: Array.from(mergedDeletedSet),
               notes: parentNotes
             }
           };
@@ -2182,7 +2199,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           newAppt.date = ''; newAppt.time = ''; newAppt.endTime = ''; newAppt.location = ''; newAppt.type = '이벤트'; newAppt.title = ''; newAppt.description = ''; newAppt.targetName = ''; newAppt.attendees = []; newAppt.newAttendeeInput = ''; newAppt.createdBy = '';
       }
-      function removeAppointment(id) { if (!confirm('이 약속/이벤트를 삭제하시겠습니까?')) return; appointments.value = appointments.value.filter(a => a.id !== id); showToastMsg('약속이 삭제되었습니다.'); }
+      function removeAppointment(id) {
+        if (!confirm('이 약속/이벤트를 삭제하시겠습니까?')) return;
+        appointments.value = appointments.value.filter(a => a.id !== id);
+        if (!deletedAptIds.value.includes(id)) deletedAptIds.value = [...deletedAptIds.value, id];
+        showToastMsg('약속이 삭제되었습니다.');
+      }
       function toggleApptConfirmed(apt) {
           const idx = appointments.value.findIndex(a => a.id === apt.id);
           if (idx === -1) return;
@@ -2271,7 +2293,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function onNodeClick(m){ selectedMemberId.value = m.id; if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; } }
       function getRecruitMeta(r){ const ageStr=r.age?`${r.age}세`:''; return [r.major, r.job, r.company, r.relation,ageStr,calcPeriod(r.meetDate,r.period),r.gender].filter(Boolean).join(' | '); }
-      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)) }; }
+      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)) }; }
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
@@ -2279,6 +2301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
         if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
+        deletedAptIds.value = d.deletedAptIds || [];
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
       }
