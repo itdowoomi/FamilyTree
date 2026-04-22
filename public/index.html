@@ -1180,17 +1180,17 @@
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeAppointment"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;">
-          <table class="member-table" style="font-size:12px;min-width:1080px;">
+          <table class="member-table" style="font-size:12px;min-width:1060px;">
             <thead>
               <tr>
-                <th style="width:65px">구분</th>
-                <th style="width:100px">날짜</th>
-                <th style="width:120px">시간 (시작~종료)</th>
-                <th style="width:160px">이벤트 명 / 만날 사람·고객</th>
-                <th style="width:200px">내용</th>
-                <th style="width:130px">장소</th>
-                <th style="width:180px">함께 참석</th>
-                <th style="width:145px;text-align:center;white-space:nowrap;">작업</th>
+                <th style="width:60px">구분</th>
+                <th style="width:95px">날짜</th>
+                <th style="width:110px">시간 (시작~종료)</th>
+                <th style="width:150px">이벤트 명 / 만날 사람·고객</th>
+                <th style="width:170px">내용</th>
+                <th style="width:110px">장소</th>
+                <th style="width:150px">함께 참석</th>
+                <th style="width:175px;text-align:center;white-space:nowrap;">작업</th>
                 <th></th>
               </tr>
             </thead>
@@ -1205,15 +1205,15 @@
                 <td style="font-size:11px;color:var(--text);">{{ apt.description || '-' }}</td>
                 <td style="color:var(--navy-light);font-size:11px;">{{ apt.location || '-' }}</td>
                 <td style="font-size:11px;color:var(--muted);">{{ apt.attendees.join(', ') || '-' }}</td>
-                <td style="text-align:center; white-space:nowrap;">
+                <td style="text-align:center; white-space:nowrap; padding:4px 4px;">
                   <button
                     :class="apt.confirmed ? 'btn-sm-danger' : 'btn-sm-primary'"
                     @click="toggleApptConfirmed(apt)"
-                    style="margin-right:4px;"
+                    style="margin-right:3px;padding:2px 5px;"
                     :title="apt.confirmed ? '다시 디스플레이 패널에 표시합니다' : '확인 처리: 디스플레이 패널에서 숨깁니다'">{{ apt.confirmed ? '표시' : '확인' }}</button>
-                  <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:4px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
-                  <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:4px;">수정</button>
-                  <button class="btn-sm-danger" @click="removeAppointment(apt.id)">삭제</button>
+                  <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:3px;padding:2px 5px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
+                  <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:3px;padding:2px 5px;">수정</button>
+                  <button class="btn-sm-danger" @click="removeAppointment(apt.id)" style="padding:2px 5px;">삭제</button>
                 </td>
                 <td></td>
               </tr>
