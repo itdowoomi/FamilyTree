@@ -1186,7 +1186,7 @@
                 <th style="width:65px">구분</th>
                 <th style="width:100px">날짜</th>
                 <th style="width:120px">시간 (시작~종료)</th>
-                <th style="width:160px">이벤트 명 / 만날 사람</th>
+                <th style="width:160px">이벤트 명 / 만날 사람·고객</th>
                 <th style="width:200px">내용</th>
                 <th style="width:130px">장소</th>
                 <th style="width:180px">함께 참석</th>
@@ -1261,8 +1261,8 @@
                     <input type="text" v-model="newAppt.title" class="form-input" placeholder="예: 봄맞이 네트워크 모임">
                 </div>
                 <div v-else>
-                    <label class="apt-form-label meet">만날 사람</label>
-                    <input type="text" v-model="newAppt.title" list="all-persons" class="form-input" placeholder="예: 홍길동">
+                    <label class="apt-form-label meet">만날 사람 / 고객</label>
+                    <input type="text" v-model="newAppt.title" list="all-persons" class="form-input" placeholder="예: 홍길동 (고객은 Recruit 리스트에 등록되지 않습니다)">
                     <datalist id="all-persons">
                         <option v-for="name in allPersonNames" :key="name" :value="name"></option>
                     </datalist>

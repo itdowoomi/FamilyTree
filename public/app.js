@@ -1534,9 +1534,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const seen = new Set(); const out = []; if (main) { out.push(main); seen.add(main); } attendees.forEach(n => { if (!seen.has(n)) { out.push(n); seen.add(n); } }); return out;
       }
       function handleTargetNameChange() {
-          const name = newAppt.targetName.trim(); if (!name) return;
-          let exists = members.value.some(m => m.name === name) || recruits.value.some(r => r.name === name);
-          if (!exists) { const newR = { id:'r'+Date.now(), name:name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition() }; recruits.value.push(newR); showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`); }
+          // 약속의 만날 사람은 고객이므로 Recruit 리스트에 자동 등록하지 않음.
+          // (이벤트의 경우 등록이 필요하다면 별도 입력을 통해 진행)
+          return;
       }
       function addAppointment() {
           if(!newAppt.date || !newAppt.title) return showToastMsg('날짜와 내용은 필수 항목입니다.', 'error');
@@ -1555,14 +1555,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           if(!newAppt.targetName && newAppt.attendees.length === 0) return showToastMsg('참석할 멤버나 만날 대상자를 최소 한 명 이상 지정해주세요.', 'error');
-          if(newAppt.targetName) {
-            let exists = members.value.some(m => m.name === newAppt.targetName) || recruits.value.some(r => r.name === newAppt.targetName);
-            if(!exists) { 
-              const newR = { id:'r'+Date.now(), name:newAppt.targetName, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId: selectedMemberId.value || 'root' }; 
-              recruits.value.push(newR); 
-              showToastMsg(`[${newAppt.targetName}]님이 Recruit 리스트에 자동 추가되었습니다.`); 
-            }
-          }
+          // ⚠️ 약속(meet)의 만날 사람은 "고객"이므로 Recruit 리스트에 자동 등록하지 않음.
+          //    이벤트(event)의 targetName은 자동 등록 대상이 아님(빈 값) — 별도 동작 없음.
+          //    고객이면서 Recruit 대상에 추가하고 싶다면 Recruit 탭의 신규 등록 폼을 이용해야 함.
           if (editingApptId.value) {
               const idx = appointments.value.findIndex(a => a.id === editingApptId.value);
               if (idx !== -1) { 
@@ -1656,13 +1651,16 @@ document.addEventListener('DOMContentLoaded', () => {
       function addAttendeeByName() {
           const name = (newAppt.newAttendeeInput || '').trim(); if (!name) return; if (newAppt.attendees.includes(name)) { newAppt.newAttendeeInput = ''; return; }
           const isMember = apptMemberNames.value.includes(name); const isRecruit = recruitNames.value.includes(name);
-          const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root' 
-            ? members.value.find(m => m.id === selectedMemberId.value)?.name 
+          const createdBy = selectedMemberId.value && selectedMemberId.value !== 'root'
+            ? members.value.find(m => m.id === selectedMemberId.value)?.name
             : rootMember.value?.name || '';
-          if (!isMember && !isRecruit) { 
-            const newR = { id:'r'+Date.now(), name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId: selectedMemberId.value || 'root' }; 
-            recruits.value.push(newR); 
-            showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`); 
+          // 이벤트(event) 참석자 중 기존에 없는 이름은 Recruit 리스트에 자동 추가.
+          // 단, 약속(meet)의 경우 고객 프라이버시 보호를 위해 자동 등록하지 않음.
+          const isMeet = (newAppt.type || '이벤트') === '약속';
+          if (!isMember && !isRecruit && !isMeet) {
+            const newR = { id:'r'+Date.now(), name, major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', show:true, interactionHistory:[], disposition: defaultDisposition(), createdBy, parentId: selectedMemberId.value || 'root' };
+            recruits.value.push(newR);
+            showToastMsg(`[${name}]님이 Recruit 리스트에 자동 추가되었습니다.`);
           }
           newAppt.attendees.push(name); newAppt.newAttendeeInput = '';
       }
