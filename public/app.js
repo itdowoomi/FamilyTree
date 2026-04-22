@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
@@ -781,8 +781,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isAdmin.value) return;
         try {
           const now = Date.now();
-          const snap = await getDocsFromServer(collection(db, 'registeredUsers'));
-          registeredUsers.value = snap.docs.map(d => {
+          const snap = await getDocs(collection(db, 'registeredUsers'));
+          const mapped = snap.docs.map(d => {
             const data = d.data();
             const joinedMs = data.joinedAt?.seconds ? data.joinedAt.seconds * 1000 : 0;
             const daysPassed = joinedMs ? Math.floor((now - joinedMs) / (1000*60*60*24)) : 0;
@@ -795,6 +795,8 @@ document.addEventListener('DOMContentLoaded', () => {
               daysInfo: (s !== 'approved' && s !== 'denied') ? (remaining > 0 ? `유예 ${remaining}일` : '만료') : ''
             };
           }).sort((a,b) => (b.joinedAt?.seconds||0) - (a.joinedAt?.seconds||0));
+          console.log('[DEBUG] fetchRegisteredUsers:', mapped.length, '명, statuses:', mapped.map(u => `${u.email}:${u.status}`));
+          registeredUsers.value = mapped;
         } catch (e) { console.error('사용자 목록 로드 실패:', e); }
       };
 
@@ -947,11 +949,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const updateAdminTabUsers = () => {
         const tab = adminTab.value;
         const users = registeredUsers.value;
-        if (tab === 'pending') adminTabUsers.value = users.filter(u => !u.status || u.status === 'pending');
-        else if (tab === 'manager') adminTabUsers.value = users.filter(u => u.status === 'manager');
-        else if (tab === 'approved') adminTabUsers.value = users.filter(u => u.status === 'approved');
-        else if (tab === 'denied') adminTabUsers.value = users.filter(u => u.status === 'denied');
-        else adminTabUsers.value = [];
+        let result;
+        if (tab === 'pending') result = users.filter(u => !u.status || u.status === 'pending');
+        else if (tab === 'manager') result = users.filter(u => u.status === 'manager');
+        else if (tab === 'approved') result = users.filter(u => u.status === 'approved');
+        else if (tab === 'denied') result = users.filter(u => u.status === 'denied');
+        else result = [];
+        console.log('[DEBUG] updateAdminTabUsers tab:', tab, '전체:', users.length, '결과:', result.length);
+        adminTabUsers.value = result;
       };
       watch([adminTab, registeredUsers], updateAdminTabUsers, { immediate: true });
 
