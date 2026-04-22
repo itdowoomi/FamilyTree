@@ -1480,8 +1480,20 @@ document.addEventListener('DOMContentLoaded', () => {
                   linkedMember.status = newStatus;
                   linkedMember.score = score;
               } else if (newStatus && !linkedMember) {
-                  // Create new member with Potential/Serious status (will be auto-linked by watch)
-                  // The watch on members will handle the recruit linkage automatically
+                  const pId = focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
+                  if (pId) {
+                      const newMemberId = 'm' + Date.now() + Math.random().toString(36).substring(2, 7);
+                      members.value.push({
+                          id: newMemberId, recruitId: item.id, name: item.name, email: item.email || '',
+                          major: item.major || '', job: item.job || '', company: item.company || '',
+                          status: newStatus, parentId: pId, history: [],
+                          interactionHistory: [...(item.interactionHistory || [])],
+                          issuePaid: 0, pending: 0, birthDate: item.birthDate || '', age: item.age || '',
+                          meetDate: item.meetDate || '', relation: item.relation || '',
+                          gender: item.gender || '남', score: score,
+                          disposition: item.disposition ? JSON.parse(JSON.stringify(item.disposition)) : defaultDisposition()
+                      });
+                  }
               } else if (!newStatus && linkedMember) {
                   // Score dropped below 60, remove member (keep recruit)
                   if (linkedMember.parentId) {
