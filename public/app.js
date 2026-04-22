@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, getDocsFromServer, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isAdmin.value) return;
         try {
           const now = Date.now();
-          const snap = await getDocs(collection(db, 'registeredUsers'));
+          const snap = await getDocsFromServer(collection(db, 'registeredUsers'));
           registeredUsers.value = snap.docs.map(d => {
             const data = d.data();
             const joinedMs = data.joinedAt?.seconds ? data.joinedAt.seconds * 1000 : 0;
@@ -943,13 +943,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); showToastMsg('삭제 실패', 'error'); }
       };
 
-      const adminTabUsers = computed(() => registeredUsers.value.filter(u => {
-        if (adminTab.value === 'pending') return !u.status || u.status === 'pending';
-        if (adminTab.value === 'manager') return u.status === 'manager';
-        if (adminTab.value === 'approved') return u.status === 'approved';
-        if (adminTab.value === 'denied') return u.status === 'denied';
-        return false;
-      }));
+      const adminTabUsers = ref([]);
+      const updateAdminTabUsers = () => {
+        const tab = adminTab.value;
+        const users = registeredUsers.value;
+        if (tab === 'pending') adminTabUsers.value = users.filter(u => !u.status || u.status === 'pending');
+        else if (tab === 'manager') adminTabUsers.value = users.filter(u => u.status === 'manager');
+        else if (tab === 'approved') adminTabUsers.value = users.filter(u => u.status === 'approved');
+        else if (tab === 'denied') adminTabUsers.value = users.filter(u => u.status === 'denied');
+        else adminTabUsers.value = [];
+      };
+      watch([adminTab, registeredUsers], updateAdminTabUsers, { immediate: true });
 
       const adminPendingCount = computed(() => registeredUsers.value.filter(u => !u.status || u.status === 'pending').length);
 
