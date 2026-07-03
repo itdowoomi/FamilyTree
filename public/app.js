@@ -1759,9 +1759,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const teamTotal = computed(() => {
         const l = focusedList.value;
+        const points = l.reduce((s,m)=>s+mPtsSum(m), 0);
         const paid = l.reduce((s,m)=>s+getMemberIssuePaid(m), 0);
         const pend = l.reduce((s,m)=>s+getMemberPending(m), 0);
-        return { paid, pending:pend, total:paid+pend };
+        return { points, paid, pending:pend, total:paid+pend };
       });
       const statusCounts = computed(() => {
         const c = {}; STATUSES.forEach(s => c[s] = 0);

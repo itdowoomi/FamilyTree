@@ -703,13 +703,15 @@
                 <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-bar-item">
                   <div class="point-bar-row-1">
                     <span class="point-bar-date">{{ h.date || '—' }}</span>
-                    <span class="point-bar-content">{{ h.content }}</span>
                     <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                   </div>
                   <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-track">
                     <div class="point-bar-fill" :style="{width: getPointHistPct(selectedMember, h) + '%'}"></div>
                   </div>
-                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</div>
+                  <div class="point-bar-row-2">
+                    <span class="point-bar-content">{{ h.content }}</span>
+                    <span v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</span>
+                  </div>
                 </div>
                 <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
@@ -810,6 +812,7 @@
         </div>
         <div class="financials" :style="{marginTop:getLegendMargin()}">
           <div class="legend-title">전체 합계</div>
+          <div class="fin-row"><span class="fin-label">Point</span><span class="fin-value">{{ fmt(teamTotal.points) }}</span></div>
           <div class="fin-row"><span class="fin-label">Issue Paid</span><span class="fin-value">{{ fmt(teamTotal.paid) }}</span></div>
           <div class="fin-row"><span class="fin-label">Pending</span><span class="fin-value">{{ fmt(teamTotal.pending) }}</span></div>
           <div class="fin-row"><span class="fin-label fin-total">Total</span><span class="fin-value fin-total">{{ fmt(teamTotal.total) }}</span></div>
@@ -911,13 +914,15 @@
                 <div v-for="h in sortedPointHistory(selectedMember)" :key="h.id" class="point-bar-item">
                   <div class="point-bar-row-1">
                     <span class="point-bar-date">{{ h.date || '—' }}</span>
-                    <span class="point-bar-content">{{ h.content }}</span>
                     <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                   </div>
                   <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-track">
                     <div class="point-bar-fill" :style="{width: getPointHistPct(selectedMember, h) + '%'}"></div>
                   </div>
-                  <div v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</div>
+                  <div class="point-bar-row-2">
+                    <span class="point-bar-content">{{ h.content }}</span>
+                    <span v-if="getPointHistPct(selectedMember, h) > 0" class="point-bar-pct">{{ getPointHistPct(selectedMember, h).toFixed(1) }}%</span>
+                  </div>
                 </div>
                 <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
@@ -1172,13 +1177,15 @@
                     <div class="point-bar-row-1">
                       <span class="point-bar-date">{{ h.date || '—' }}</span>
                       <span class="team-hist-name">{{ h._memberName }}</span>
-                      <span class="point-bar-content">{{ h.content }}</span>
                       <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                     </div>
                     <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-track">
                       <div class="point-bar-fill" :style="{width: getPointHistPct(h._member, h) + '%'}"></div>
                     </div>
-                    <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-pct">{{ getPointHistPct(h._member, h).toFixed(1) }}%</div>
+                    <div class="point-bar-row-2">
+                      <span class="point-bar-content">{{ h.content }}</span>
+                      <span v-if="getPointHistPct(h._member, h) > 0" class="point-bar-pct">{{ getPointHistPct(h._member, h).toFixed(1) }}%</span>
+                    </div>
                   </div>
                 </template>
                 <div v-else class="mem-hist-empty">기록이 없습니다.</div>
@@ -1193,13 +1200,15 @@
                     <div class="point-bar-row-1">
                       <span class="point-bar-date">{{ h.date || '—' }}</span>
                       <span class="team-hist-name">{{ h._memberName }}</span>
-                      <span class="point-bar-content">{{ h.content }}</span>
                       <span v-if="h.amount||h.point" class="point-bar-val">{{ h.amount ? '$'+fmt(h.amount) : '' }}{{ h.amount&&h.point ? ' · ' : '' }}{{ h.point ? fmt(h.point)+'P' : '' }}</span>
                     </div>
                     <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-track">
                       <div class="point-bar-fill" :style="{width: getPointHistPct(h._member, h) + '%'}"></div>
                     </div>
-                    <div v-if="getPointHistPct(h._member, h) > 0" class="point-bar-pct">{{ getPointHistPct(h._member, h).toFixed(1) }}%</div>
+                    <div class="point-bar-row-2">
+                      <span class="point-bar-content">{{ h.content }}</span>
+                      <span v-if="getPointHistPct(h._member, h) > 0" class="point-bar-pct">{{ getPointHistPct(h._member, h).toFixed(1) }}%</span>
+                    </div>
                   </div>
                 </template>
                 <div v-else class="mem-hist-empty">5건 이하</div>

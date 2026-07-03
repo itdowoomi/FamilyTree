@@ -329,13 +329,14 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 
 .point-bar-item{padding:4px 0 5px;border-bottom:1px dotted #e5e2dc;}
 .point-bar-item:last-child{border-bottom:none;}
-.point-bar-row-1{display:flex;align-items:baseline;gap:6px;font-size:10.5px;line-height:1.3;}
+.point-bar-row-1{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font-size:10.5px;line-height:1.3;}
 .point-bar-date{font-family:'JetBrains Mono',monospace;color:var(--navy-light);font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap;}
-.point-bar-content{flex:1;color:var(--text);word-break:break-all;}
+.point-bar-content{flex:1;min-width:0;color:var(--text);word-break:keep-all;overflow-wrap:break-word;}
 .point-bar-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:10px;flex-shrink:0;}
 .point-bar-track{height:5px;background:#e7edf6;border-radius:3px;overflow:hidden;margin-top:4px;position:relative;}
 .point-bar-fill{height:100%;background:linear-gradient(90deg,#60a5fa 0%,#3b82f6 55%,var(--navy) 100%);border-radius:3px;transition:width .4s ease;}
-.point-bar-pct{font-size:8.5px;color:var(--navy-light);font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:1px;text-align:right;letter-spacing:.3px;}
+.point-bar-row-2{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:3px;}
+.point-bar-pct{font-size:8.5px;color:var(--navy-light);font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;letter-spacing:.3px;}
 .team-hist-name{font-size:8.5px;font-weight:700;color:var(--gold);flex-shrink:0;background:rgba(184,148,58,.1);padding:0 4px;border-radius:3px;margin-left:2px;}
 .mem-hist-empty{font-size:10px;color:var(--muted);text-align:center;padding:6px;font-style:italic;}
 
