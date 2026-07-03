@@ -1813,7 +1813,34 @@
     <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
       <div class="info-col" style="flex: 2; min-width: 400px;">
        <div class="info-col-scroll">
+        <!-- 문서 기본 정보: 트리 전체에 1회만 적용되는 공통 정보 (본인/배우자 개인정보와 분리) -->
         <div class="info-box">
+          <div class="info-box-title">📄 문서 기본 정보</div>
+          <div class="grid4">
+            <div class="form-row grid4-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
+            <div class="form-row">
+              <label class="form-label">직책 (Rank)</label>
+              <select v-if="selectedIsRootView" v-model="header.rank" class="form-select">
+                <option value="">— 선택 —</option>
+                <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+              </select>
+              <select v-else-if="selectedMember" v-model="selectedMember.status" class="form-select">
+                <option value="">— 선택 —</option>
+                <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
+            <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
+            <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+            <div class="form-row grid4-full">
+              <label class="form-label">기준일 (As of)</label>
+              <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 본인 정보: 배우자 정보와 동일한 양식(이름/이메일/회원ID/성별/전공/직업/직장/관계/생년월일/나이) -->
+        <div class="info-box" style="margin-top:12px;">
           <div class="info-box-title">
             <template v-if="selectedIsRootView">👤 본인 정보</template>
             <template v-else>👤 {{ selectedMember ? selectedMember.name : '' }} 님의 기본 정보 <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px;">(서브 트리 관리자 관점)</span></template>
@@ -1822,19 +1849,13 @@
           <div class="grid4">
             <!-- Root 뷰 -->
             <template v-if="selectedIsRootView">
-              <div class="form-row grid4-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
               <div class="form-row grid4-half"><label class="form-label">이름 (Root 노드)</label><input :value="rootMemberName" @input="updateRootMemberName" class="form-input"></div>
               <div class="form-row grid4-half"><label class="form-label">이메일 (로그인 계정)</label><input type="email" :value="rootMemberEmail" @input="updateRootMemberEmail" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
               <div class="form-row"><label class="form-label">회원 ID</label><input v-model="header.id" class="form-input" placeholder="SCA12345"></div>
-              <div class="form-row"><label class="form-label">직책 (Rank)</label><select v-model="header.rank" class="form-select"><option value="">— 선택 —</option><option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option></select></div>
-              <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
-              <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
-              <div class="form-row grid4-full">
-                <label class="form-label">기준일 (As of)</label>
-                <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
-                <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
-              </div>
               <template v-if="rootMember">
+                <div class="form-row"><label class="form-label">성별</label>
+                  <select v-model="rootMember.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select>
+                </div>
                 <div class="form-row"><label class="form-label">전공</label><input v-model="rootMember.major" class="form-input"></div>
                 <div class="form-row"><label class="form-label">직업</label><input v-model="rootMember.job" class="form-input"></div>
                 <div class="form-row"><label class="form-label">직장</label><input v-model="rootMember.company" class="form-input"></div>
@@ -1846,22 +1867,11 @@
 
             <!-- 서브 트리 뷰: 선택된 멤버의 기본정보를 편집 -->
             <template v-else-if="selectedMember">
-              <div class="form-row grid4-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="(트리 공통)"></div>
               <div class="form-row grid4-half"><label class="form-label">이름</label><input v-model="selectedMember.name" class="form-input"></div>
               <div class="form-row grid4-half"><label class="form-label">이메일</label><input type="email" v-model="selectedMember.email" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
               <div class="form-row"><label class="form-label">회원 ID</label><input v-model="selectedMember.memberCode" class="form-input" placeholder="예: SCA12345"></div>
-              <div class="form-row"><label class="form-label">직책 (Rank)</label>
-                <select v-model="selectedMember.status" class="form-select">
-                  <option value="">— 선택 —</option>
-                  <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
-                </select>
-              </div>
-              <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
-              <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
-              <div class="form-row grid4-full">
-                <label class="form-label">기준일 (As of)</label>
-                <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
-                <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
+              <div class="form-row"><label class="form-label">성별</label>
+                <select v-model="selectedMember.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select>
               </div>
               <div class="form-row"><label class="form-label">전공</label><input v-model="selectedMember.major" class="form-input"></div>
               <div class="form-row"><label class="form-label">직업</label><input v-model="selectedMember.job" class="form-input"></div>
@@ -1873,7 +1883,7 @@
           </div>
         </div>
 
-        <!-- 배우자 통합으로 합쳐진 2번째 이후 인물의 개인정보: 인원 수만큼 기본정보 블록이 연속으로 나타남 -->
+        <!-- 배우자 통합으로 합쳐진 2번째 이후 인물의 개인정보: 본인 정보와 동일한 양식으로, 인원 수만큼 연속으로 나타남 -->
         <div v-for="(p, pi) in (activeInfoMember ? (activeInfoMember.mergedPeople || []) : [])" :key="p.id" class="info-box" style="margin-top:12px;">
           <div class="info-box-title">👤 {{ p.name || ('합쳐진 멤버 ' + (pi+2)) }} 님의 기본 정보 <span style="font-size:10px;color:#6b2d8a;font-weight:700;margin-left:6px;">🔗 배우자 통합 인물 {{ pi+2 }}</span></div>
           <div class="grid4">
