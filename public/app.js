@@ -1757,11 +1757,42 @@ document.addEventListener('DOMContentLoaded', () => {
           }).sort((a,b) => new Date(a.date.replace(/[-./]/g, '/')) - new Date(b.date.replace(/[-./]/g, '/')));
       });
 
+      // 전체 합계(Point/Issue Paid/Pending) 집계 기준: 기간 합계 | 연도 합계 | 전체 합계
+      const pointSumMode = ref('year'); // 'period' | 'year' | 'all'
+      const pointSumYear = ref(new Date().getFullYear());
+
+      function fmtDateDot(dStr){
+        if(!dStr) return '';
+        const parts = dStr.trim().split(/[-/]/);
+        if(parts.length<2) return dStr;
+        let m=parseInt(parts[0],10), day=parseInt(parts[1],10), y=parts.length>2?parseInt(parts[2],10):new Date().getFullYear();
+        if(isNaN(m)||isNaN(day)||isNaN(y)) return dStr;
+        if(y<100) y+=2000;
+        return `${m}.${day}.${y}`;
+      }
+      function historyInSumScope(h){
+        if(!h || !h.date) return true;
+        if(pointSumMode.value === 'all') return true;
+        if(pointSumMode.value === 'period') return histInRange(h);
+        if(pointSumMode.value === 'year'){
+          const t = parseDateForSort(h.date);
+          if(!t) return true;
+          return new Date(t).getFullYear() === Number(pointSumYear.value);
+        }
+        return true;
+      }
+      const teamTotalScopeLabel = computed(() => {
+        if(pointSumMode.value === 'all') return '(전체 기간)';
+        if(pointSumMode.value === 'year') return `(${pointSumYear.value}년)`;
+        if(pointSumMode.value === 'period') return `(${fmtDateDot(header.periodStart)}~${fmtDateDot(header.periodEnd)})`;
+        return '';
+      });
+
       const teamTotal = computed(() => {
         const l = focusedList.value;
-        const points = l.reduce((s,m)=>s+mPtsSum(m), 0);
-        const paid = l.reduce((s,m)=>s+getMemberIssuePaid(m), 0);
-        const pend = l.reduce((s,m)=>s+getMemberPending(m), 0);
+        const points = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.point)||0),0), 0);
+        const paid = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && h.type==='Issue Paid' && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.amount)||0),0), 0);
+        const pend = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && h.type==='Pending' && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.amount)||0),0), 0);
         return { points, paid, pending:pend, total:paid+pend };
       });
       const statusCounts = computed(() => {
@@ -2603,7 +2634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
-        teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
+        teamTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,

@@ -811,7 +811,7 @@
           </div>
         </div>
         <div class="financials" :style="{marginTop:getLegendMargin()}">
-          <div class="legend-title">전체 합계</div>
+          <div class="legend-title">전체 합계 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">{{ teamTotalScopeLabel }}</span></div>
           <div class="fin-row"><span class="fin-label">Point</span><span class="fin-value">{{ fmt(teamTotal.points) }}</span></div>
           <div class="fin-row"><span class="fin-label">Issue Paid</span><span class="fin-value">{{ fmt(teamTotal.paid) }}</span></div>
           <div class="fin-row"><span class="fin-label">Pending</span><span class="fin-value">{{ fmt(teamTotal.pending) }}</span></div>
@@ -1840,6 +1840,19 @@
             </div>
             <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
             <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+            <div class="form-row">
+              <label class="form-label">전체 합계 표기 기준</label>
+              <select v-model="pointSumMode" class="form-select">
+                <option value="period">기간 합계</option>
+                <option value="year">연도 합계</option>
+                <option value="all">전체 합계</option>
+              </select>
+            </div>
+            <div v-if="pointSumMode==='year'" class="form-row grid4-full">
+              <label class="form-label">집계 연도 (직접 입력 가능)</label>
+              <input type="number" v-model.number="pointSumYear" class="form-input" style="max-width:140px;" placeholder="예: 2026">
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">기본값은 올해입니다. 12월/1월 등 연도 경계에 걸친 실적은 연도를 직접 입력해 조회할 수 있습니다.</div>
+            </div>
             <div class="form-row grid4-full">
               <label class="form-label">기준일 (As of)</label>
               <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
