@@ -40,6 +40,9 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .dashboard-section-title { width: 100%; max-width: 1000px; font-size: 14px; font-weight: 700; color: var(--navy); letter-spacing:.4px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1.5px solid #d9d9d9; }
 .tbar-btn.tbar-share { background: #fff6d9; color: #8a6d14; border-color: #e8d488; }
 .tbar-btn.tbar-share:hover { background: #f5e5a7; }
+.tbar-btn.tbar-merge { background: rgba(107,45,138,.15); color: #d9b8ea; border-color: rgba(107,45,138,.5); }
+.tbar-btn.tbar-merge:hover { background: rgba(107,45,138,.3); }
+.tbar-btn.tbar-merge:disabled { opacity: .4; cursor: not-allowed; }
 .shared-owner-indicator { font-size: 10.5px; color: var(--muted); font-weight: 600; padding: 0 8px; letter-spacing:.2px; }
 /* 공유 모달 */
 .share-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -219,7 +222,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .side-hist-close:hover{color:var(--navy);border-color:var(--navy);}
 .side-hist-list{overflow-y:auto;max-height:calc(100vh - 320px);margin:0 -10px;padding:0 10px 4px 10px;min-height:60px;}
 .side-hist-add{flex-shrink:0;border-top:1px solid var(--border);padding-top:9px;margin-top:6px;display:flex;flex-direction:column;gap:5px;}
-.form-row{margin-bottom:7px;}
+.form-row{margin-bottom:7px;min-width:0;}
 .form-label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.4px;text-transform:uppercase;}
 .form-input,.form-select,.form-textarea{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:12px;background:var(--white);color:var(--text);transition:border-color .2s;}
 .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--navy-light);}
@@ -230,14 +233,16 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .btn-gold{background:var(--gold);color:#fff;}
 .btn-gold:hover{background:var(--gold-light);}
 
-.info-col{flex:1;min-width:260px;display:flex;flex-direction:column;gap:9px;}
-.info-box{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:11px 13px;}
-.info-box-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;}
+.info-col{flex:1;min-width:260px;min-height:0;display:flex;flex-direction:column;gap:9px;overflow:hidden;}
+.info-box{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:11px 13px;min-width:0;box-sizing:border-box;overflow:hidden;}
+.info-box-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;overflow-wrap:break-word;}
+/* grid item(칸) 안의 input이 grid 트랙 폭을 벗어나지 않도록 min-width:0을 명시 (CSS grid 기본값 min-width:auto로 인한 오버플로 방지) */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;min-width:0;}
 .grid2-full{grid-column:1/-1;}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px;min-width:0;}
 .grid4-full{grid-column:1/-1;}
 .grid4-half{grid-column:span 2;}
+.form-input,.form-select,.form-textarea{box-sizing:border-box;max-width:100%;}
 .ref-list{font-size:11px;color:var(--muted);line-height:1.9;margin-top:7px;}
 
 .notes-pos-bar{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--border);flex-shrink:0;}

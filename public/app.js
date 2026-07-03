@@ -89,13 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = currentUser.value;
         const email = u && u.email ? u.email : '';
         const name = (u && u.displayName) ? u.displayName : (email ? email.split('@')[0] : '');
-        return { id:'root', recruitId: null, name, email, major:'', job:'', company:'', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:'', meetDate:'', gender:'', birthDate:'', disposition: defaultDisposition() };
+        return { id:'root', recruitId: null, name, email, memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:'', meetDate:'', gender:'', birthDate:'', disposition: defaultDisposition() };
       };
 
       const header = reactive(defaultHeader());
       const members = ref([
         defaultRoot(),
-        { id:'m1', recruitId: null, name:'김은숙', email:'', major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
+        { id:'m1', recruitId: null, name:'김은숙', email:'', memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
       ]);
       const notes = ref([]);
       const appointments = ref([]);
@@ -1560,6 +1560,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
       const selectedIsRootView = computed(() => !selectedMemberId.value || selectedMemberId.value === 'root');
+      // 기본 정보 탭에서 지금 편집 대상인 멤버 (root 뷰면 root, 아니면 선택된 멤버) — 배우자 통합 인물 반복 표시에 사용
+      const activeInfoMember = computed(() => selectedIsRootView.value ? rootMember.value : selectedMember.value);
+      // 트리 타이틀에 표시할 회원 ID 코드 (배우자 통합된 경우 콤마로 이어붙임: 예 "SCA87396, SCA46478")
+      const rootDisplayCode = computed(() => {
+        const codes = [header.id];
+        if (rootMember.value && rootMember.value.mergedPeople) {
+          rootMember.value.mergedPeople.forEach(p => { if (p.memberCode) codes.push(p.memberCode); });
+        }
+        return codes.filter(Boolean).join(', ');
+      });
 
       // ── 핵심 필터링 로직 (선택된 멤버 기준 뷰) ──
       const tabContext = computed(() => {
@@ -1943,7 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!nm.name.trim()) return;
         const newId = 'm'+Date.now();
         const parentId = nm.parentId || focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
-        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition() });
+        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), memberCode:'', mergedPeople:[], major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition() });
         nm.name=''; nm.email=''; nm.major=''; nm.job=''; nm.company=''; nm.birthDate=''; nm.age=''; nm.meetDate=''; nm.relation=''; nm.gender='남'; nm.score=0;
         showToastMsg(`✅ 멤버가 추가되었습니다.`);
       }
@@ -1961,87 +1971,125 @@ document.addEventListener('DOMContentLoaded', () => {
         if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null;
         if (hadLinkedRecruit) showToastMsg(`[${m.name}]님이 멤버와 Recruit 리스트에서 모두 삭제되었습니다.`);
       }
-      // ── 배우자 합치기 (부부 통합) ──
-      // FD 이상(= root 포함) 조직에서, 배우자 관계인 두 멤버를 하나의 노드로 합친다.
-      // 예: 방동혁(root) + 김은숙(SA, 방동혁의 하위) -> "방동혁, 김은숙" 로 통합
-      const TOP_TIER_STATUSES = ['root', 'EFD', 'NFD', 'DFD', 'SFD', 'FD'];
-      function canMergeIntoParent(m) {
-        if (!m || !m.parentId) return false;
-        const parent = members.value.find(x => x.id === m.parentId);
-        if (!parent) return false;
-        return TOP_TIER_STATUSES.includes(parent.status);
+      // ── 배우자 통합 (멤버 합치기) ──
+      // 특정 직급 조건에 상관없이, 사용자가 직접 "합칠 멤버"와 "합쳐질 상위 멤버"를 골라
+      // 하나의 노드로 합친다. 합쳐지는 멤버의 하위 멤버는 모두 상위 멤버 밑으로 이동한다.
+      const showMergeModal = ref(false);
+      const mergeForm = reactive({ sourceId: '', targetId: '' });
+      function isMemberDescendantOf(candidateId, ancestorId) {
+        let cur = members.value.find(x => x.id === candidateId);
+        while (cur && cur.parentId) {
+          if (cur.parentId === ancestorId) return true;
+          cur = members.value.find(x => x.id === cur.parentId);
+        }
+        return false;
       }
-      function mergeMemberIntoParent(id) {
-        const m = members.value.find(x => x.id === id);
-        if (!m || !m.parentId) return;
-        const parent = members.value.find(x => x.id === m.parentId);
-        if (!parent) return;
-        if (!canMergeIntoParent(m)) {
-          showToastMsg('배우자 합치기는 FD 이상 조직(상위가 root/EFD/NFD/DFD/SFD/FD)에서만 가능합니다.', 'error');
+      // 합칠 멤버(사라짐) 후보: root는 다른 멤버에 흡수될 수 없으므로 제외
+      const mergeSourceOptions = computed(() => members.value.filter(m => m.parentId));
+      // 합쳐질 상위 멤버(남음) 후보: 선택한 source 자신과, source의 하위트리는 제외(순환 방지)
+      const mergeTargetOptions = computed(() => {
+        if (!mergeForm.sourceId) return members.value;
+        return members.value.filter(m => m.id !== mergeForm.sourceId && !isMemberDescendantOf(m.id, mergeForm.sourceId));
+      });
+      function openMergeModal() { mergeForm.sourceId = ''; mergeForm.targetId = ''; showMergeModal.value = true; }
+      function closeMergeModal() { showMergeModal.value = false; }
+      function canMergeMembers(sourceId, targetId) {
+        if (!sourceId || !targetId || sourceId === targetId) return false;
+        const source = members.value.find(x => x.id === sourceId);
+        const target = members.value.find(x => x.id === targetId);
+        if (!source || !target) return false;
+        if (!source.parentId) return false; // 최상위(root)는 다른 멤버에 흡수될 수 없음
+        if (isMemberDescendantOf(targetId, sourceId)) return false; // 순환 방지
+        return true;
+      }
+      function mergeTwoMembers(sourceId, targetId) {
+        const m = members.value.find(x => x.id === sourceId);
+        const target = members.value.find(x => x.id === targetId);
+        if (!canMergeMembers(sourceId, targetId) || !m || !target) {
+          showToastMsg('선택한 두 멤버는 합칠 수 없습니다.', 'error');
           return;
         }
         const oldName = m.name;
-        if (!confirm(`'${parent.name}' 님과 '${oldName}' 님을 합치시겠습니까?\n\n· '${parent.name}' 님의 이름이 '${parent.name}, ${oldName}' 로 바뀝니다.\n· ${oldName} 님의 하위 멤버 전체가 그 아래로 옮겨집니다.\n· 포인트/실적, 상담 기록, 연결된 Recruit·약속·메모가 모두 합쳐집니다.\n· 이 작업은 되돌릴 수 없습니다.`)) return;
+        if (!confirm(`'${oldName}' 님을 '${target.name}' 님 쪽으로 합치시겠습니까?\n\n· '${target.name}' 님의 이름이 '${target.name}, ${oldName}' 로 바뀝니다.\n· ${oldName} 님의 하위 멤버 전체가 '${target.name}' 님 밑으로 옮겨집니다.\n· 포인트/실적, 상담 기록, 연결된 Recruit·약속·메모, 개인정보가 모두 합쳐집니다.\n· 이 작업은 되돌릴 수 없습니다.`)) return;
 
         const today = new Date();
         const d = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${String(today.getFullYear()).slice(2)}`;
 
         // 1) 이름 합치기 (중복 방지)
-        const existingNames = parent.name.split(',').map(s => s.trim()).filter(Boolean);
-        if (!existingNames.includes(oldName)) parent.name = existingNames.concat(oldName).join(', ');
+        const existingNames = target.name.split(',').map(s => s.trim()).filter(Boolean);
+        if (!existingNames.includes(oldName)) target.name = existingNames.concat(oldName).join(', ');
 
-        // 2) 이메일 보존 (부모에 이메일이 없을 때만 승계)
-        if (!parent.email && m.email) parent.email = m.email;
+        // 2) 개인정보를 별도 인물로 보관 (기본 정보 탭에서 각자 정보를 확인/수정할 수 있도록)
+        if (!target.mergedPeople) target.mergedPeople = [];
+        const ownPerson = {
+          id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7),
+          name: oldName, email: m.email || '', memberCode: m.memberCode || '',
+          major: m.major || '', job: m.job || '', company: m.company || '',
+          relation: m.relation || '', birthDate: m.birthDate || '', age: m.age || '', gender: m.gender || '남'
+        };
+        // 이미 합쳐져 있던 멤버(m)를 또 합치는 경우, m이 가지고 있던 사람들도 함께 승계
+        target.mergedPeople = [...target.mergedPeople, ownPerson, ...(m.mergedPeople || [])];
 
-        // 3) 하위 멤버 전체를 부모 밑으로 재배치
-        members.value.forEach(x => { if (x.parentId === m.id) x.parentId = parent.id; });
+        // 3) 이메일 보존 (상위 멤버에 이메일이 없을 때만 승계)
+        if (!target.email && m.email) target.email = m.email;
 
-        // 4) 포인트/실적 히스토리 병합 (id 재발급으로 충돌 방지)
+        // 4) 하위 멤버 전체를 상위 멤버 밑으로 재배치 (서브 노드가 고스란히 따라 올라감)
+        members.value.forEach(x => { if (x.parentId === m.id) x.parentId = target.id; });
+
+        // 5) 포인트/실적 히스토리 병합 (id 재발급으로 충돌 방지)
         const mergedHistory = (m.history || []).map(h => ({ ...h, id: 'h' + Date.now() + Math.random().toString(36).slice(2, 7) }));
-        parent.history = [...(parent.history || []), ...mergedHistory];
+        target.history = [...(target.history || []), ...mergedHistory];
 
-        // 5) 상담/관리 기록 병합 + 합침 로그 추가
+        // 6) 상담/관리 기록 병합 + 합침 로그 추가
         const mergedInteractions = (m.interactionHistory || []).map(h => ({ ...h, id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7) }));
-        parent.interactionHistory = [...(parent.interactionHistory || []), ...mergedInteractions,
-          { id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7), date: d, content: `🔗 배우자 '${oldName}' 님과 합쳐짐 (멤버·Recruit·약속·메모 통합)` }];
+        target.interactionHistory = [...(target.interactionHistory || []), ...mergedInteractions,
+          { id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7), date: d, content: `🔗 '${oldName}' 님과 합쳐짐 (멤버·Recruit·약속·메모 통합)` }];
 
-        // 6) 적합도 점수: 더 큰 값을 유지
-        parent.score = Math.max(parent.score || 0, m.score || 0);
+        // 7) 적합도 점수: 더 큰 값을 유지
+        target.score = Math.max(target.score || 0, m.score || 0);
 
-        // 7) 연결된 Recruit 정리 (중복 링크 방지)
+        // 8) 연결된 Recruit 정리 (중복 링크 방지)
         if (m.recruitId) {
-          if (!parent.recruitId) {
-            parent.recruitId = m.recruitId;
+          if (!target.recruitId) {
+            target.recruitId = m.recruitId;
             const r = recruits.value.find(x => x.id === m.recruitId);
-            if (r) r.name = parent.name;
+            if (r) r.name = target.name;
           } else {
             recruits.value = recruits.value.filter(r => r.id !== m.recruitId);
           }
         }
         // 합쳐진 멤버 이름으로 남아있는 별개 Recruit 항목도 이름 갱신
-        recruits.value.forEach(r => { if (r.name === oldName) r.name = parent.name; });
+        recruits.value.forEach(r => { if (r.name === oldName) r.name = target.name; });
 
-        // 8) 약속(appointments)의 대상자/참석자/작성자 이름 갱신
+        // 9) 약속(appointments)의 대상자/참석자/작성자 이름 갱신
         appointments.value.forEach(a => {
-          if (a.targetName === oldName) a.targetName = parent.name;
-          if (a.attendees) a.attendees = a.attendees.map(n => n === oldName ? parent.name : n);
-          if (a.createdBy === oldName) a.createdBy = parent.name;
+          if (a.targetName === oldName) a.targetName = target.name;
+          if (a.attendees) a.attendees = a.attendees.map(n => n === oldName ? target.name : n);
+          if (a.createdBy === oldName) a.createdBy = target.name;
         });
 
-        // 9) 메모(notes) 작성자 이름 갱신
-        notes.value.forEach(n => { if (n.createdBy === oldName) n.createdBy = parent.name; });
+        // 10) 메모(notes) 작성자 이름 갱신
+        notes.value.forEach(n => { if (n.createdBy === oldName) n.createdBy = target.name; });
 
-        // 10) 선택/포커스/펼침 상태 정리
+        // 11) 선택/포커스/펼침 상태 정리
         if (focusRootId.value === m.id) clearFocus();
-        if (selectedMemberId.value === m.id) selectedMemberId.value = parent.id;
+        if (selectedMemberId.value === m.id) selectedMemberId.value = target.id;
         if (expandedMemberId.value === m.id) expandedMemberId.value = null;
         if (expandedInteractionId.value === m.id) expandedInteractionId.value = null;
         if (expandedDispositionId.value === m.id) expandedDispositionId.value = null;
 
-        // 11) 멤버 목록에서 제거
+        // 12) 멤버 목록에서 제거
         members.value = members.value.filter(x => x.id !== m.id);
 
-        showToastMsg(`✅ '${oldName}' 님이 '${parent.name}' 님과 합쳐졌습니다.`);
+        showToastMsg(`✅ '${oldName}' 님이 '${target.name}' 님과 합쳐졌습니다.`);
+      }
+      function confirmMergeFromModal() {
+        if (!mergeForm.sourceId || !mergeForm.targetId) {
+          showToastMsg('합칠 멤버와 합쳐질 상위 멤버를 모두 선택하세요.', 'error');
+          return;
+        }
+        mergeTwoMembers(mergeForm.sourceId, mergeForm.targetId);
+        showMergeModal.value = false;
       }
       function parentOpts(ex){
         const excludeIds=new Set([ex]); const chMap={}; members.value.forEach(m=>chMap[m.id]=[]);
@@ -2410,7 +2458,7 @@ document.addEventListener('DOMContentLoaded', () => {
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
-        members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp}; });
+        members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
         if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
@@ -2538,13 +2586,13 @@ document.addEventListener('DOMContentLoaded', () => {
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
-        selectedUpline, viewHeader, selectedIsRootView,
+        selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
         teamTotal, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
-        canMergeIntoParent, mergeMemberIntoParent,
+        showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
