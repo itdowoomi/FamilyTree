@@ -1812,7 +1812,7 @@
 
     <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
       <div class="info-col" style="flex: 2; min-width: 400px;">
-        <div class="info-box" style="min-height:100%;">
+        <div class="info-box">
           <div class="info-box-title">
             <template v-if="selectedIsRootView">👤 본인 정보</template>
             <template v-else>👤 {{ selectedMember ? selectedMember.name : '' }} 님의 기본 정보 <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px;">(서브 트리 관리자 관점)</span></template>
