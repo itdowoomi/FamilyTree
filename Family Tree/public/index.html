@@ -652,6 +652,11 @@
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
               </div>
+              <div v-if="canMergeIntoParent(selectedMember)" class="mem-info-edit-row" style="margin-top:6px;">
+                  <button class="btn btn-merge-spouse" style="width:100%;font-size:11px;padding:5px 10px;" @click="mergeMemberIntoParent(selectedMember.id)" title="부부 등 배우자 관계인 상위 멤버와 이 멤버를 하나의 노드로 합칩니다 (FD 이상 조직 전용)">
+                      🔗 {{ members.find(p=>p.id===selectedMember.parentId) ? members.find(p=>p.id===selectedMember.parentId).name : '상위 멤버' }} 와(과) 합치기 (배우자 통합)
+                  </button>
+              </div>
               <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
                   <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
                   <div v-for="em in subTreeSharesForSelected.sharedEmails" :key="em" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;font-size:11px;">
@@ -860,6 +865,11 @@
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
               </div>
+              <div v-if="canMergeIntoParent(selectedMember)" class="mem-info-edit-row" style="margin-top:6px;">
+                  <button class="btn btn-merge-spouse" style="width:100%;font-size:11px;padding:5px 10px;" @click="mergeMemberIntoParent(selectedMember.id)" title="부부 등 배우자 관계인 상위 멤버와 이 멤버를 하나의 노드로 합칩니다 (FD 이상 조직 전용)">
+                      🔗 {{ members.find(p=>p.id===selectedMember.parentId) ? members.find(p=>p.id===selectedMember.parentId).name : '상위 멤버' }} 와(과) 합치기 (배우자 통합)
+                  </button>
+              </div>
               <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
                   <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
                   <div v-for="em in subTreeSharesForSelected.sharedEmails" :key="em" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;font-size:11px;">
@@ -1053,7 +1063,10 @@
                 </button>
               </td>
               <td style="text-align:center">
-                <button v-if="m.parentId!==null" class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                  <button v-if="canMergeIntoParent(m)" class="btn-sm-merge" title="상위 멤버와 합치기 (배우자 통합)" @click="mergeMemberIntoParent(m.id)">🔗 합치기</button>
+                  <button v-if="m.parentId!==null" class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -1257,7 +1270,7 @@
                 </td>
                 <td>
                   <div style="display:flex;align-items:center;gap:3px;overflow:hidden;">
-                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 3px;width:50px;font-family:monospace;font-size:10.5px;flex-shrink:0;" placeholder="YYYY-MM">
+                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 3px;width:57px;font-family:monospace;font-size:10.5px;flex-shrink:0;" placeholder="YYYY-MM">
                     <span v-if="calcPeriod(m.meetDate)" style="font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ calcPeriod(m.meetDate) }}</span>
                   </div>
                 </td>
@@ -1287,7 +1300,10 @@
                   <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)" style="padding:6px 12px;font-size:12px;">📋{{ m.interactionHistory ? m.interactionHistory.length : 0 }}</button>
                 </td>
                 <td style="text-align:center;padding:3px 0;">
-                  <button v-if="m.parentId!==null" class="btn-sm-danger" style="padding:2px 3px;font-size:10px;" @click="removeMember(m.id)">삭제</button>
+                  <div style="display:flex;gap:3px;justify-content:center;flex-wrap:wrap;">
+                    <button v-if="canMergeIntoParent(m)" class="btn-sm-merge" style="padding:2px 3px;font-size:10px;" title="상위 멤버와 합치기 (배우자 통합)" @click="mergeMemberIntoParent(m.id)">🔗</button>
+                    <button v-if="m.parentId!==null" class="btn-sm-danger" style="padding:2px 3px;font-size:10px;" @click="removeMember(m.id)">삭제</button>
+                  </div>
                 </td>
               </tr>
             </tbody>
