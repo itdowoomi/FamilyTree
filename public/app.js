@@ -1961,6 +1961,88 @@ document.addEventListener('DOMContentLoaded', () => {
         if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null;
         if (hadLinkedRecruit) showToastMsg(`[${m.name}]님이 멤버와 Recruit 리스트에서 모두 삭제되었습니다.`);
       }
+      // ── 배우자 합치기 (부부 통합) ──
+      // FD 이상(= root 포함) 조직에서, 배우자 관계인 두 멤버를 하나의 노드로 합친다.
+      // 예: 방동혁(root) + 김은숙(SA, 방동혁의 하위) -> "방동혁, 김은숙" 로 통합
+      const TOP_TIER_STATUSES = ['root', 'EFD', 'NFD', 'DFD', 'SFD', 'FD'];
+      function canMergeIntoParent(m) {
+        if (!m || !m.parentId) return false;
+        const parent = members.value.find(x => x.id === m.parentId);
+        if (!parent) return false;
+        return TOP_TIER_STATUSES.includes(parent.status);
+      }
+      function mergeMemberIntoParent(id) {
+        const m = members.value.find(x => x.id === id);
+        if (!m || !m.parentId) return;
+        const parent = members.value.find(x => x.id === m.parentId);
+        if (!parent) return;
+        if (!canMergeIntoParent(m)) {
+          showToastMsg('배우자 합치기는 FD 이상 조직(상위가 root/EFD/NFD/DFD/SFD/FD)에서만 가능합니다.', 'error');
+          return;
+        }
+        const oldName = m.name;
+        if (!confirm(`'${parent.name}' 님과 '${oldName}' 님을 합치시겠습니까?\n\n· '${parent.name}' 님의 이름이 '${parent.name}, ${oldName}' 로 바뀝니다.\n· ${oldName} 님의 하위 멤버 전체가 그 아래로 옮겨집니다.\n· 포인트/실적, 상담 기록, 연결된 Recruit·약속·메모가 모두 합쳐집니다.\n· 이 작업은 되돌릴 수 없습니다.`)) return;
+
+        const today = new Date();
+        const d = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${String(today.getFullYear()).slice(2)}`;
+
+        // 1) 이름 합치기 (중복 방지)
+        const existingNames = parent.name.split(',').map(s => s.trim()).filter(Boolean);
+        if (!existingNames.includes(oldName)) parent.name = existingNames.concat(oldName).join(', ');
+
+        // 2) 이메일 보존 (부모에 이메일이 없을 때만 승계)
+        if (!parent.email && m.email) parent.email = m.email;
+
+        // 3) 하위 멤버 전체를 부모 밑으로 재배치
+        members.value.forEach(x => { if (x.parentId === m.id) x.parentId = parent.id; });
+
+        // 4) 포인트/실적 히스토리 병합 (id 재발급으로 충돌 방지)
+        const mergedHistory = (m.history || []).map(h => ({ ...h, id: 'h' + Date.now() + Math.random().toString(36).slice(2, 7) }));
+        parent.history = [...(parent.history || []), ...mergedHistory];
+
+        // 5) 상담/관리 기록 병합 + 합침 로그 추가
+        const mergedInteractions = (m.interactionHistory || []).map(h => ({ ...h, id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7) }));
+        parent.interactionHistory = [...(parent.interactionHistory || []), ...mergedInteractions,
+          { id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7), date: d, content: `🔗 배우자 '${oldName}' 님과 합쳐짐 (멤버·Recruit·약속·메모 통합)` }];
+
+        // 6) 적합도 점수: 더 큰 값을 유지
+        parent.score = Math.max(parent.score || 0, m.score || 0);
+
+        // 7) 연결된 Recruit 정리 (중복 링크 방지)
+        if (m.recruitId) {
+          if (!parent.recruitId) {
+            parent.recruitId = m.recruitId;
+            const r = recruits.value.find(x => x.id === m.recruitId);
+            if (r) r.name = parent.name;
+          } else {
+            recruits.value = recruits.value.filter(r => r.id !== m.recruitId);
+          }
+        }
+        // 합쳐진 멤버 이름으로 남아있는 별개 Recruit 항목도 이름 갱신
+        recruits.value.forEach(r => { if (r.name === oldName) r.name = parent.name; });
+
+        // 8) 약속(appointments)의 대상자/참석자/작성자 이름 갱신
+        appointments.value.forEach(a => {
+          if (a.targetName === oldName) a.targetName = parent.name;
+          if (a.attendees) a.attendees = a.attendees.map(n => n === oldName ? parent.name : n);
+          if (a.createdBy === oldName) a.createdBy = parent.name;
+        });
+
+        // 9) 메모(notes) 작성자 이름 갱신
+        notes.value.forEach(n => { if (n.createdBy === oldName) n.createdBy = parent.name; });
+
+        // 10) 선택/포커스/펼침 상태 정리
+        if (focusRootId.value === m.id) clearFocus();
+        if (selectedMemberId.value === m.id) selectedMemberId.value = parent.id;
+        if (expandedMemberId.value === m.id) expandedMemberId.value = null;
+        if (expandedInteractionId.value === m.id) expandedInteractionId.value = null;
+        if (expandedDispositionId.value === m.id) expandedDispositionId.value = null;
+
+        // 11) 멤버 목록에서 제거
+        members.value = members.value.filter(x => x.id !== m.id);
+
+        showToastMsg(`✅ '${oldName}' 님이 '${parent.name}' 님과 합쳐졌습니다.`);
+      }
       function parentOpts(ex){
         const excludeIds=new Set([ex]); const chMap={}; members.value.forEach(m=>chMap[m.id]=[]);
         members.value.forEach(m=>{ if(m.parentId&&chMap[m.parentId]) chMap[m.parentId].push(m.id); });
@@ -2462,6 +2544,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
+        canMergeIntoParent, mergeMemberIntoParent,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,

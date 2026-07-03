@@ -201,6 +201,11 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .btn-sm-danger:hover{background:var(--danger);color:#fff;}
 .btn-sm-primary{white-space:nowrap;background:transparent;color:var(--navy);border:1px solid var(--navy);padding:2px 7px;font-size:11px;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .15s;}
 .btn-sm-primary:hover{background:var(--navy);color:#fff;}
+/* 배우자 합치기(부부 통합) 버튼 */
+.btn-sm-merge{white-space:nowrap;background:transparent;color:#6b2d8a;border:1px solid #6b2d8a;padding:2px 7px;font-size:11px;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-sm-merge:hover{background:#6b2d8a;color:#fff;}
+.btn-merge-spouse{background:#6b2d8a;color:#fff;border:1px solid #6b2d8a;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600;}
+.btn-merge-spouse:hover{background:#59236f;}
 .member-table input.form-input,.member-table select.form-select{width:100%;padding:2px 4px;}
 
 /* ─── ADD FORM ─── */
