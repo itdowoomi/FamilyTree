@@ -233,7 +233,11 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .btn-gold{background:var(--gold);color:#fff;}
 .btn-gold:hover{background:var(--gold-light);}
 
-.info-col{flex:1;min-width:260px;min-height:0;display:flex;flex-direction:column;gap:9px;overflow-y:auto;overflow-x:hidden;}
+.info-col{flex:1;min-width:260px;min-height:0;display:flex;flex-direction:column;gap:9px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;}
+.info-col::-webkit-scrollbar{width:8px;}
+.info-col::-webkit-scrollbar-track{background:transparent;}
+.info-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.info-col::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .info-box{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:11px 13px;min-width:0;box-sizing:border-box;flex-shrink:0;}
 .info-box-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;overflow-wrap:break-word;}
 /* grid item(칸) 안의 input이 grid 트랙 폭을 벗어나지 않도록 min-width:0을 명시 (CSS grid 기본값 min-width:auto로 인한 오버플로 방지) */
@@ -268,9 +272,9 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .recruit-rank{font-size:9px;font-family:'JetBrains Mono',monospace;color:#fff;background:var(--gold);border-radius:10px;padding:1px 6px;font-weight:700;flex-shrink:0;}
 .recruit-name-score{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;}
 .recruit-score-badge{color:var(--gold);font-weight:700;}
-.recruit-hist-item{display:flex;gap:5px;padding:2px 0 2px 10px;font-size:10px;line-height:1.5;border-left:2px solid #e8dfc8;margin-left:4px;}
-.recruit-hist-date{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px;flex-shrink:0;white-space:nowrap;}
-.recruit-hist-content{color:var(--text);word-break:break-all;}
+.recruit-hist-item{display:flex;flex-direction:column;gap:1px;padding:2px 0 2px 10px;font-size:10px;line-height:1.5;border-left:2px solid #e8dfc8;margin-left:4px;}
+.recruit-hist-date{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px;white-space:nowrap;}
+.recruit-hist-content{color:var(--text);word-break:keep-all;overflow-wrap:break-word;padding-left:6px;}
 .recruit-score-input{width:64px;padding:2px 5px;font-size:12px;border:1px solid var(--border);border-radius:3px;font-family:'JetBrains Mono',monospace;background:var(--white);text-align:center;}
 .recruit-score-input:focus{outline:none;border-color:var(--gold);}
 
