@@ -1812,6 +1812,7 @@
 
     <div v-if="tab==='header'" class="tab-content" style="display:flex; gap:15px; align-items:stretch;">
       <div class="info-col" style="flex: 2; min-width: 400px;">
+       <div class="info-col-scroll">
         <div class="info-box">
           <div class="info-box-title">
             <template v-if="selectedIsRootView">👤 본인 정보</template>
@@ -1890,6 +1891,7 @@
             <div class="form-row"><label class="form-label">나이</label><input type="number" v-model.number="p.age" class="form-input"></div>
           </div>
         </div>
+       </div>
       </div>
 
       <div class="info-col" style="flex: 1; min-width: 220px;">
