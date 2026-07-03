@@ -2081,6 +2081,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // 12) 멤버 목록에서 제거
         members.value = members.value.filter(x => x.id !== m.id);
 
+        // 13) 합쳐진 배우자의 이메일도 이 트리를 열람/관리할 수 있도록 자동 공유
+        //     (배우자 통합된 경우, 두 사람 중 누구의 계정으로 로그인해도 같은 트리를 관리할 수 있어야 함)
+        const emailsToAutoShare = [...new Set(
+          [m.email, target.email, ...(m.mergedPeople || []).map(p => p.email), ...(target.mergedPeople || []).map(p => p.email)]
+            .map(e => (e || '').trim().toLowerCase())
+            .filter(e => e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))
+        )];
+        emailsToAutoShare.forEach(email => {
+          if (currentUser.value && currentUser.value.email && email === currentUser.value.email.toLowerCase()) return;
+          const already = currentTreeMeta.value && (currentTreeMeta.value.sharedEmails || []).some(e => (e || '').toLowerCase() === email);
+          if (already) return;
+          if (!currentIsOwner.value) return; // 소유자만 공유 가능 (addShare 내부 정책과 동일)
+          addShare(email, 'editor').catch(err => console.warn('배우자 자동 공유 실패:', err));
+        });
+
         showToastMsg(`✅ '${oldName}' 님이 '${target.name}' 님과 합쳐졌습니다.`);
       }
       function confirmMergeFromModal() {
