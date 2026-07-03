@@ -1136,7 +1136,7 @@
                   </td>
                   <td><input type="number" class="history-content-input" style="text-align:right;font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.point" placeholder="Pts"></td>
                   <td>
-                    <input type="number" class="history-content-input" style="font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
+                    <input type="number" class="history-content-input" style="text-align:right;font-family:'JetBrains Mono',monospace;" v-model.number.lazy="h.amount"
                       :placeholder="h.type==='History' ? '—' : h.type" :disabled="h.type==='History'" :style="h.type==='History' ? 'background:#f0f0f0;cursor:not-allowed;color:#aaa;' : ''">
                   </td>
                   <td><input class="history-content-input" v-model.lazy="h.content" placeholder="내용 입력"></td>
@@ -1157,7 +1157,7 @@
                 </select>
                 <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
                   v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(sideHistMember.id)">
-                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
+                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
                   v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : '$'" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
               </div>
               <input class="history-content-input" v-model="newHist.content" placeholder="내용" @keyup.enter="addHistoryItem(sideHistMember.id)" style="flex:1 1 0%;min-width:0;">
