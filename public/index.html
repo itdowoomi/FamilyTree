@@ -1316,7 +1316,7 @@
                 </td>
                 <td>
                   <div style="display:flex;align-items:center;gap:3px;overflow:hidden;">
-                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 3px;width:57px;font-family:monospace;font-size:10.5px;flex-shrink:0;" placeholder="YYYY-MM">
+                    <input type="text" v-model.lazy="m.meetDate" class="form-input" style="padding:2px 3px;width:50px;font-family:monospace;font-size:10.5px;flex-shrink:0;" placeholder="YYYY-MM">
                   </div>
                 </td>
                 <td style="padding:3px 6px;">
@@ -2040,8 +2040,8 @@
               <div v-else-if="promotionProgress.noCriteria" style="font-size:11px;color:var(--muted);">"{{ statusLabel(promotionProgress.targetRank) }}" 승급 기준이 아직 설정되지 않았습니다. 아래에서 설정해 보세요.</div>
               <div v-else style="font-size:11.5px;">
                 <div style="font-weight:700;color:var(--navy);margin-bottom:5px;">{{ activeInfoMember.name }} → {{ statusLabel(promotionProgress.targetRank) }}</div>
-                <div v-for="r in promotionProgress.requirements" :key="r.status" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px dotted #e5e2dc;">
-                  <span>{{ statusLabel(r.status) }} 하위 {{ r.actual }}/{{ r.required }}명</span>
+                <div v-for="(r,ridx) in promotionProgress.requirements" :key="ridx" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px dotted #e5e2dc;">
+                  <span>{{ r.label }} 하위 {{ r.actual }}/{{ r.required }}명</span>
                   <span :style="{color: r.met ? '#2d7a2d' : '#c0392b', fontWeight:700, fontSize:'10.5px'}">{{ r.met ? '✓ 충족' : ('부족 ' + r.shortfall + '명') }}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
@@ -2063,19 +2063,21 @@
               </select>
             </div>
             <template v-if="promoEditRank">
-              <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">"{{ statusLabel(promoEditRank) }}"가 되기 위한 하위 조직 요건</div>
-              <div v-for="r in ((promotionCriteria[promoEditRank] && promotionCriteria[promoEditRank].requirements) || [])" :key="r.status" style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
-                <span style="flex:1;font-size:11px;">{{ statusLabel(r.status) }}</span>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">"{{ statusLabel(promoEditRank) }}"가 되기 위한 하위 조직 요건 (한 줄에 여러 직급을 넣으면 OR 조건으로 합산됩니다)</div>
+              <div v-for="(r,ridx) in ((promotionCriteria[promoEditRank] && promotionCriteria[promoEditRank].requirements) || [])" :key="ridx" style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+                <span style="flex:1;font-size:11px;">{{ (r.statuses||(r.status?[r.status]:[])).map(s=>statusLabel(s)).join(' 또는 ') }}</span>
                 <input type="number" min="0" v-model.number="r.count" class="form-input" style="width:55px;padding:2px 4px;">
                 <span style="font-size:10px;color:var(--muted);flex-shrink:0;">명</span>
-                <button class="btn-sm-danger" @click="removePromoRequirement(promoEditRank, r.status)" style="padding:1px 5px;font-size:10px;">✕</button>
+                <button class="btn-sm-danger" @click="removePromoRequirement(promoEditRank, ridx)" style="padding:1px 5px;font-size:10px;">✕</button>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">+ 항목 추가 (복수 선택 시 OR 조건으로 합산 — 예: 라이센스+Agent 2명)</div>
+              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;max-height:88px;overflow-y:auto;padding:5px;border:1px solid var(--border);border-radius:4px;">
+                <label v-for="s in allStatuses" :key="s" style="display:flex;align-items:center;gap:2px;font-size:10.5px;background:#f7f5f0;padding:2px 6px;border-radius:3px;cursor:pointer;white-space:nowrap;">
+                  <input type="checkbox" :value="s" v-model="newPromoReq.statuses" style="margin:0;">{{ statusLabel(s) }}
+                </label>
               </div>
               <div style="display:flex;gap:4px;margin-bottom:8px;">
-                <select v-model="newPromoReq.status" class="form-select" style="flex:1;">
-                  <option value="">+ 항목 추가</option>
-                  <option v-for="s in allStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
-                </select>
-                <button class="btn btn-primary" style="padding:3px 10px;font-size:11px;flex-shrink:0;" @click="addPromoRequirement()">추가</button>
+                <button class="btn btn-primary" style="padding:3px 10px;font-size:11px;flex-shrink:0;" :disabled="!newPromoReq.statuses.length" @click="addPromoRequirement()">선택한 {{ newPromoReq.statuses.length }}개 항목을 OR로 추가</button>
               </div>
               <div class="form-row" style="margin-bottom:6px;">
                 <label class="form-label">필요 포인트</label>

@@ -238,11 +238,12 @@ document.addEventListener('DOMContentLoaded', () => {
         issuePaidHistoryCount: 3
       });
 
-      // 승급 기준 설정: { [rank]: { requirements:[{status,count}], points:Number } }
+      // 승급 기준 설정: { [rank]: { requirements:[{statuses:[status,...],count}], points:Number } }
+      // requirements의 각 항목은 statuses 배열(OR 조건)로 구성됨 - 예: statuses:['Licensed','Agent'], count:2 → "Licensed 또는 Agent 합산 2명"
       const promotionCriteria = ref({});
       const promotionWindowDays = ref(90);
       const promoEditRank = ref('');
-      const newPromoReq = reactive({ status: '' });
+      const newPromoReq = reactive({ statuses: [] });
 
       // ── Auth & Cloud Logic ──
       const getTreesPath = () => {
@@ -1930,16 +1931,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return promotionCriteria.value[rank];
       }
       function addPromoRequirement(){
-        if(!promoEditRank.value || !newPromoReq.status) return;
+        if(!promoEditRank.value || !newPromoReq.statuses.length) return;
         const crit = ensurePromoCriteria(promoEditRank.value);
-        if(crit.requirements.some(r=>r.status===newPromoReq.status)) { newPromoReq.status=''; return; }
-        crit.requirements = [...crit.requirements, { status:newPromoReq.status, count:1 }];
-        newPromoReq.status = '';
+        const key = [...newPromoReq.statuses].sort().join('|');
+        if(crit.requirements.some(r=>normalizeReqStatuses(r).sort().join('|')===key)) { newPromoReq.statuses=[]; return; }
+        crit.requirements = [...crit.requirements, { statuses:[...newPromoReq.statuses], count:1 }];
+        newPromoReq.statuses = [];
       }
-      function removePromoRequirement(rank, status){
+      function removePromoRequirement(rank, idx){
         const crit = promotionCriteria.value[rank]; if(!crit) return;
-        crit.requirements = crit.requirements.filter(r=>r.status!==status);
+        crit.requirements = crit.requirements.filter((r,i)=>i!==idx);
       }
+      // 구버전 데이터({status,count}) 호환: statuses 배열이 없으면 status 하나짜리 배열로 변환
+      function normalizeReqStatuses(r){ return r.statuses || (r.status ? [r.status] : []); }
       function setPromoPoints(rank, val){
         const crit = ensurePromoCriteria(rank);
         crit.points = Number(val)||0;
@@ -1970,8 +1974,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!crit || (!crit.requirements.length && !crit.points)) return { targetRank:target, noCriteria:true };
         const descendants = collectDescendants(m.id);
         const requirements = (crit.requirements||[]).map(r=>{
-          const actual = descendants.filter(d=>d.status===r.status).length;
-          return { status:r.status, required:r.count, actual, met: actual>=r.count, shortfall: Math.max(0, r.count-actual) };
+          const statuses = normalizeReqStatuses(r);
+          const actual = descendants.filter(d=>statuses.includes(d.status)).length;
+          const label = statuses.map(s=>statusLabel(s)).join(' 또는 ');
+          return { statuses, label, required:r.count, actual, met: actual>=r.count, shortfall: Math.max(0, r.count-actual) };
         });
         const actualPoints = pointsInWindow([m, ...descendants], promotionWindowDays.value);
         const requiredPoints = crit.points||0;
@@ -2760,6 +2766,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
         if(d.nodeDisplayConfig) nodeDisplayConfig.value = { ...nodeDisplayConfig.value, ...d.nodeDisplayConfig };
         promotionCriteria.value = d.promotionCriteria || {};
+        Object.values(promotionCriteria.value).forEach(crit=>{
+          if(crit && Array.isArray(crit.requirements)){
+            crit.requirements = crit.requirements.map(r=> r.statuses ? r : { statuses: r.status?[r.status]:[], count:r.count });
+          }
+        });
         if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
       }
       function exportJSON(){ 
