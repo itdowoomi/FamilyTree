@@ -100,6 +100,10 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .note-card:last-child{border-bottom:none;}
 .note-idx{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--gold);font-weight:700;flex-shrink:0;line-height:1.6;min-width:14px;}
 .note-text-disp{font-size:11px;line-height:1.55;color:var(--text);word-break:break-all;}
+.note-scope-tag{font-size:9px;font-weight:700;flex-shrink:0;padding:1px 6px;border-radius:8px;white-space:nowrap;margin-top:1px;}
+.note-scope-tag.notice{background:rgba(28,43,74,.1);color:var(--navy);}
+.note-scope-tag.issue{background:rgba(211,84,0,.12);color:#d35400;}
+.note-scope-tag.personal{background:rgba(184,148,58,.15);color:#8a6d14;}
 
 /* Appointments Side Panel */
 .appointment-panel{background:#fdf6ee;}

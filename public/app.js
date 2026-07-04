@@ -101,7 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const appointments = ref([]);
       const deletedAptIds = ref([]); // 삭제된 약속 ID 목록 (tombstone - 동기화 시 양방향 삭제 전파용)
       const recruits = ref([]);
-      const newNote = reactive({ text: '', scope: 'all' }); // all or personal
+      const newNote = reactive({ text: '', scope: 'notice' }); // notice | issue | personal (legacy: all)
+      function noteScopeLabel(scope){
+        if(scope === 'notice') return '공지사항';
+        if(scope === 'issue') return '최근 이슈';
+        if(scope === 'personal') return '개인 메모';
+        return '공지사항'; // 예전 데이터(scope:'all' 또는 미지정)와의 호환용 기본값
+      }
       
       const notesPosition = ref('none');
       const recruitPosition = ref('none');
@@ -1589,7 +1595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 메모 가시성: scope=all(전체) 또는 작성자 본인(이메일/이름 일치)
         const noteVisible = (n) => {
           if (!n) return false;
-          if (n.scope === 'all' || !n.scope) return true;
+          if (n.scope !== 'personal') return true;
           const byEmail = (n.createdByEmail || '').toLowerCase();
           if (byEmail && myEmail && byEmail === myEmail) return true;
           if (n.createdBy && myName && n.createdBy === myName) return true;
@@ -1642,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
            notes: notes.value.filter(n => {
                if (!noteVisible(n)) return false;
                // 서브 뷰에서는 선택된 멤버 영역의 메모만
-               if (n.scope === 'all' && (!n.createdBy || selectedNames.has(n.createdBy))) return true;
+               if (n.scope !== 'personal' && (!n.createdBy || selectedNames.has(n.createdBy))) return true;
                if (n.createdBy && selectedNames.has(n.createdBy)) return true;
                return false;
            })
@@ -2359,7 +2365,7 @@ document.addEventListener('DOMContentLoaded', () => {
           updatedAt: now
         });
         newNote.text='';
-        newNote.scope='all';
+        newNote.scope='notice';
       }
       function getPersonTitle(name) {
           if (!name) return ''; const n = String(name).trim(); if (!n) return '';
@@ -2655,7 +2661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
-        selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote,
+        selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,

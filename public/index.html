@@ -610,11 +610,23 @@
     <div class="tree-body">
       <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
         <div class="panel-title">📝 메모 / 액션</div>
+        <div v-if="selectedMember">
+          <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
+          <div class="mem-hist-list" style="margin-bottom:10px;">
+              <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
+                  <span class="mem-int-date">{{ ih.date||'—' }}</span>
+                  <span class="mem-int-content">{{ ih.content }}</span>
+                  <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
+              </div>
+              <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
+          </div>
+        </div>
+        <div class="mem-hist-section-title" v-if="selectedMember">📝 메모 / 액션</div>
         <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
         <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
           <span class="note-text-disp">{{ n.text }}</span>
-          <span v-if="n.scope==='personal'" style="font-size:9px;color:#b07;margin-left:4px;">(본인)</span>
+          <span class="note-scope-tag" :class="n.scope||'notice'">{{ noteScopeLabel(n.scope) }}</span>
         </div>
       </div>
 
@@ -716,17 +728,6 @@
                 <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
-            <div>
-              <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
-              <div class="mem-hist-list">
-                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
-                      <span class="mem-int-date">{{ ih.date||'—' }}</span>
-                      <span class="mem-int-content">{{ ih.content }}</span>
-                      <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
-                  </div>
-                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" style="font-size:10px; color:var(--muted); text-align:center; padding: 5px;">기록이 없습니다.</div>
-              </div>
-            </div>
         </div>
         <div v-else style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0; text-align:center;">멤버를 클릭하여 선택하세요.</div>
       </div>
@@ -821,11 +822,23 @@
 
       <div v-if="notesPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
         <div class="panel-title">📝 메모 / 액션</div>
+        <div v-if="selectedMember">
+          <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
+          <div class="mem-hist-list" style="margin-bottom:10px;">
+              <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
+                  <span class="mem-int-date">{{ ih.date||'—' }}</span>
+                  <span class="mem-int-content">{{ ih.content }}</span>
+                  <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
+              </div>
+              <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
+          </div>
+        </div>
+        <div class="mem-hist-section-title" v-if="selectedMember">📝 메모 / 액션</div>
         <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
         <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
           <span class="note-text-disp">{{ n.text }}</span>
-          <span v-if="n.scope==='personal'" style="font-size:9px;color:#b07;margin-left:4px;">(본인)</span>
+          <span class="note-scope-tag" :class="n.scope||'notice'">{{ noteScopeLabel(n.scope) }}</span>
         </div>
       </div>
 
@@ -925,17 +938,6 @@
                   </div>
                 </div>
                 <div v-if="!selectedMember.history || selectedMember.history.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
-              </div>
-            </div>
-            <div>
-              <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
-              <div class="mem-hist-list">
-                  <div v-for="ih in sortedInteractionHistory(selectedMember)" :key="ih.id" class="mem-int-item">
-                      <span class="mem-int-date">{{ ih.date||'—' }}</span>
-                      <span class="mem-int-content">{{ ih.content }}</span>
-                      <button class="del-x-btn" @click.stop="removeInteractionItem(selectedMember.id, ih.id)" title="삭제">✕</button>
-                  </div>
-                  <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
         </div>
@@ -1987,8 +1989,9 @@
                 <td><input v-model.lazy="n.text" class="form-input" style="padding:2px 5px"></td>
                 <td style="text-align:center">
                   <select v-model="n.scope" class="form-select" style="padding:2px 4px;font-size:10px;">
-                    <option value="all">전체</option>
-                    <option value="personal">본인</option>
+                    <option value="notice">공지사항</option>
+                    <option value="issue">최근 이슈</option>
+                    <option value="personal">개인 메모</option>
                   </select>
                 </td>
                 <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ n.createdBy || '-' }}</span></td>
@@ -2003,14 +2006,18 @@
         <h4>+ 메모 추가</h4>
         <div class="form-row">
           <label class="form-label">공개 범위</label>
-          <div style="display:flex;gap:10px;font-size:12px;">
+          <div style="display:flex;gap:10px;font-size:12px;flex-wrap:wrap;">
             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
-              <input type="radio" v-model="newNote.scope" value="all" style="accent-color:var(--navy);">
-              전체
+              <input type="radio" v-model="newNote.scope" value="notice" style="accent-color:var(--navy);">
+              공지사항
+            </label>
+            <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <input type="radio" v-model="newNote.scope" value="issue" style="accent-color:#d35400;">
+              최근 이슈
             </label>
             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
               <input type="radio" v-model="newNote.scope" value="personal" style="accent-color:var(--gold);">
-              본인만
+              개인 메모
             </label>
           </div>
         </div>
