@@ -1897,20 +1897,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return { points, paid, pending:pend, total:paid+pend };
       });
 
-      // 멤버 관리 탭: 선택 노드(또는 전체보기 시 팀 전체)의 실적을 5개씩 묶어 좌우 스크롤로 보여주기 위한 데이터
-      const perfViewAll = ref(false);
-      const perfHistoryEntries = computed(() => {
-        const source = perfViewAll.value ? focusedList.value : (activeInfoMember.value ? [activeInfoMember.value] : []);
+      // 멤버 관리 탭: 고정 2단(좌: 선택 멤버 실적 / 우: 팀 전체 실적)으로 표시. 둘 다 기본정보에서 선택한 검색범위(historyInSumScope) 반영
+      const perfMemberHistoryEntries = computed(() => {
+        const m = activeInfoMember.value;
+        if(!m) return [];
+        return (m.history||[]).filter(h=>h.show && historyInSumScope(h)).map(h=>({ ...h, _member:m, _memberName:m.name })).sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date));
+      });
+      const perfTeamHistoryEntries = computed(() => {
         const rows = [];
-        source.forEach(m => { (m.history||[]).filter(h=>h.show).forEach(h => rows.push({ ...h, _member:m, _memberName:m.name })); });
+        focusedList.value.forEach(m => { (m.history||[]).filter(h=>h.show && historyInSumScope(h)).forEach(h => rows.push({ ...h, _member:m, _memberName:m.name })); });
         rows.sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date));
         return rows;
-      });
-      const perfHistoryColumns = computed(() => {
-        const rows = perfHistoryEntries.value;
-        const cols = [];
-        for(let i=0;i<rows.length;i+=5) cols.push(rows.slice(i,i+5));
-        return cols;
       });
       const statusCounts = computed(() => {
         const c = {}; STATUSES.forEach(s => c[s] = 0);
@@ -2771,7 +2768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         teamTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
-        mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfViewAll, perfHistoryColumns, perfHistoryEntries,
+        mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal,
