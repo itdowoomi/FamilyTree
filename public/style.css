@@ -203,7 +203,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .tab-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 .tab-content::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 
-.member-list{flex:1;overflow:auto;min-width:0;min-height:0;}
+.member-list{flex:1;overflow:auto;min-width:0;min-height:0;padding-right:10px;}
 .member-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
 .member-table th{text-align:left;padding:4px 5px;font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--white);position:sticky;top:0;white-space:nowrap;overflow:hidden;z-index:2;}
 .member-table td{padding:3px 5px;border-bottom:1px solid #eae8e3;vertical-align:middle;}
@@ -386,8 +386,8 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
    basic(내용) 컬럼만 flex로 확장, 멤버/Recruit 컬럼은 고정 폭 유지. */
 .apt-form { flex: 0 0 auto; width: fit-content; min-width: 0; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
 .apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 7px; flex-shrink:0;}
-.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(187px, 1fr) 138px 138px; gap: 7px; min-height: 0; min-width: 0; }
-.apt-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 5px; overflow-y: auto; padding-right: 2px;}
+.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(187px, 1fr) 175px 175px; gap: 7px; min-height: 0; min-width: 0; }
+.apt-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 5px; overflow-y: auto; padding-right: 10px;}
 .apt-col.basic { gap: 5px; }
 .apt-type-switch{display:flex;gap:6px;align-items:center;padding:1px 0;}
 .apt-type-switch label{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid var(--border);transition:all .15s;}
