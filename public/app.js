@@ -1690,6 +1690,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const availableStatuses = computed(() => STATUSES.filter(s => legendConfig.value.items[s] && legendConfig.value.items[s].show));
+      // 범례에서 이름을 바꾼 경우, 내부 상태값(status)은 그대로 두고 화면에 표시되는 라벨만 범례 라벨을 따라가도록 함
+      function statusLabel(s){
+        if(!s) return s;
+        if(s === 'root') return '최상위';
+        const cfg = legendConfig.value.items[s];
+        return (cfg && cfg.label) ? cfg.label : s;
+      }
       const PAGE_W_PX = computed(() => printLandscape.value ? 979 : 739);
       const PAGE_H_PX = computed(() => printLandscape.value ? 700 : 979);
       const previewScale = computed(() => Math.min((window.innerWidth-80)/PAGE_W_PX.value, (window.innerHeight-100)/PAGE_H_PX.value, 1));
@@ -2649,7 +2656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote,
-        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
+        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,

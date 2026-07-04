@@ -1039,7 +1039,7 @@
           <thead>
             <tr>
               <th>이름</th>
-              <th>상태</th>
+              <th>Stage (직급)</th>
               <th>상위</th>
               <th style="text-align:right;padding-right:6px">Pts 🔒</th>
               <th style="text-align:right;padding-right:6px">Issued 🔒</th>
@@ -1055,7 +1055,7 @@
               <td><input v-model.lazy="m.name" class="form-input"></td>
               <td>
                 <select v-if="m.parentId!==null" v-model="m.status" class="form-select">
-                  <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+                  <option v-for="s in availableStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
                 </select>
                 <span v-else class="sbadge s-root">Root</span>
               </td>
@@ -1283,7 +1283,7 @@
                 <td style="cursor:pointer;font-size:11px;" @click="onNodeClick(m)">
                   <span style="font-weight:600;color:var(--navy);text-decoration:underline;" title="클릭하여 정보 패널 열기">{{m.name}}</span>
                 </td>
-                <td style="font-size:11px;">{{m.status==='root' ? '최상위' : m.status}}</td>
+                <td style="font-size:11px;">{{ statusLabel(m.status) }}</td>
                 <td><input v-model.lazy="m.major" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="전공"></td>
                 <td><input v-model.lazy="m.job" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="직업"></td>
                 <td><input v-model.lazy="m.company" class="form-input" style="padding:2px 3px;font-size:11px;" placeholder="직장"></td>
@@ -1831,11 +1831,11 @@
               <label class="form-label">직책 (Rank)</label>
               <select v-if="selectedIsRootView" v-model="header.rank" class="form-select">
                 <option value="">— 선택 —</option>
-                <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+                <option v-for="s in availableStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
               </select>
               <select v-else-if="selectedMember" v-model="selectedMember.status" class="form-select">
                 <option value="">— 선택 —</option>
-                <option v-for="s in availableStatuses" :key="s" :value="s">{{ s }}</option>
+                <option v-for="s in availableStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
               </select>
             </div>
             <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
