@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const STROKES = { root:'#0f1e38', EFD:'#3a1258', NFD:'#561f72', DFD:'#123a58', SFD:'#124848', FD:'#1e3a1e', SA:'#1e3a1e', Agent:'#223316', Licensed:'#3a1e0e', 'Serious':'#ccc', 'Potential':'#9ca3af', 'New(Code-in)':'#cccccc' };
   const TEXT_COLORS = { root:'#ffffff', EFD:'#ffffff', NFD:'#ffffff', DFD:'#ffffff', SFD:'#ffffff', FD:'#ffffff', SA:'#ffffff', Agent:'#ffffff', Licensed:'#ffffff', 'Serious':'#333', 'Potential':'#555', 'New(Code-in)':'#333' };
   const DIVIDERS = { root:'rgba(255,255,255,.3)', EFD:'rgba(255,255,255,.3)', NFD:'rgba(255,255,255,.3)', DFD:'rgba(255,255,255,.3)', SFD:'rgba(255,255,255,.3)', FD:'rgba(255,255,255,.3)', SA:'rgba(255,255,255,.3)', Agent:'rgba(255,255,255,.3)', Licensed:'rgba(255,255,255,.3)', 'Serious':'rgba(0,0,0,.1)', 'Potential':'rgba(0,0,0,.05)', 'New(Code-in)':'rgba(0,0,0,.1)' };
-  const BADGE_MAP = { EFD:'★★★★★ EFD', NFD:'★★★★ NFD', DFD:'★★★ DFD', SFD:'★★★ SFD', FD:'★★ FD', SA:'★★ SA', Agent:'★ Agent', Licensed:'★ Licensed', 'New(Code-in)':'◈ New(Code-in)' };
+  // 접두 기호만 고정하고, 뒤에 붙는 이름은 범례에서 바꾼 라벨(statusLabel)을 따라가도록 함
+  const BADGE_PREFIX = { EFD:'★★★★★', NFD:'★★★★', DFD:'★★★', SFD:'★★★', FD:'★★', SA:'★★', Agent:'★', Licensed:'★', 'New(Code-in)':'◈' };
 
   createApp({
     setup() {
@@ -1819,12 +1820,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
       });
 
+      // 기본정보에서 선택한 기간(기간 합계/연도 합계/전체 합계) 기준으로 계산되는 포인트/실적 값
+      function mPtsSumScoped(m){ if(!m || !m.history) return 0; return m.history.filter(h=>h.show && historyInSumScope(h)).reduce((s,h)=>s+(Number(h.point)||0),0); }
+      function getMemberIssuePaidScoped(m){ if(!m || !m.history) return 0; return m.history.filter(h=>h.show && h.type==='Issue Paid' && historyInSumScope(h)).reduce((s,h)=>s+(Number(h.amount)||0),0); }
+      function getMemberPendingScoped(m){ if(!m || !m.history) return 0; return m.history.filter(h=>h.show && h.type==='Pending' && historyInSumScope(h)).reduce((s,h)=>s+(Number(h.amount)||0),0); }
+      function getRawMemberTotalScoped(m){ return getMemberIssuePaidScoped(m) + getMemberPendingScoped(m); }
+      function getMemberTotalScoped(m){ return fmt(getRawMemberTotalScoped(m)); }
+      function getIncomePercentScoped(m){ const mTotal=getRawMemberTotalScoped(m); const tTotal=teamTotal.value.total; if(tTotal===0||mTotal===0) return 0; return Math.min(100, Math.max(0,(mTotal/tTotal)*100)); }
+
       const teamTotal = computed(() => {
         const l = focusedList.value;
-        const points = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.point)||0),0), 0);
-        const paid = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && h.type==='Issue Paid' && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.amount)||0),0), 0);
-        const pend = l.reduce((s,m)=> s + (m.history||[]).filter(h=>h.show && h.type==='Pending' && historyInSumScope(h)).reduce((s2,h)=>s2+(Number(h.amount)||0),0), 0);
+        const points = l.reduce((s,m)=> s + mPtsSumScoped(m), 0);
+        const paid = l.reduce((s,m)=> s + getMemberIssuePaidScoped(m), 0);
+        const pend = l.reduce((s,m)=> s + getMemberPendingScoped(m), 0);
         return { points, paid, pending:pend, total:paid+pend };
+      });
+
+      // 멤버 관리 탭: 선택 노드(또는 전체보기 시 팀 전체)의 실적을 5개씩 묶어 좌우 스크롤로 보여주기 위한 데이터
+      const perfViewAll = ref(false);
+      const perfHistoryEntries = computed(() => {
+        const source = perfViewAll.value ? focusedList.value : (activeInfoMember.value ? [activeInfoMember.value] : []);
+        const rows = [];
+        source.forEach(m => { (m.history||[]).filter(h=>h.show).forEach(h => rows.push({ ...h, _member:m, _memberName:m.name })); });
+        rows.sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date));
+        return rows;
+      });
+      const perfHistoryColumns = computed(() => {
+        const rows = perfHistoryEntries.value;
+        const cols = [];
+        for(let i=0;i<rows.length;i+=5) cols.push(rows.slice(i,i+5));
+        return cols;
       });
       const statusCounts = computed(() => {
         const c = {}; STATUSES.forEach(s => c[s] = 0);
@@ -2669,6 +2694,7 @@ document.addEventListener('DOMContentLoaded', () => {
         teamTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
+        mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfViewAll, perfHistoryColumns, perfHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal,
@@ -2688,7 +2714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getFocusTitle:(m)=>focusRootId.value===m.id?'포커스 해제':m.name+' 기준으로 보기',
         getFocusIcon:(m)=>focusRootId.value===m.id?'⊙':'🔍',
         nColor:(s)=>COLORS[s]||'#fff', nStroke:(s)=>STROKES[s]||'#000', nTextColor:(s)=>TEXT_COLORS[s]||'#000',
-        nDivider:(s)=>DIVIDERS[s]||'rgba(0,0,0,.15)', statusBadge:(s)=>BADGE_MAP[s]||s
+        nDivider:(s)=>DIVIDERS[s]||'rgba(0,0,0,.15)', statusBadge:(s)=>(BADGE_PREFIX[s] ? BADGE_PREFIX[s]+' ' : '') + statusLabel(s)
       };
     }
   }).mount('#app');
