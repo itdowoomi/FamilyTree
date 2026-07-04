@@ -1251,7 +1251,7 @@
           <div style="flex:1"></div>
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeMemberInfo"> 인쇄 포함 (멤버 히스토리)</label>
         </div>
-        <div style="flex:1;overflow:auto;">
+        <div style="flex:1;overflow:auto;min-height:0;">
           <table class="member-table" style="font-size:12px;min-width:900px;">
             <colgroup>
               <col style="width:75px">
@@ -1264,7 +1264,7 @@
               <col style="width:40px">
               <col style="width:111px">
               <col style="width:40px">
-              <col style="width:150px">
+              <col style="width:110px">
               <col style="width:36px">
               <col style="width:36px">
               <col style="width:40px">
@@ -1282,7 +1282,7 @@
                 <th style="text-align:center">나이</th>
                 <th>만난 시기</th>
                 <th style="text-align:center">성별</th>
-                <th style="text-align:center">전체 실적 / 기간 실적</th>
+                <th style="text-align:center">실적 / 그래프</th>
                 <th style="text-align:center">성향</th>
                 <th style="text-align:center">교육</th>
                 <th style="text-align:center">상담</th>
@@ -1315,34 +1315,17 @@
                   </div>
                 </td>
                 <td style="text-align:center"><select v-model="m.gender" class="form-select" style="padding:2px 3px;font-size:11px;"><option value="남">남</option><option value="여">여</option></select></td>
-                <td style="padding:3px 4px;">
-                  <template v-if="['Serious', 'Potential'].includes(m.status)">
-                    <div style="display:grid; grid-template-columns: 1fr 44px; gap:5px; align-items:center;">
-                      <div style="text-align:right;">
-                        <input type="number" v-model.number.lazy="m.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(m, false)" style="width:40px;padding:2px;margin:0;text-align:right;">
-                      </div>
-                      <div class="score-dots-wrap" style="margin-left:0;width:44px;">
-                        <div class="score-dots-fill" :style="{width:m.score+'%'}"></div>
-                      </div>
+                <td style="padding:3px 6px;">
+                  <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
+                    <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;white-space:nowrap;">
+                      <template v-if="['Serious','Potential'].includes(m.status)">{{ m.score || 0 }}</template>
+                      <template v-else>${{ getMemberTotalScoped(m) }}</template>
                     </div>
-                  </template>
-                  <template v-else>
-                    <div style="display:flex;flex-direction:column;gap:3px;width:100%;">
-                      <div style="display:flex;align-items:baseline;gap:5px;width:100%;">
-                        <span style="font-size:8.5px;color:var(--muted);flex-shrink:0;">전체</span>
-                        <span style="flex:1;text-align:left;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotal(m) }}</span>
-                      </div>
-                      <div style="display:grid; grid-template-columns: 28px 1fr; gap:5px; align-items:center; width:100%;">
-                        <span style="font-size:8.5px;color:var(--muted);">기간</span>
-                        <div style="display:flex;align-items:center;gap:5px;">
-                          <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;white-space:nowrap;">${{ getMemberTotalScoped(m) }}</span>
-                          <div class="score-dots-wrap" style="margin-left:0;flex:1;min-width:36px;">
-                            <div class="score-dots-fill-blue" :style="{width:getIncomePercentScoped(m)+'%'}"></div>
-                          </div>
-                        </div>
-                      </div>
+                    <div class="score-dots-wrap" style="margin-left:0;flex-shrink:0;">
+                      <div v-if="['Serious','Potential'].includes(m.status)" class="score-dots-fill" :style="{width:(m.score||0)+'%'}"></div>
+                      <div v-else class="score-dots-fill-blue" :style="{width:getIncomePercentScoped(m)+'%'}"></div>
                     </div>
-                  </template>
+                  </div>
                 </td>
                 <td style="text-align:center;padding:3px 0;">
                   <button class="btn-hist-toggle" :class="{active:expandedDispositionId===m.id}" @click="toggleDispositionPanel(m.id)" style="padding:6px 12px;font-size:12px;">📊</button>
@@ -1480,7 +1463,7 @@
         </template>
         <!-- 기본 모드: 2단 레이아웃 (팀 최근 상담기록 10 | 교육 내용 추가) -->
         <template v-else>
-          <div style="display:grid;grid-template-columns:1fr 180px;gap:0;height:100%;">
+          <div style="display:grid;grid-template-columns:1fr 180px;gap:0;height:100%;min-height:0;">
             <!-- ① 팀 최근 상담/관리 기록 (최근 10) -->
             <div style="padding-right:12px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
               <div class="mem-hist-section-title" style="flex-shrink:0;">📝 팀 최근 상담/관리 <span style="font-weight:400;color:var(--muted);">(최근 10)</span></div>
@@ -1532,7 +1515,7 @@
           <div style="flex:1"></div>
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeRecruit"> 인쇄 포함</label>
         </div>
-        <div style="flex:1;overflow:auto;">
+        <div style="flex:1;overflow:auto;min-height:0;">
           <table class="member-table" style="font-size:12px;min-width:1150px;">
             <colgroup>
               <col style="width:110px">
@@ -1732,7 +1715,7 @@
           <div style="flex:1"></div>
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeAppointment"> 인쇄 포함</label>
         </div>
-        <div style="flex:1;overflow:auto;">
+        <div style="flex:1;overflow:auto;min-height:0;">
           <table class="member-table" style="font-size:12px;width:100%;table-layout:auto;">
             <thead>
               <tr>
@@ -2038,7 +2021,7 @@
           <div style="flex:1"></div>
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeNotes"> 인쇄 포함</label>
         </div>
-        <div style="flex:1;overflow:auto;">
+        <div style="flex:1;overflow:auto;min-height:0;">
           <table class="member-table">
             <thead><tr><th>#</th><th style="width:100%">내용</th><th style="width:80px">공개범위</th><th style="width:80px">작성자</th><th style="width:60px"></th></tr></thead>
             <tbody>

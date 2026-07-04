@@ -203,7 +203,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .tab-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 .tab-content::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 
-.member-list{flex:1;overflow:auto;min-width:0;}
+.member-list{flex:1;overflow:auto;min-width:0;min-height:0;}
 .member-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
 .member-table th{text-align:left;padding:4px 5px;font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--white);position:sticky;top:0;white-space:nowrap;overflow:hidden;z-index:2;}
 .member-table td{padding:3px 5px;border-bottom:1px solid #eae8e3;vertical-align:middle;}
@@ -220,15 +220,15 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .member-table input.form-input,.member-table select.form-select{width:100%;padding:2px 4px;}
 
 /* ─── ADD FORM ─── */
-.add-form{width:460px;flex-shrink:0;align-self:flex-start;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);display:flex;flex-direction:column;}
-.add-form h4{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;margin-bottom:9px;}
+.add-form{width:460px;flex-shrink:0;align-self:stretch;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.add-form h4{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;margin-bottom:9px;flex-shrink:0;}
 /* ─── SIDE HISTORY PANEL ─── */
-.side-hist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--navy);}
+.side-hist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--navy);flex-shrink:0;}
 .side-hist-name{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
 .side-hist-sub{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-top:2px;}
 .side-hist-close{background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:4px;font-size:11px;cursor:pointer;flex-shrink:0;font-family:inherit;transition:all .15s;}
 .side-hist-close:hover{color:var(--navy);border-color:var(--navy);}
-.side-hist-list{overflow-y:auto;max-height:calc(100vh - 320px);margin:0 -10px;padding:0 10px 4px 10px;min-height:60px;}
+.side-hist-list{overflow-y:auto;flex:1;min-height:60px;margin:0 -10px;padding:0 10px 4px 10px;}
 .side-hist-add{flex-shrink:0;border-top:1px solid var(--border);padding-top:9px;margin-top:6px;display:flex;flex-direction:column;gap:5px;}
 .form-row{margin-bottom:7px;min-width:0;}
 .form-label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;letter-spacing:.4px;text-transform:uppercase;}
@@ -386,7 +386,7 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
    basic(내용) 컬럼만 flex로 확장, 멤버/Recruit 컬럼은 고정 폭 유지. */
 .apt-form { flex: 0 0 auto; width: fit-content; min-width: 0; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
 .apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 7px; flex-shrink:0;}
-.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(170px, 1fr) 125px 125px; gap: 7px; min-height: 0; min-width: 0; }
+.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(187px, 1fr) 138px 138px; gap: 7px; min-height: 0; min-width: 0; }
 .apt-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 5px; overflow-y: auto; padding-right: 2px;}
 .apt-col.basic { gap: 5px; }
 .apt-type-switch{display:flex;gap:6px;align-items:center;padding:1px 0;}
