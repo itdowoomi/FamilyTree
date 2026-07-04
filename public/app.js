@@ -226,6 +226,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const legendConfig = ref({ show:true, items:{} });
       ALL_STATUSES.forEach(s => { legendConfig.value.items[s] = { label:s, show:true }; });
 
+      // 노드에 표기할 내용 옵션 (기본 정보 탭 > 노드 표기 옵션)
+      const nodeDisplayConfig = ref({
+        showRank: true,
+        showPoints: true,
+        showIssuePaid: true,
+        showPending: true,
+        showHistory: true,
+        historyCount: 3,
+        showIssuePaidHistory: false,
+        issuePaidHistoryCount: 3
+      });
+
+      // 승급 기준 설정: { [rank]: { requirements:[{status,count}], points:Number } }
+      const promotionCriteria = ref({});
+      const promotionWindowDays = ref(90);
+      const promoEditRank = ref('');
+      const newPromoReq = reactive({ status: '' });
+
       // ── Auth & Cloud Logic ──
       const getTreesPath = () => {
         if (isCanvas) {
@@ -1897,6 +1915,71 @@ document.addEventListener('DOMContentLoaded', () => {
         return { points, paid, pending:pend, total:paid+pend };
       });
 
+      // ── 승급 기준 (Promotion Criteria) ──
+      // STATUSES 배열 순서 = 직급 서열(선임→말단). 특정 상태의 "다음 승급 랭크"는 배열에서 바로 앞(더 상위) 항목.
+      function nextRankFor(status){
+        const idx = STATUSES.indexOf(status);
+        if(idx <= 0) return null;
+        return STATUSES[idx-1];
+      }
+      function ensurePromoCriteria(rank){
+        if(!rank) return null;
+        if(!promotionCriteria.value[rank]){
+          promotionCriteria.value = { ...promotionCriteria.value, [rank]: { requirements: [], points: 0 } };
+        }
+        return promotionCriteria.value[rank];
+      }
+      function addPromoRequirement(){
+        if(!promoEditRank.value || !newPromoReq.status) return;
+        const crit = ensurePromoCriteria(promoEditRank.value);
+        if(crit.requirements.some(r=>r.status===newPromoReq.status)) { newPromoReq.status=''; return; }
+        crit.requirements = [...crit.requirements, { status:newPromoReq.status, count:1 }];
+        newPromoReq.status = '';
+      }
+      function removePromoRequirement(rank, status){
+        const crit = promotionCriteria.value[rank]; if(!crit) return;
+        crit.requirements = crit.requirements.filter(r=>r.status!==status);
+      }
+      function setPromoPoints(rank, val){
+        const crit = ensurePromoCriteria(rank);
+        crit.points = Number(val)||0;
+      }
+      // 특정 멤버의 하위 전체(모든 세대) 자손 목록 수집
+      function collectDescendants(id){
+        const result = [];
+        function walk(pid){ members.value.filter(m=>m.parentId===pid).forEach(m=>{ result.push(m); walk(m.id); }); }
+        walk(id);
+        return result;
+      }
+      // 지정된 멤버 목록의 최근 N일 이내 포인트 합계
+      function pointsInWindow(memberList, days){
+        const now = Date.now(); const startTime = now - (Number(days)||0)*24*60*60*1000;
+        let sum = 0;
+        memberList.forEach(m=>{ (m.history||[]).filter(h=>h.show).forEach(h=>{ const t=parseDateForSort(h.date); if(t && t>=startTime && t<=now) sum += Number(h.point)||0; }); });
+        return sum;
+      }
+      // 현재 선택/포커스된 멤버(activeInfoMember) 기준, 다음 승급까지의 진행률 계산
+      const promotionProgress = computed(() => {
+        const m = activeInfoMember.value;
+        if(!m || !m.status) return null;
+        const target = nextRankFor(m.status);
+        if(!target) return { targetRank:null };
+        const crit = promotionCriteria.value[target];
+        if(!crit || (!crit.requirements.length && !crit.points)) return { targetRank:target, noCriteria:true };
+        const descendants = collectDescendants(m.id);
+        const requirements = (crit.requirements||[]).map(r=>{
+          const actual = descendants.filter(d=>d.status===r.status).length;
+          return { status:r.status, required:r.count, actual, met: actual>=r.count, shortfall: Math.max(0, r.count-actual) };
+        });
+        const actualPoints = pointsInWindow([m, ...descendants], promotionWindowDays.value);
+        const requiredPoints = crit.points||0;
+        return {
+          targetRank: target,
+          requirements,
+          points: { required: requiredPoints, actual: actualPoints, met: actualPoints>=requiredPoints, shortfall: Math.max(0, requiredPoints-actualPoints) }
+        };
+      });
+
       // 멤버 관리 탭: 고정 2단(좌: 선택 멤버 실적 / 우: 팀 전체 실적)으로 표시. 둘 다 기본정보에서 선택한 검색범위(historyInSumScope) 반영
       const perfMemberHistoryEntries = computed(() => {
         const m = activeInfoMember.value;
@@ -2052,18 +2135,49 @@ document.addEventListener('DOMContentLoaded', () => {
       function setFocus(id){ focusRootId.value=id; zoomLevel.value=1; nextTick(centerTree); }
       function clearFocus(){ focusRootId.value=null; zoomLevel.value=1; nextTick(centerTree); }
       function toggleFocus(id){ if(focusRootId.value===id) clearFocus(); else setFocus(id); }
-      function nodeNoteLines(m){
-        if(!m.history) return [];
-        // 최신 거래 내역 3건을 항목 단위로 먼저 자르고, 각 건의 내용/금액·포인트 줄이 잘리지 않도록 함
-        return m.history.filter(h=>h.show).sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).slice(0,3).reduce((acc, h) => {
-            let val = h.content || ''; acc.push({ text: h.date ? `[${h.date}] ${val}` : val, isExtra: false });
-            let extras=[]; if(Number(h.amount)) extras.push(`$${fmt(h.amount)}`); if(Number(h.point)) extras.push(`${fmt(h.point)} Pts`);
-            if(extras.length) acc.push({ text: extras.join(' | '), isExtra: true }); return acc;
-          }, []);
+      // 노드에 이름/뱃지 아래로 표기되는 모든 줄(재무정보/포인트/히스토리)을 노드 표기 옵션에 맞춰 계산.
+      // 각 항목은 variant(fin/total/divider/note/noteExtra)와 절대 y좌표를 함께 반환하여 템플릿이 단순 순회만 하도록 함.
+      function nodeContentLines(m){
+        const cfg = nodeDisplayConfig.value;
+        const gap = nodeLineGap.value;
+        let y = nodeFontSize.value + 14; // 이름/뱃지 아래 구분선 위치와 동일
+        const lines = [];
+        const hasFin = cfg.showIssuePaid || cfg.showPending;
+        if(hasFin){
+          const parts=[]; if(cfg.showIssuePaid) parts.push(`Paid: ${fmtS(getMemberIssuePaid(m))}`); if(cfg.showPending) parts.push(`Pend: ${fmtS(getMemberPending(m))}`);
+          y += gap; lines.push({ variant:'fin', text: parts.join('  /  '), y });
+          const pts = mPtsSum(m);
+          y += gap; lines.push({ variant:'total', text:`Total: ${getMemberTotal(m)}`, ptsText:(cfg.showPoints && pts>0) ? `Pts: ${fmt(pts)}` : '', y });
+        } else if(cfg.showPoints){
+          const pts = mPtsSum(m);
+          if(pts>0){ y += gap; lines.push({ variant:'total', text:'', ptsText:`Pts: ${fmt(pts)}`, y }); }
+        }
+        function pushHistBlock(entries, issuePaidOnly){
+          if(!entries.length) return;
+          y += 6; lines.push({ variant:'divider', y });
+          entries.forEach(h=>{
+            const val = h.content || ''; y += gap; lines.push({ variant:'note', text: h.date ? `[${h.date}] ${val}` : val, y });
+            const extras=[]; if(Number(h.amount)) extras.push(`$${fmt(h.amount)}`); if(!issuePaidOnly && Number(h.point)) extras.push(`${fmt(h.point)} Pts`);
+            if(extras.length){ y += gap; lines.push({ variant:'noteExtra', text: extras.join(' | '), y }); }
+          });
+        }
+        if(cfg.showHistory){
+          const n = Math.max(0, cfg.historyCount||0);
+          const hist = (m.history||[]).filter(h=>h.show).sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).slice(0,n);
+          pushHistBlock(hist, false);
+        }
+        if(cfg.showIssuePaidHistory){
+          const n = Math.max(0, cfg.issuePaidHistoryCount||0);
+          const hist = (m.history||[]).filter(h=>h.show && h.type==='Issue Paid').sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).slice(0,n);
+          pushHistBlock(hist, true);
+        }
+        return lines;
       }
-      function nodeH(m){ 
-        const base = Math.max(nodeBaseHeight.value, nodeFontSize.value + 14 + nodeLineGap.value * 2 + 10);
-        const notesCount = nodeNoteLines(m).length; if(notesCount === 0) return base; return (nodeFontSize.value + 14 + nodeLineGap.value * 2 + 6) + 8 + (notesCount * nodeLineGap.value) + 6; 
+      function nodeH(m){
+        const base = Math.max(nodeBaseHeight.value, nodeFontSize.value + 14 + 10);
+        const lines = nodeContentLines(m);
+        if(!lines.length) return base;
+        return Math.max(base, lines[lines.length-1].y + 10);
       }
       function getRawMemberTotal(m) { return getMemberIssuePaid(m) + getMemberPending(m); }
       function getMemberTotal(m) { return fmt(getRawMemberTotal(m)); }
@@ -2630,7 +2744,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function onNodeClick(m){ selectedMemberId.value = m.id; if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; } }
       function getRecruitMeta(r){ const ageStr=r.age?`${r.age}세`:''; return [r.major, r.job, r.company, r.relation,ageStr,calcPeriod(r.meetDate,r.period),r.gender].filter(Boolean).join(' | '); }
-      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)) }; }
+      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)), nodeDisplayConfig:JSON.parse(JSON.stringify(nodeDisplayConfig.value)), promotionCriteria:JSON.parse(JSON.stringify(promotionCriteria.value)), promotionWindowDays:promotionWindowDays.value }; }
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
@@ -2642,6 +2756,9 @@ document.addEventListener('DOMContentLoaded', () => {
         trainingTopics.value = d.trainingTopics || [];
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
+        if(d.nodeDisplayConfig) nodeDisplayConfig.value = { ...nodeDisplayConfig.value, ...d.nodeDisplayConfig };
+        promotionCriteria.value = d.promotionCriteria || {};
+        if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
       }
       function exportJSON(){ 
         if (printRootId.value !== '__actual_root__') {
@@ -2733,7 +2850,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSubTreeForSelectedMember();
       });
 
-      watch([header,members,notes,recruits,appointments,deletedAptIds,trainingTopics,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
+      watch([header,members,notes,recruits,appointments,deletedAptIds,trainingTopics,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig,nodeDisplayConfig,promotionCriteria,promotionWindowDays],()=>{
         if (applyingRemote) return;
         if (currentIsReadOnly.value) return;
         if(!isDashboard.value) {
@@ -2769,7 +2886,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
-        updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeNoteLines, nodeH,
+        updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,
+        nodeDisplayConfig, promotionCriteria, promotionWindowDays, promoEditRank, newPromoReq, addPromoRequirement, removePromoRequirement, setPromoPoints, promotionProgress, nextRankFor,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
