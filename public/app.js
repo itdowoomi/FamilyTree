@@ -1714,6 +1714,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return ids;
       });
       
+      // 범례 체크가 꺼진 직책(status)은 트리 노드에서도 숨김 (root 노드 자신은 항상 표시)
+      function isStatusVisible(status){
+        if(!status) return true;
+        const cfg = legendConfig.value.items[status];
+        return !cfg || cfg.show !== false;
+      }
+      const visibleFocusedList = computed(() => {
+        const list = focusedList.value;
+        const idMap = {}; list.forEach(m=>idMap[m.id]=m);
+        const hiddenIds = new Set(list.filter(m=>m.parentId && !isStatusVisible(m.status)).map(m=>m.id));
+        if(!hiddenIds.size) return list;
+        return list.filter(m=>!hiddenIds.has(m.id)).map(m=>{
+          if(!m.parentId || !hiddenIds.has(m.parentId)) return m;
+          let pid = m.parentId;
+          while(pid && hiddenIds.has(pid)){ const p = idMap[pid]; pid = p ? p.parentId : null; }
+          return { ...m, parentId: pid };
+        });
+      });
       const rootMember = computed(() => focusedList.value.find(m=>!m.parentId));
       const rootMemberName = computed(() => rootMember.value ? rootMember.value.name : '');
       const rootMemberEmail = computed(() => rootMember.value ? (rootMember.value.email || '') : '');
@@ -1801,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return c;
       });
       const layout = computed(() => {
-        const NW = nodeWidth.value, list = focusedList.value;
+        const NW = nodeWidth.value, list = visibleFocusedList.value;
         const rootNode = list.find(m=>!m.parentId);
         if (!rootNode) return { totalWidth:800, totalHeight:600, edges:[], membersWithPos:[] };
         const ch = {}; list.forEach(m=>ch[m.id]=[]);
@@ -1940,11 +1958,12 @@ document.addEventListener('DOMContentLoaded', () => {
       function toggleFocus(id){ if(focusRootId.value===id) clearFocus(); else setFocus(id); }
       function nodeNoteLines(m){
         if(!m.history) return [];
-        return m.history.filter(h=>h.show).sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).reduce((acc, h) => {
+        // 최신 거래 내역 3건을 항목 단위로 먼저 자르고, 각 건의 내용/금액·포인트 줄이 잘리지 않도록 함
+        return m.history.filter(h=>h.show).sort((a,b)=>parseDateForSort(b.date)-parseDateForSort(a.date)).slice(0,3).reduce((acc, h) => {
             let val = h.content || ''; acc.push({ text: h.date ? `[${h.date}] ${val}` : val, isExtra: false });
             let extras=[]; if(Number(h.amount)) extras.push(`$${fmt(h.amount)}`); if(Number(h.point)) extras.push(`${fmt(h.point)} Pts`);
             if(extras.length) acc.push({ text: extras.join(' | '), isExtra: true }); return acc;
-          }, []).slice(0,5); 
+          }, []);
       }
       function nodeH(m){ 
         const base = Math.max(nodeBaseHeight.value, nodeFontSize.value + 14 + nodeLineGap.value * 2 + 10);
