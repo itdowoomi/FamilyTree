@@ -1131,7 +1131,7 @@
       </div>
 
       <!-- 오른쪽 사이드 패널: 선택 시 히스토리, 미선택 시 멤버 추가 -->
-      <div class="add-form" style="flex:0 0 auto;width:525px;min-width:300px;">
+      <div class="add-form" style="flex:0 0 auto;width:571px;min-width:300px;">
         <!-- 히스토리 모드 -->
         <template v-if="sideHistMember">
           <div class="side-hist-header">
@@ -1200,7 +1200,7 @@
         <!-- 기본 모드: 고정 2단 - 좌측(선택 멤버 실적) / 우측(팀 전체 실적). 각각 독립 세로 스크롤, 기본정보 검색범위 반영 -->
         <template v-else>
           <div style="display:flex;height:100%;min-height:0;">
-            <div style="flex:0 0 231px;padding:0 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
+            <div style="flex:0 0 250px;padding:0 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
               <div class="mem-hist-section-title" style="flex-shrink:0;">
                 💰 {{ activeInfoMember ? activeInfoMember.name + ' 님의 실적' : '실적' }} <span style="font-weight:400;color:var(--muted);">{{ teamTotalScopeLabel }} · {{ perfMemberHistoryEntries.length }}건</span>
               </div>
@@ -1225,7 +1225,7 @@
                 </div>
               </div>
             </div>
-            <div style="flex:0 0 273px;padding:0 12px;display:flex;flex-direction:column;min-height:0;">
+            <div style="flex:0 0 300px;padding:0 12px;display:flex;flex-direction:column;min-height:0;">
               <div class="mem-hist-section-title" style="flex-shrink:0;">
                 💰 팀 전체 실적 <span style="font-weight:400;color:var(--muted);">{{ teamTotalScopeLabel }} · {{ perfTeamHistoryEntries.length }}건</span>
               </div>
@@ -1361,7 +1361,7 @@
       </div>
 
       <!-- 오른쪽 사이드 패널: 선택 시 히스토리/성향, 미선택 시 멤버 등록 -->
-      <div class="add-form" style="flex:22 1 0%;width:auto;min-width:240px;align-self:stretch;">
+      <div class="add-form" style="flex:22 1 0%;width:auto;min-width:630px;align-self:stretch;">
         <!-- 기본성향 모드 -->
         <template v-if="sideDispositionMember">
           <div class="side-hist-header">
@@ -1478,7 +1478,7 @@
         </template>
         <!-- 기본 모드: 2단 레이아웃 (팀 최근 상담기록 10 | 교육 내용 추가) -->
         <template v-else>
-          <div style="display:grid;grid-template-columns:1fr 220px;gap:0;height:100%;min-height:0;">
+          <div style="display:grid;grid-template-columns:minmax(300px,1fr) minmax(300px,1fr);gap:0;height:100%;min-height:0;">
             <!-- ① 팀 최근 상담/관리 기록 (최근 10) -->
             <div style="padding-right:12px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
               <div class="mem-hist-section-title" style="flex-shrink:0;">📝 팀 최근 상담/관리 <span style="font-weight:400;color:var(--muted);">(최근 10)</span></div>
