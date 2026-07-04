@@ -1944,6 +1944,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const crit = ensurePromoCriteria(rank);
         crit.points = Number(val)||0;
       }
+      // 승급 기준 설정 화면에서 직급을 선택하는 즉시 편집 가능한 항목(requirements/points)이 항상 존재하도록 보장
+      watch(promoEditRank, (rank) => { if(rank) ensurePromoCriteria(rank); });
       // 특정 멤버의 하위 전체(모든 세대) 자손 목록 수집
       function collectDescendants(id){
         const result = [];
@@ -2824,7 +2826,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let filterLabel=''; if(h.periodStart || h.periodEnd) { filterLabel = `${h.periodStart||'시작'} ~ ${h.periodEnd||'계속'}`; }
         let legendHTML=''; if(legendConfig.value.show){ legendHTML=ALL_STATUSES.filter(s=>legendConfig.value.items[s].show && sc[s] > 0).map(s=>`<div class="pd-leg-item"><span class="pd-leg-box" style="background:${COLORS[s]}!important;border:1px solid ${STROKES[s]}!important"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${legendConfig.value.items[s].label}</span><span style="transform:scale(0.8);flex-shrink:0;">(${sc[s]})</span></div>`).join(''); }
         let headerHTML=`<div class="pd-header"><div class="pd-header-left"><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;width:100%;">${legendHTML}</div></div><div class="pd-header-center"><div class="pd-name">${rm?rm.name:''} <span class="pd-id">(${h.id})</span></div>`;
-        if(h.rank)headerHTML+=`<div style="display:inline-block;margin:1px 0 2px 0;background:#1c2b4a;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;letter-spacing:1px">${h.rank}</div>`;
+        if(rm && rm.status && rm.status!=='root')headerHTML+=`<div style="display:inline-block;margin:1px 0 2px 0;background:#1c2b4a;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;letter-spacing:1px">${statusLabel(rm.status)}</div>`;
         if(uplines.length)headerHTML+=`<div class="pd-upline">${uplines.join('&nbsp;|&nbsp;')}</div>`;
         headerHTML+=`<div style="margin-top:3px;font-size:8px;color:#555;"><strong>PERIOD:</strong> ${h.periodStart} – ${h.periodEnd}</div></div><div class="pd-header-right"><div class="pd-date">As of ${h.asOf}</div><div class="pd-fin-row"><span class="pd-fin-label">Issue Paid</span><span class="pd-fin-val">${fmt(tt.paid)}</span></div><div class="pd-fin-row"><span class="pd-fin-label">Pending</span><span class="pd-fin-val">${fmt(tt.pending)}</span></div><div class="pd-fin-row pd-fin-total"><span>Total</span><span class="pd-fin-val">${fmt(tt.total)}</span></div></div></div>`;
         let sideColHTML = ''; if (memberRows || recruitsHTML || appointmentsHTML || notesHTML) {
