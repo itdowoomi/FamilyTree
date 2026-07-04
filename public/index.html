@@ -465,6 +465,27 @@
     </div>
   </div>
 
+  <!-- 멤버 추가 모달 -->
+  <div v-if="showAddMemberModal" class="share-modal-overlay" @click.self="showAddMemberModal=false">
+    <div class="share-modal">
+      <div class="share-modal-header">
+        <span>+ 멤버 추가</span>
+        <button class="share-modal-close" @click="showAddMemberModal=false">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
+        <div class="form-row"><label class="form-label">상위</label>
+          <select v-model="nm.parentId" class="form-select">
+            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+        <div class="form-row"><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
+        <div class="form-row"><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;" @click="addMember()">등록</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 기술 지원 요청 작성 모달 (사용자) -->
   <div v-if="showSupportRequestModal" class="share-modal-overlay" @click.self="showSupportRequestModal=false">
     <div class="share-modal" style="width:560px;">
@@ -609,7 +630,6 @@
 
     <div class="tree-body">
       <div v-if="notesPosition==='left'" class="side-panel left" :style="{ width: notePanelWidth + 'px' }">
-        <div class="panel-title">📝 메모 / 액션</div>
         <div v-if="selectedMember">
           <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
           <div class="mem-hist-list" style="margin-bottom:10px;">
@@ -621,7 +641,7 @@
               <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
           </div>
         </div>
-        <div class="mem-hist-section-title" v-if="selectedMember">📝 메모 / 액션</div>
+        <div class="mem-hist-section-title">📝 메모 / 액션</div>
         <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
         <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
@@ -821,7 +841,6 @@
       </div>
 
       <div v-if="notesPosition==='right'" class="side-panel right" :style="{width:notePanelWidth+'px'}">
-        <div class="panel-title">📝 메모 / 액션</div>
         <div v-if="selectedMember">
           <div class="mem-hist-section-title">📝 상담 / 관리 기록</div>
           <div class="mem-hist-list" style="margin-bottom:10px;">
@@ -833,7 +852,7 @@
               <div v-if="!selectedMember.interactionHistory || selectedMember.interactionHistory.length === 0" class="mem-hist-empty">기록이 없습니다.</div>
           </div>
         </div>
-        <div class="mem-hist-section-title" v-if="selectedMember">📝 메모 / 액션</div>
+        <div class="mem-hist-section-title">📝 메모 / 액션</div>
         <div v-if="tabNotes.length===0" style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0">메모 없음</div>
         <div v-for="(n,i) in tabNotes" :key="i" class="note-card">
           <span class="note-idx">{{ i+1 }}</span>
@@ -967,6 +986,8 @@
           </span>
           <div class="tab-actions-sep"></div>
           <button class="tbar-btn tbar-merge" :disabled="mergeSourceOptions.length===0" @click="openMergeModal()" title="두 멤버를 골라 하나의 노드로 합칩니다 (배우자 통합 등)">🔗 배우자 통합</button>
+          <div class="tab-actions-sep"></div>
+          <button class="tbar-btn" @click="showAddMemberModal=true" title="새 멤버를 추가합니다">+ 멤버 추가</button>
           <div class="tab-actions-sep"></div>
           <button class="tbar-btn" :class="getTbarClass(printLandscape)" @click="printLandscape=!printLandscape">
             {{ printLandscape ? '가로' : '세로' }}
@@ -1239,7 +1260,8 @@
               <col style="width:40px">
               <col style="width:111px">
               <col style="width:40px">
-              <col style="width:106px">
+              <col style="width:150px">
+              <col style="width:36px">
               <col style="width:36px">
               <col style="width:40px">
               <col style="width:32px">
@@ -1256,8 +1278,9 @@
                 <th style="text-align:center">나이</th>
                 <th>만난 시기</th>
                 <th style="text-align:center">성별</th>
-                <th style="text-align:center">적합도 / Total</th>
+                <th style="text-align:center">전체 실적 / 기간 실적</th>
                 <th style="text-align:center">성향</th>
+                <th style="text-align:center">교육</th>
                 <th style="text-align:center">상담</th>
                 <th style="text-align:center">삭제</th>
               </tr>
@@ -1289,25 +1312,40 @@
                 </td>
                 <td style="text-align:center"><select v-model="m.gender" class="form-select" style="padding:2px 3px;font-size:11px;"><option value="남">남</option><option value="여">여</option></select></td>
                 <td style="padding:3px 4px;">
-                  <div style="display:grid; grid-template-columns: 1fr 44px; gap:5px; align-items:center;">
-                    <div style="text-align:right;">
-                      <template v-if="['Serious', 'Potential'].includes(m.status)">
+                  <template v-if="['Serious', 'Potential'].includes(m.status)">
+                    <div style="display:grid; grid-template-columns: 1fr 44px; gap:5px; align-items:center;">
+                      <div style="text-align:right;">
                         <input type="number" v-model.number.lazy="m.score" class="recruit-score-input" min="0" max="100" @change="onScoreChange(m, false)" style="width:40px;padding:2px;margin:0;text-align:right;">
-                      </template>
-                      <template v-else>
-                        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">
-                          ${{ getMemberTotal(m) }}
-                        </span>
-                      </template>
+                      </div>
+                      <div class="score-dots-wrap" style="margin-left:0;width:44px;">
+                        <div class="score-dots-fill" :style="{width:m.score+'%'}"></div>
+                      </div>
                     </div>
-                    <div class="score-dots-wrap" style="margin-left:0;width:44px;">
-                      <div v-if="['Serious', 'Potential'].includes(m.status)" class="score-dots-fill" :style="{width:m.score+'%'}"></div>
-                      <div v-else class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
+                  </template>
+                  <template v-else>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                      <div style="display:grid; grid-template-columns: 28px 1fr 44px; gap:4px; align-items:center;">
+                        <span style="font-size:8.5px;color:var(--muted);">전체</span>
+                        <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotal(m) }}</span>
+                        <div class="score-dots-wrap" style="margin-left:0;width:44px;">
+                          <div class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
+                        </div>
+                      </div>
+                      <div style="display:grid; grid-template-columns: 28px 1fr 44px; gap:4px; align-items:center;">
+                        <span style="font-size:8.5px;color:var(--muted);">기간</span>
+                        <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotalScoped(m) }}</span>
+                        <div class="score-dots-wrap" style="margin-left:0;width:44px;">
+                          <div class="score-dots-fill-blue" :style="{width:getIncomePercentScoped(m)+'%'}"></div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </template>
                 </td>
                 <td style="text-align:center;padding:3px 0;">
                   <button class="btn-hist-toggle" :class="{active:expandedDispositionId===m.id}" @click="toggleDispositionPanel(m.id)" style="padding:6px 12px;font-size:12px;">📊</button>
+                </td>
+                <td style="text-align:center;padding:3px 0;">
+                  <button class="btn-hist-toggle" :class="{active:expandedTrainingId===m.id}" @click="toggleTrainingPanel(m.id)" style="padding:6px 12px;font-size:12px;">🎓{{ getTrainingDoneCount(m) }}</button>
                 </td>
                 <td style="text-align:center;padding:3px 0;">
                   <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)" style="padding:6px 12px;font-size:12px;">📋{{ m.interactionHistory ? m.interactionHistory.length : 0 }}</button>
@@ -1409,9 +1447,26 @@
             </div>
           </div>
         </template>
-        <!-- 기본 모드: 2단 레이아웃 (팀 최근 상담기록 10 | 멤버 추가) -->
+        <!-- 교육(Training) 진도 모드 -->
+        <template v-else-if="sideTrainingMember">
+          <div class="side-hist-header">
+            <div style="flex:1;min-width:0;">
+              <div class="side-hist-name">🎓 {{ sideTrainingMember.name }} - Training 진도표</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">✓ 교육 받은 내용은 여기에 체크해 주세요.</div>
+            </div>
+            <button @click="toggleTrainingPanel(sideTrainingMember.id)" class="side-hist-close">✕ 닫기</button>
+          </div>
+          <div class="side-hist-list">
+            <div v-if="trainingTopics.length===0" class="mem-hist-empty">등록된 교육 항목이 없습니다. 오른쪽 '교육 내용 추가' 패널에서 추가해 주세요.</div>
+            <label v-for="t in trainingTopics" :key="t.id" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px dotted #e5e2dc;font-size:12px;">
+              <input type="checkbox" :checked="isTrainingDone(sideTrainingMember, t.id)" @change="toggleTrainingDone(sideTrainingMember, t.id)" style="accent-color:var(--navy);">
+              <span>{{ t.name }}</span>
+            </label>
+          </div>
+        </template>
+        <!-- 기본 모드: 2단 레이아웃 (팀 최근 상담기록 10 | 교육 내용 추가) -->
         <template v-else>
-          <div style="display:grid;grid-template-columns:1fr 164px;gap:0;height:100%;">
+          <div style="display:grid;grid-template-columns:1fr 180px;gap:0;height:100%;">
             <!-- ① 팀 최근 상담/관리 기록 (최근 10) -->
             <div style="padding-right:12px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;">
               <div class="mem-hist-section-title" style="flex-shrink:0;">📝 팀 최근 상담/관리 <span style="font-weight:400;color:var(--muted);">(최근 10)</span></div>
@@ -1428,18 +1483,21 @@
                 <div v-else class="mem-hist-empty">기록이 없습니다.</div>
               </div>
             </div>
-            <!-- ② 멤버 추가 폼 -->
-            <div style="padding-left:12px;flex-shrink:0;">
-              <h4>+ 멤버 추가</h4>
-              <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
-              <div class="form-row"><label class="form-label">상위</label>
-                <select v-model="nm.parentId" class="form-select">
-                  <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
-                </select>
+            <!-- ② 교육 내용 추가 -->
+            <div style="padding-left:12px;display:flex;flex-direction:column;min-height:0;">
+              <h4 style="flex-shrink:0;">+ 교육 내용 추가</h4>
+              <div class="form-row"><label class="form-label">교육명</label><input v-model="newTrainingTopic.name" class="form-input" placeholder="예: 신입 오리엔테이션" @keyup.enter="addTrainingTopic()"></div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px;flex-shrink:0;" @click="addTrainingTopic()">등록</button>
+              <div class="mem-hist-section-title" style="flex-shrink:0;margin-top:10px;">교육 항목 ({{ trainingTopics.length }})</div>
+              <div style="overflow-y:auto;flex:1;min-height:0;margin:0 -2px;padding:0 2px;">
+                <div v-for="(t,idx) in trainingTopics" :key="t.id" style="display:flex;align-items:center;gap:3px;padding:4px 0;border-bottom:1px dotted #e5e2dc;font-size:11px;">
+                  <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="t.name">{{ t.name }}</span>
+                  <button class="btn-sm-danger" :disabled="idx===0" @click="moveTrainingTopicUp(t.id)" title="위로 이동" style="padding:1px 5px;font-size:10px;opacity:1;">▲</button>
+                  <button class="btn-sm-danger" :disabled="idx===trainingTopics.length-1" @click="moveTrainingTopicDown(t.id)" title="아래로 이동" style="padding:1px 5px;font-size:10px;">▼</button>
+                  <button class="btn-sm-danger" @click="removeTrainingTopic(t.id)" title="삭제" style="padding:1px 5px;font-size:10px;">✕</button>
+                </div>
+                <div v-if="trainingTopics.length===0" class="mem-hist-empty">등록된 교육 항목이 없습니다.</div>
               </div>
-              <div class="form-row"><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
-              <div class="form-row"><label class="form-label">관계</label><input v-model="nm.relation" class="form-input" placeholder="예: 친구"></div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px;" @click="addMember()">등록</button>
             </div>
           </div>
         </template>

@@ -90,18 +90,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = currentUser.value;
         const email = u && u.email ? u.email : '';
         const name = (u && u.displayName) ? u.displayName : (email ? email.split('@')[0] : '');
-        return { id:'root', recruitId: null, name, email, memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:'', meetDate:'', gender:'', birthDate:'', disposition: defaultDisposition() };
+        return { id:'root', recruitId: null, name, email, memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'root', parentId:null, history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'본인', age:'', meetDate:'', gender:'', birthDate:'', disposition: defaultDisposition(), trainingDone:[] };
       };
 
       const header = reactive(defaultHeader());
       const members = ref([
         defaultRoot(),
-        { id:'m1', recruitId: null, name:'김은숙', email:'', memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition() }
+        { id:'m1', recruitId: null, name:'김은숙', email:'', memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition(), trainingDone:[] }
       ]);
       const notes = ref([]);
       const appointments = ref([]);
       const deletedAptIds = ref([]); // 삭제된 약속 ID 목록 (tombstone - 동기화 시 양방향 삭제 전파용)
       const recruits = ref([]);
+      const trainingTopics = ref([]); // [{id, name}] 교육(Training) 항목 마스터 목록 (순서 = 표시 순서)
+      const newTrainingTopic = reactive({ name: '' });
+      function addTrainingTopic(){
+        if(!newTrainingTopic.name.trim()) return;
+        trainingTopics.value = [...trainingTopics.value, { id: 'tt'+Date.now()+Math.random().toString(36).slice(2,7), name: newTrainingTopic.name.trim() }];
+        newTrainingTopic.name = '';
+      }
+      function removeTrainingTopic(id){
+        trainingTopics.value = trainingTopics.value.filter(t=>t.id!==id);
+        members.value.forEach(m=>{ if(m.trainingDone && m.trainingDone.includes(id)) m.trainingDone = m.trainingDone.filter(tid=>tid!==id); });
+      }
+      function moveTrainingTopicUp(id){
+        const arr=[...trainingTopics.value]; const idx=arr.findIndex(t=>t.id===id);
+        if(idx>0){ [arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]]; trainingTopics.value=arr; }
+      }
+      function moveTrainingTopicDown(id){
+        const arr=[...trainingTopics.value]; const idx=arr.findIndex(t=>t.id===id);
+        if(idx>=0 && idx<arr.length-1){ [arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]]; trainingTopics.value=arr; }
+      }
+      function isTrainingDone(m, topicId){ return !!(m && m.trainingDone && m.trainingDone.includes(topicId)); }
+      function toggleTrainingDone(m, topicId){
+        if(!m) return;
+        const list = m.trainingDone ? [...m.trainingDone] : [];
+        const idx = list.indexOf(topicId);
+        if(idx>=0) list.splice(idx,1); else list.push(topicId);
+        m.trainingDone = list;
+      }
+      function getTrainingDoneCount(m){ if(!m || !m.trainingDone) return 0; return m.trainingDone.filter(id=>trainingTopics.value.some(t=>t.id===id)).length; }
       const newNote = reactive({ text: '', scope: 'notice' }); // notice | issue | personal (legacy: all)
       function noteScopeLabel(scope){
         if(scope === 'notice') return '공지사항';
@@ -144,6 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const expandedMemberId = ref(null);
       const expandedInteractionId = ref(null);
       const expandedDispositionId = ref(null);
+      const expandedTrainingId = ref(null);
+      const showAddMemberModal = ref(false);
       
       const expandedRecruitInteractionId = ref(null);
       const expandedRecruitDispositionId = ref(null);
@@ -1660,6 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const sideHistMember = computed(() => expandedMemberId.value ? (tabMembers.value.find(m => m.id === expandedMemberId.value) || null) : null);
       const sideInteractionMember = computed(() => expandedInteractionId.value ? (tabMembers.value.find(m => m.id === expandedInteractionId.value) || null) : null);
       const sideDispositionMember = computed(() => expandedDispositionId.value ? (tabMembers.value.find(m => m.id === expandedDispositionId.value) || null) : null);
+      const sideTrainingMember = computed(() => expandedTrainingId.value ? (tabMembers.value.find(m => m.id === expandedTrainingId.value) || null) : null);
       const recentTeamHistory = computed(() => {
         const all = [];
         for (const m of tabMembers.value) {
@@ -2042,7 +2073,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!nm.name.trim()) return;
         const newId = 'm'+Date.now();
         const parentId = nm.parentId || focusRootId.value || (members.value.find(m => !m.parentId)?.id) || null;
-        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), memberCode:'', mergedPeople:[], major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition() });
+        members.value.push({ id:newId, recruitId: null, name:nm.name.trim(), email:(nm.email||'').trim(), memberCode:'', mergedPeople:[], major:nm.major.trim(), job:nm.job.trim(), company:nm.company.trim(), status:nm.status, parentId, history:[], interactionHistory:[], issuePaid:0, pending:0, birthDate:nm.birthDate, age:nm.age, meetDate:nm.meetDate, relation:nm.relation, gender:nm.gender, score:nm.score, disposition: defaultDisposition(), trainingDone:[] });
+        showAddMemberModal.value = false;
         nm.name=''; nm.email=''; nm.major=''; nm.job=''; nm.company=''; nm.birthDate=''; nm.age=''; nm.meetDate=''; nm.relation=''; nm.gender='남'; nm.score=0;
         showToastMsg(`✅ 멤버가 추가되었습니다.`);
       }
@@ -2057,7 +2089,7 @@ document.addEventListener('DOMContentLoaded', () => {
         members.value.forEach(x=>{ if(x.parentId===id) x.parentId=m.parentId; });
         members.value=members.value.filter(x=>x.id!==id);
         if(selectedMemberId.value===id) selectedMemberId.value='root';
-        if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null;
+        if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null; if(expandedTrainingId.value===id) expandedTrainingId.value=null;
         if (hadLinkedRecruit) showToastMsg(`[${m.name}]님이 멤버와 Recruit 리스트에서 모두 삭제되었습니다.`);
       }
       // ── 배우자 통합 (멤버 합치기) ──
@@ -2202,8 +2234,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return members.value.filter(m=>!excludeIds.has(m.id));
       }
       function toggleHistoryPanel(id){ expandedMemberId.value = expandedMemberId.value===id ? null : id; newHist.date=''; newHist.content=''; newHist.point=null; newHist.amount=null; newHist.type='History'; }
-      function toggleInteractionPanel(id){ expandedDispositionId.value = null; expandedInteractionId.value = expandedInteractionId.value===id ? null : id; newInteraction.date=''; newInteraction.content=''; }
-      function toggleDispositionPanel(id){ expandedInteractionId.value = null; expandedDispositionId.value = expandedDispositionId.value===id ? null : id; }
+      function toggleInteractionPanel(id){ expandedDispositionId.value = null; expandedTrainingId.value = null; expandedInteractionId.value = expandedInteractionId.value===id ? null : id; newInteraction.date=''; newInteraction.content=''; }
+      function toggleDispositionPanel(id){ expandedInteractionId.value = null; expandedTrainingId.value = null; expandedDispositionId.value = expandedDispositionId.value===id ? null : id; }
+      function toggleTrainingPanel(id){ expandedInteractionId.value = null; expandedDispositionId.value = null; expandedTrainingId.value = expandedTrainingId.value===id ? null : id; }
       function toggleRecruitInteractionPanel(id){ expandedRecruitDispositionId.value = null; expandedRecruitInteractionId.value = expandedRecruitInteractionId.value===id ? null : id; newRecruitInteraction.date=''; newRecruitInteraction.content=''; }
       function toggleRecruitDispositionPanel(id){ expandedRecruitInteractionId.value = null; expandedRecruitDispositionId.value = expandedRecruitDispositionId.value===id ? null : id; }
       function addHistoryItem(memberId){
@@ -2558,15 +2591,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function onNodeClick(m){ selectedMemberId.value = m.id; if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; } }
       function getRecruitMeta(r){ const ageStr=r.age?`${r.age}세`:''; return [r.major, r.job, r.company, r.relation,ageStr,calcPeriod(r.meetDate,r.period),r.gender].filter(Boolean).join(' | '); }
-      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)) }; }
+      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)) }; }
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
-        members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople}; });
+        members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; const trainingDone = m.trainingDone || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople, trainingDone}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
         if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         deletedAptIds.value = d.deletedAptIds || [];
+        trainingTopics.value = d.trainingTopics || [];
         if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
       }
@@ -2660,7 +2694,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSubTreeForSelectedMember();
       });
 
-      watch([header,members,notes,recruits,appointments,deletedAptIds,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
+      watch([header,members,notes,recruits,appointments,deletedAptIds,trainingTopics,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig],()=>{
         if (applyingRemote) return;
         if (currentIsReadOnly.value) return;
         if(!isDashboard.value) {
@@ -2685,7 +2719,8 @@ document.addEventListener('DOMContentLoaded', () => {
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
-        recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
+        recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedTrainingId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
+        trainingTopics, newTrainingTopic, addTrainingTopic, removeTrainingTopic, moveTrainingTopicUp, moveTrainingTopicDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
