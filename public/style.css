@@ -131,7 +131,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .appt-empty{font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;text-align:center;}
 
 /* SVG container */
-.tree-svg-wrap{flex:1;overflow:hidden;position:relative;cursor:grab;}
+.tree-svg-wrap{flex:1;overflow:hidden;position:relative;cursor:grab;touch-action:none;}
 .tree-svg-wrap.panning{cursor:grabbing;}
 .tree-svg-pan-layer{position:absolute;top:0;left:0;will-change:transform;}
 .tree-svg-scale-layer{transform-origin:0 0;will-change:transform;}
@@ -419,3 +419,18 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 
 @page{margin:0;size:A4;}
 @media print{html,body{height:auto;overflow:visible;background:#fff;}}
+
+/* ─── 태블릿 대응 (예: 825×1318 세로 화면 등 좁은 화면) ─── */
+@media (max-width: 900px){
+  .add-form{ width:min(460px, 94vw); min-width:220px; }
+  .doc-header{ grid-template-columns: 1fr; text-align:center; row-gap:6px; padding:9px 12px 8px; }
+  .doc-header-left{ align-items:center; }
+  .doc-header-right{ align-items:center; }
+  .toolbar-row-2{ overflow-x:auto; flex-wrap:nowrap; scrollbar-width:thin; }
+  .tab-content{ padding:6px; }
+}
+@media (max-width: 900px) and (pointer: coarse){
+  /* 터치 조작 시 버튼/입력 요소가 너무 작지 않도록 최소 탭 영역 확보 */
+  .tbar-btn, .tab-btn, .btn-hist-toggle, .zoom-btn{ min-height:30px; }
+  input, select, textarea{ font-size:13px; }
+}

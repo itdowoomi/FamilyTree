@@ -757,7 +757,11 @@
            @mousedown="onPanStart"
            @mousemove="onPanMove"
            @mouseup="onPanEnd"
-           @mouseleave="onPanEnd">
+           @mouseleave="onPanEnd"
+           @touchstart="onTouchStart"
+           @touchmove.prevent="onTouchMove"
+           @touchend="onTouchEnd"
+           @touchcancel="onTouchEnd">
 
         <div class="zoom-overlay">
           <button class="zoom-btn" @click.stop="zoomIn()" title="확대 (+)">＋</button>
@@ -1138,6 +1142,24 @@
             </div>
             <button @click="toggleHistoryPanel(sideHistMember.id)" class="side-hist-close">✕ 닫기</button>
           </div>
+          <div class="side-hist-add">
+            <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;">
+              <div style="flex:1 1 0%;display:flex;gap:3px;min-width:0;">
+                <input class="history-date-input" style="flex:1 1 0%;min-width:0;" v-model="newHist.date" placeholder="MM/DD/YY">
+                <select v-model="newHist.type" style="flex:1 1 0%;min-width:0;font-size:10px;padding:2px 2px;border:1px solid var(--border);border-radius:3px;font-family:inherit;">
+                  <option value="History">히스토리</option>
+                  <option value="Issue Paid">Issue Paid</option>
+                  <option value="Pending">Pending</option>
+                </select>
+                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
+                  v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(sideHistMember.id)">
+                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
+                  v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : '$'" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
+              </div>
+              <input class="history-content-input" v-model="newHist.content" placeholder="내용" @keyup.enter="addHistoryItem(sideHistMember.id)" style="flex:1 1 0%;min-width:0;">
+              <button class="btn btn-primary" style="padding:2px 10px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addHistoryItem(sideHistMember.id)">+</button>
+            </div>
+          </div>
           <div class="side-hist-list">
             <table class="history-table" v-if="sideHistMember.history && sideHistMember.history.length">
               <thead>
@@ -1172,25 +1194,7 @@
                 </tr>
               </tbody>
             </table>
-            <div v-else class="history-empty">기록이 없습니다. 아래에서 추가하세요.</div>
-          </div>
-          <div class="side-hist-add">
-            <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;">
-              <div style="flex:1 1 0%;display:flex;gap:3px;min-width:0;">
-                <input class="history-date-input" style="flex:1 1 0%;min-width:0;" v-model="newHist.date" placeholder="MM/DD/YY">
-                <select v-model="newHist.type" style="flex:1 1 0%;min-width:0;font-size:10px;padding:2px 2px;border:1px solid var(--border);border-radius:3px;font-family:inherit;">
-                  <option value="History">히스토리</option>
-                  <option value="Issue Paid">Issue Paid</option>
-                  <option value="Pending">Pending</option>
-                </select>
-                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
-                  v-model.number="newHist.point" placeholder="Pts" @keyup.enter="addHistoryItem(sideHistMember.id)">
-                <input type="number" style="flex:1 1 0%;min-width:0;font-family:'JetBrains Mono',monospace;text-align:right;padding:2px 3px;border:1px solid var(--border);border-radius:3px;font-size:11px;"
-                  v-model.number="newHist.amount" :placeholder="newHist.type==='History' ? '—' : '$'" :disabled="newHist.type==='History'" @keyup.enter="addHistoryItem(sideHistMember.id)">
-              </div>
-              <input class="history-content-input" v-model="newHist.content" placeholder="내용" @keyup.enter="addHistoryItem(sideHistMember.id)" style="flex:1 1 0%;min-width:0;">
-              <button class="btn btn-primary" style="padding:2px 10px;font-size:11px;white-space:nowrap;flex-shrink:0;" @click="addHistoryItem(sideHistMember.id)">+</button>
-            </div>
+            <div v-else class="history-empty">기록이 없습니다. 위에서 추가하세요.</div>
           </div>
         </template>
         <!-- 기본 모드: 선택 노드(또는 전체보기 시 팀 전체)의 실적을 5개씩 묶어 좌우 스크롤로 표시 -->
@@ -1323,19 +1327,18 @@
                     </div>
                   </template>
                   <template v-else>
-                    <div style="display:flex;flex-direction:column;gap:3px;">
-                      <div style="display:grid; grid-template-columns: 28px 1fr 44px; gap:4px; align-items:center;">
-                        <span style="font-size:8.5px;color:var(--muted);">전체</span>
-                        <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotal(m) }}</span>
-                        <div class="score-dots-wrap" style="margin-left:0;width:44px;">
-                          <div class="score-dots-fill-blue" :style="{width:getIncomePercent(m)+'%'}"></div>
-                        </div>
+                    <div style="display:flex;flex-direction:column;gap:3px;width:100%;">
+                      <div style="display:flex;align-items:baseline;gap:5px;width:100%;">
+                        <span style="font-size:8.5px;color:var(--muted);flex-shrink:0;">전체</span>
+                        <span style="flex:1;text-align:left;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotal(m) }}</span>
                       </div>
-                      <div style="display:grid; grid-template-columns: 28px 1fr 44px; gap:4px; align-items:center;">
+                      <div style="display:grid; grid-template-columns: 28px 1fr; gap:5px; align-items:center; width:100%;">
                         <span style="font-size:8.5px;color:var(--muted);">기간</span>
-                        <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;">${{ getMemberTotalScoped(m) }}</span>
-                        <div class="score-dots-wrap" style="margin-left:0;width:44px;">
-                          <div class="score-dots-fill-blue" :style="{width:getIncomePercentScoped(m)+'%'}"></div>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                          <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy);font-size:11px;white-space:nowrap;">${{ getMemberTotalScoped(m) }}</span>
+                          <div class="score-dots-wrap" style="margin-left:0;flex:1;min-width:36px;">
+                            <div class="score-dots-fill-blue" :style="{width:getIncomePercentScoped(m)+'%'}"></div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1458,10 +1461,21 @@
           </div>
           <div class="side-hist-list">
             <div v-if="trainingTopics.length===0" class="mem-hist-empty">등록된 교육 항목이 없습니다. 오른쪽 '교육 내용 추가' 패널에서 추가해 주세요.</div>
-            <label v-for="t in trainingTopics" :key="t.id" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px dotted #e5e2dc;font-size:12px;">
-              <input type="checkbox" :checked="isTrainingDone(sideTrainingMember, t.id)" @change="toggleTrainingDone(sideTrainingMember, t.id)" style="accent-color:var(--navy);">
-              <span>{{ t.name }}</span>
-            </label>
+            <template v-for="unit in trainingUnits" :key="unit.type==='group' ? 'grp_'+unit.group : 'sgl_'+unit.item.id">
+              <label v-if="unit.type==='single'" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px dotted #e5e2dc;font-size:12px;">
+                <input type="checkbox" :checked="isTrainingDone(sideTrainingMember, unit.item.id)" @change="toggleTrainingDone(sideTrainingMember, unit.item.id)" style="accent-color:var(--navy);">
+                <span>{{ unit.item.name }}</span>
+              </label>
+              <div v-else style="padding:6px 2px;border-bottom:1px dotted #e5e2dc;">
+                <div style="font-size:11.5px;font-weight:700;color:var(--navy);margin-bottom:4px;">{{ unit.items[0].groupLabel }}</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <label v-for="it in unit.items" :key="it.id" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--muted);">
+                    <input type="checkbox" :checked="isTrainingDone(sideTrainingMember, it.id)" @change="toggleTrainingDone(sideTrainingMember, it.id)" style="accent-color:var(--navy);">
+                    <span>{{ it.groupIndex }}</span>
+                  </label>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
         <!-- 기본 모드: 2단 레이아웃 (팀 최근 상담기록 10 | 교육 내용 추가) -->
@@ -1487,16 +1501,20 @@
             <div style="padding-left:12px;display:flex;flex-direction:column;min-height:0;">
               <h4 style="flex-shrink:0;">+ 교육 내용 추가</h4>
               <div class="form-row"><label class="form-label">교육명</label><input v-model="newTrainingTopic.name" class="form-input" placeholder="예: 신입 오리엔테이션" @keyup.enter="addTrainingTopic()"></div>
-              <button class="btn btn-primary" style="width:100%;margin-top:4px;flex-shrink:0;" @click="addTrainingTopic()">등록</button>
-              <div class="mem-hist-section-title" style="flex-shrink:0;margin-top:10px;">교육 항목 ({{ trainingTopics.length }})</div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px;flex-shrink:0;" @click="addTrainingTopic()">단일 항목 등록</button>
+              <div class="form-row" style="margin-top:10px;"><label class="form-label">그룹명 (예: NAT)</label><input v-model="newTrainingGroup.name" class="form-input" placeholder="예: NAT"></div>
+              <div class="form-row"><label class="form-label">단계 수</label><input type="number" min="1" max="30" v-model.number="newTrainingGroup.count" class="form-input"></div>
+              <button class="btn btn-primary" style="width:100%;margin-top:4px;flex-shrink:0;" @click="addTrainingGroup()">그룹 등록 (1~N 일괄 생성)</button>
+              <div class="mem-hist-section-title" style="flex-shrink:0;margin-top:10px;">교육 항목 ({{ trainingUnits.length }})</div>
               <div style="overflow-y:auto;flex:1;min-height:0;margin:0 -2px;padding:0 2px;">
-                <div v-for="(t,idx) in trainingTopics" :key="t.id" style="display:flex;align-items:center;gap:3px;padding:4px 0;border-bottom:1px dotted #e5e2dc;font-size:11px;">
-                  <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="t.name">{{ t.name }}</span>
-                  <button class="btn-sm-danger" :disabled="idx===0" @click="moveTrainingTopicUp(t.id)" title="위로 이동" style="padding:1px 5px;font-size:10px;opacity:1;">▲</button>
-                  <button class="btn-sm-danger" :disabled="idx===trainingTopics.length-1" @click="moveTrainingTopicDown(t.id)" title="아래로 이동" style="padding:1px 5px;font-size:10px;">▼</button>
-                  <button class="btn-sm-danger" @click="removeTrainingTopic(t.id)" title="삭제" style="padding:1px 5px;font-size:10px;">✕</button>
+                <div v-for="(u,idx) in trainingUnits" :key="u.type==='group' ? 'ug_'+u.group : 'us_'+u.item.id" style="display:flex;align-items:center;gap:3px;padding:4px 0;border-bottom:1px dotted #e5e2dc;font-size:11px;">
+                  <span v-if="u.type==='single'" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="u.item.name">{{ u.item.name }}</span>
+                  <span v-else style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="u.items[0].groupLabel">🗂 {{ u.items[0].groupLabel }} (1~{{ u.items.length }})</span>
+                  <button class="btn-sm-danger" :disabled="idx===0" @click="moveTrainingUnitUp(u)" title="위로 이동" style="padding:1px 5px;font-size:10px;opacity:1;">▲</button>
+                  <button class="btn-sm-danger" :disabled="idx===trainingUnits.length-1" @click="moveTrainingUnitDown(u)" title="아래로 이동" style="padding:1px 5px;font-size:10px;">▼</button>
+                  <button class="btn-sm-danger" @click="u.type==='single' ? removeTrainingTopic(u.item.id) : removeTrainingGroup(u.group)" title="삭제" style="padding:1px 5px;font-size:10px;">✕</button>
                 </div>
-                <div v-if="trainingTopics.length===0" class="mem-hist-empty">등록된 교육 항목이 없습니다.</div>
+                <div v-if="trainingUnits.length===0" class="mem-hist-empty">등록된 교육 항목이 없습니다.</div>
               </div>
             </div>
           </div>

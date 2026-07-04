@@ -102,24 +102,54 @@ document.addEventListener('DOMContentLoaded', () => {
       const appointments = ref([]);
       const deletedAptIds = ref([]); // 삭제된 약속 ID 목록 (tombstone - 동기화 시 양방향 삭제 전파용)
       const recruits = ref([]);
-      const trainingTopics = ref([]); // [{id, name}] 교육(Training) 항목 마스터 목록 (순서 = 표시 순서)
+      const trainingTopics = ref([]); // [{id, name, group?, groupLabel?, groupIndex?}] 교육(Training) 항목 마스터 목록 (순서 = 표시 순서). group 항목은 같은 group값끼리 연속 배치됨.
       const newTrainingTopic = reactive({ name: '' });
+      const newTrainingGroup = reactive({ name: '', count: 6 }); // 예: NAT, 6단계 → NAT 1~NAT 6 일괄 생성
       function addTrainingTopic(){
         if(!newTrainingTopic.name.trim()) return;
-        trainingTopics.value = [...trainingTopics.value, { id: 'tt'+Date.now()+Math.random().toString(36).slice(2,7), name: newTrainingTopic.name.trim() }];
+        trainingTopics.value = [...trainingTopics.value, { id: 'tt'+Date.now()+Math.random().toString(36).slice(2,7), name: newTrainingTopic.name.trim(), group: null }];
         newTrainingTopic.name = '';
+      }
+      function addTrainingGroup(){
+        const name = newTrainingGroup.name.trim(); const count = Math.round(Number(newTrainingGroup.count)) || 0;
+        if(!name || count < 1) return;
+        const groupId = 'tg'+Date.now()+Math.random().toString(36).slice(2,5);
+        const items = [];
+        for(let i=1;i<=count;i++){ items.push({ id: 'tt'+Date.now()+Math.random().toString(36).slice(2,7)+'_'+i, name: name+' '+i, group: groupId, groupLabel: name, groupIndex: i }); }
+        trainingTopics.value = [...trainingTopics.value, ...items];
+        newTrainingGroup.name = ''; newTrainingGroup.count = 6;
       }
       function removeTrainingTopic(id){
         trainingTopics.value = trainingTopics.value.filter(t=>t.id!==id);
         members.value.forEach(m=>{ if(m.trainingDone && m.trainingDone.includes(id)) m.trainingDone = m.trainingDone.filter(tid=>tid!==id); });
       }
-      function moveTrainingTopicUp(id){
-        const arr=[...trainingTopics.value]; const idx=arr.findIndex(t=>t.id===id);
-        if(idx>0){ [arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]]; trainingTopics.value=arr; }
+      function removeTrainingGroup(groupId){
+        const ids = trainingTopics.value.filter(t=>t.group===groupId).map(t=>t.id);
+        trainingTopics.value = trainingTopics.value.filter(t=>t.group!==groupId);
+        members.value.forEach(m=>{ if(m.trainingDone) m.trainingDone = m.trainingDone.filter(tid=>!ids.includes(tid)); });
       }
-      function moveTrainingTopicDown(id){
-        const arr=[...trainingTopics.value]; const idx=arr.findIndex(t=>t.id===id);
-        if(idx>=0 && idx<arr.length-1){ [arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]]; trainingTopics.value=arr; }
+      // trainingTopics를 "표시 단위(단일 항목 또는 그룹 전체)"로 묶어서 관리/이동을 쉽게 함
+      const trainingUnits = computed(() => {
+        const arr = trainingTopics.value; const units = []; let i = 0;
+        while(i < arr.length){
+          const t = arr[i];
+          if(t.group){ let j = i; while(j < arr.length && arr[j].group === t.group) j++; units.push({ type:'group', group:t.group, items: arr.slice(i,j), startIdx:i, endIdx:j }); i = j; }
+          else { units.push({ type:'single', item:t, startIdx:i, endIdx:i+1 }); i++; }
+        }
+        return units;
+      });
+      function swapTrainingUnits(a, b){
+        const units = [...trainingUnits.value]; [units[a], units[b]] = [units[b], units[a]];
+        const flat = []; units.forEach(u => { if(u.type==='group') flat.push(...u.items); else flat.push(u.item); });
+        trainingTopics.value = flat;
+      }
+      function moveTrainingUnitUp(unit){
+        const units = trainingUnits.value; const idx = units.findIndex(u=>u.startIdx===unit.startIdx);
+        if(idx > 0) swapTrainingUnits(idx, idx-1);
+      }
+      function moveTrainingUnitDown(unit){
+        const units = trainingUnits.value; const idx = units.findIndex(u=>u.startIdx===unit.startIdx);
+        if(idx >= 0 && idx < units.length-1) swapTrainingUnits(idx, idx+1);
       }
       function isTrainingDone(m, topicId){ return !!(m && m.trainingDone && m.trainingDone.includes(topicId)); }
       function toggleTrainingDone(m, topicId){
@@ -2068,6 +2098,18 @@ document.addEventListener('DOMContentLoaded', () => {
       function onPanStart(e){ if(e.button!==0)return; isPanning=true; panStartX=e.clientX; panStartY=e.clientY; panStartPX=panX.value; panStartPY=panY.value; e.currentTarget.classList.add('panning'); }
       function onPanMove(e){ if(!isPanning)return; panX.value = panStartPX + (e.clientX - panStartX); panY.value = panStartPY + (e.clientY - panStartY); }
       function onPanEnd(e){ isPanning=false; if(e.currentTarget) e.currentTarget.classList.remove('panning'); }
+      // 태블릿/모바일 터치 지원: 한 손가락 드래그 = 이동(pan), 두 손가락 = 핀치 확대/축소
+      let touchPinchStartDist = 0, touchPinchStartZoom = 1;
+      function touchDist(e){ const a=e.touches[0], b=e.touches[1]; return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+      function onTouchStart(e){
+        if(e.touches.length===1){ const t=e.touches[0]; isPanning=true; panStartX=t.clientX; panStartY=t.clientY; panStartPX=panX.value; panStartPY=panY.value; e.currentTarget.classList.add('panning'); }
+        else if(e.touches.length===2){ isPanning=false; touchPinchStartDist=touchDist(e); touchPinchStartZoom=zoomLevel.value; }
+      }
+      function onTouchMove(e){
+        if(e.touches.length===2){ const dist=touchDist(e); if(touchPinchStartDist>0){ zoomLevel.value=Math.min(3,Math.max(0.2,+(touchPinchStartZoom*(dist/touchPinchStartDist)).toFixed(2))); } return; }
+        if(!isPanning || e.touches.length!==1) return; const t=e.touches[0]; panX.value=panStartPX+(t.clientX-panStartX); panY.value=panStartPY+(t.clientY-panStartY);
+      }
+      function onTouchEnd(e){ isPanning=false; touchPinchStartDist=0; if(e.currentTarget) e.currentTarget.classList.remove('panning'); }
       function centerTree(){ nextTick(()=>{ const wrap=document.getElementById('tree-svg-container'); if(!wrap)return; const svgW = layout.value.totalWidth * zoomLevel.value; const svgH = layout.value.totalHeight * zoomLevel.value; panX.value = Math.max(16,(wrap.clientWidth-svgW)/2); panY.value = Math.max(16,(wrap.clientHeight-svgH)/2); }); }
       function addMember(){
         if(!nm.name.trim()) return;
@@ -2720,7 +2762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedTrainingId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
-        trainingTopics, newTrainingTopic, addTrainingTopic, removeTrainingTopic, moveTrainingTopicUp, moveTrainingTopicDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
+        trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
@@ -2737,7 +2779,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
         toggleApptConfirmed, apptDisplayTitle, apptDisplaySubtitle, visibleSidebarAppointments,
-        addNote, onNodeClick, getRecruitMeta, zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd,
+        addNote, onNodeClick, getRecruitMeta, zoomIn, zoomOut, zoomReset, centerTree, onWheel, onPanStart, onPanMove, onPanEnd, onTouchStart, onTouchMove, onTouchEnd,
         quickSave, exportJSON, exportSubJSON, importJSON, doPrint, confirmPrint, getToastClass, getSaveStatusClass, getSaveStatusText,
         printIncludeNotes, printIncludeRecruit, printIncludeAppointment, printIncludeMemberInfo, printIncludePointHistory,
         getEdgeClass:(e)=>['Potential', 'Serious'].includes(e.status)?'edge-dash':'edge-line',
