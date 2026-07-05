@@ -1961,9 +1961,14 @@ document.addEventListener('DOMContentLoaded', () => {
       function ensurePromoCriteria(rank){
         if(!rank) return null;
         if(!promotionCriteria.value[rank]){
-          promotionCriteria.value = { ...promotionCriteria.value, [rank]: { requirements: [], points: 0, customNote: '' } };
-        } else if(typeof promotionCriteria.value[rank].customNote !== 'string'){
-          promotionCriteria.value[rank].customNote = '';
+          promotionCriteria.value = { ...promotionCriteria.value, [rank]: { requirements: [], points: 0, cases: 0, customNote: '' } };
+        } else {
+          if(typeof promotionCriteria.value[rank].customNote !== 'string'){
+            promotionCriteria.value[rank].customNote = '';
+          }
+          if(typeof promotionCriteria.value[rank].cases !== 'number'){
+            promotionCriteria.value[rank].cases = 0;
+          }
         }
         return promotionCriteria.value[rank];
       }
@@ -2001,6 +2006,16 @@ document.addEventListener('DOMContentLoaded', () => {
         memberList.forEach(m=>{ (m.history||[]).filter(h=>h.show).forEach(h=>{ const t=parseDateForSort(h.date); if(t && t>=startTime && t<=now) sum += Number(h.point)||0; }); });
         return sum;
       }
+      // 지정된 멤버 본인의 최근 N일 이내 Case 건수 (포인트가 부여된 히스토리 항목 = 1건의 Case로 인정)
+      function casesInWindow(member, days){
+        if(!member || !member.history) return 0;
+        const now = Date.now(); const startTime = now - (Number(days)||0)*24*60*60*1000;
+        return member.history.filter(h=>{
+          if(!h.show || !(Number(h.point) > 0)) return false;
+          const t = parseDateForSort(h.date);
+          return t && t>=startTime && t<=now;
+        }).length;
+      }
       // 현재 선택/포커스된 멤버(activeInfoMember) 기준, 다음 승급까지의 진행률 계산
       const promotionProgress = computed(() => {
         const m = activeInfoMember.value;
@@ -2008,7 +2023,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = nextRankFor(m.status);
         if(!target) return { targetRank:null };
         const crit = promotionCriteria.value[target];
-        if(!crit || (!crit.requirements.length && !crit.points && !crit.customNote)) return { targetRank:target, noCriteria:true };
+        if(!crit || (!crit.requirements.length && !crit.points && !crit.cases && !crit.customNote)) return { targetRank:target, noCriteria:true };
         const descendants = collectDescendants(m.id);
         const requirements = (crit.requirements||[]).map(r=>{
           const statuses = normalizeReqStatuses(r);
@@ -2018,11 +2033,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const actualPoints = pointsInWindow([m, ...descendants], promotionWindowDays.value);
         const requiredPoints = crit.points||0;
+        const actualCases = casesInWindow(m, promotionWindowDays.value);
+        const requiredCases = crit.cases||0;
         return {
           targetRank: target,
           requirements,
           customNote: crit.customNote || '',
-          points: { required: requiredPoints, actual: actualPoints, met: actualPoints>=requiredPoints, shortfall: Math.max(0, requiredPoints-actualPoints) }
+          points: { required: requiredPoints, actual: actualPoints, met: actualPoints>=requiredPoints, shortfall: Math.max(0, requiredPoints-actualPoints) },
+          cases: { required: requiredCases, actual: actualCases, met: actualCases>=requiredCases, shortfall: Math.max(0, requiredCases-actualCases) }
         };
       });
 
@@ -2821,6 +2839,7 @@ document.addEventListener('DOMContentLoaded', () => {
             crit.requirements = crit.requirements.map(r=> r.statuses ? r : { statuses: r.status?[r.status]:[], count:r.count });
           }
           if(crit && typeof crit.customNote !== 'string') crit.customNote = '';
+          if(crit && typeof crit.cases !== 'number') crit.cases = 0;
         });
         if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
         if(header.periodEndAuto) applyAutoPeriodEnd(); // 저장된 값이 지난 날짜일 수 있으므로, 불러올 때마다 오늘 기준으로 재계산
