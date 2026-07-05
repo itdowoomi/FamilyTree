@@ -437,6 +437,57 @@
     </div>
   </div>
 
+  <!-- 다른 사람이 내보낸 트리(JSON) 파일을 선택 노드 아래에 추가하거나, 선택 노드와 병합하는 모달 -->
+  <div v-if="showTreeMergeModal" class="share-modal-overlay" @click.self="closeTreeMergeModal()">
+    <div class="share-modal">
+      <div class="share-modal-header">
+        <span>📥 트리 파일로 추가/병합</span>
+        <button class="share-modal-close" @click="closeTreeMergeModal()">✕</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-modal-hint">
+          다른 사람이 Family Tree에서 내보낸(JSON) 파일을 <strong>{{ selectedMember ? selectedMember.name : '' }}</strong> 노드 기준으로 가져옵니다.
+        </div>
+        <div class="form-row">
+          <label class="form-label">JSON 파일 선택</label>
+          <input type="file" accept=".json,application/json" class="form-input" @change="onTreeMergeFileSelected($event)">
+        </div>
+        <div v-if="treeMergeInput.parsedData" style="margin:8px 0;padding:8px 10px;background:#f7f5f0;border-radius:6px;font-size:12px;">
+          📄 {{ treeMergeInput.fileName }}<br>
+          루트 인물: <strong>{{ treeMergeInput.rootName }}</strong> · 총 {{ treeMergeInput.memberCount }}명
+        </div>
+        <template v-if="treeMergeInput.parsedData">
+          <div class="form-row">
+            <label class="form-label">처리 방식</label>
+            <select v-model="treeMergeInput.mode" class="form-select">
+              <option value="append">{{ selectedMember ? selectedMember.name : '선택 노드' }} 아래에 새 조직으로 추가</option>
+              <option value="merge">{{ selectedMember ? selectedMember.name : '선택 노드' }}와(과) 동일 인물로 병합</option>
+            </select>
+          </div>
+          <div v-if="treeMergeInput.mode==='append'" class="form-row">
+            <label class="form-label">가져온 루트 인물의 직급</label>
+            <select v-model="treeMergeInput.assignStatus" class="form-select">
+              <option value="" disabled>선택하세요</option>
+              <option v-for="s in allStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
+            </select>
+          </div>
+          <div v-else class="share-modal-hint" style="margin-top:0;">
+            <strong>{{ selectedMember ? selectedMember.name : '' }}</strong> 노드는 그대로 유지되고, 가져온 파일의 인적사항·히스토리·상담기록이 합쳐지며, 하위 조직원은 이 노드 밑으로 편입됩니다.
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" v-model="treeMergeInput.includeExtras" style="accent-color:var(--navy);">
+              Recruit, 약속, 메모 데이터도 함께 가져오기
+            </label>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:8px 14px;" @click="executeTreeMerge()">
+            {{ treeMergeInput.mode==='merge' ? '🔗 병합하기' : '📥 추가하기' }}
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- 배우자 통합(멤버 합치기) 모달 -->
   <div v-if="showMergeModal" class="share-modal-overlay" @click.self="closeMergeModal()">
     <div class="share-modal">
@@ -716,6 +767,9 @@
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;margin-top:6px;" @click="openTreeMergeModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '다른 사람이 내보낸 트리 파일을 이 노드 기준으로 추가/병합합니다' : '소유자만 트리 파일을 가져올 수 있습니다'">
+                      📥 트리 파일로 추가/병합
+                  </button>
               </div>
               <div v-else-if="selectedMember && selectedMember.id === 'root'" class="mem-info-edit-row" style="margin-top:8px;">
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="showShareModal=true" :disabled="!currentIsOwner" :title="currentIsOwner ? '트리 전체를 함께 관리할 공동 관리자를 추가합니다 (본인의 다른 계정도 가능)' : '소유자만 공동 관리자를 추가할 수 있습니다'">
@@ -974,6 +1028,9 @@
               <div v-if="selectedMember && selectedMember.id !== 'root'" class="mem-info-edit-row" style="margin-top:8px;">
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
                       🌳 {{ selectedMember.name }} 서브 트리 공유
+                  </button>
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;margin-top:6px;" @click="openTreeMergeModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '다른 사람이 내보낸 트리 파일을 이 노드 기준으로 추가/병합합니다' : '소유자만 트리 파일을 가져올 수 있습니다'">
+                      📥 트리 파일로 추가/병합
                   </button>
               </div>
               <div v-else-if="selectedMember && selectedMember.id === 'root'" class="mem-info-edit-row" style="margin-top:8px;">

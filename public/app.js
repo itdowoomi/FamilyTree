@@ -194,6 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const showSubTreeShareModal = ref(false);
       const shareInput = reactive({ email: '', role: 'editor' });
       const subTreeShareInput = reactive({ email: '', role: 'editor', includeData: true });
+      // 다른 사람이 내보낸 트리 JSON 파일을 선택된 노드 아래에 추가하거나, 선택된 노드와 병합하는 기능
+      const showTreeMergeModal = ref(false);
+      const treeMergeInput = reactive({ mode: 'append', assignStatus: '', includeExtras: true, fileName: '', parsedData: null, rootName: '', memberCount: 0 });
       // 선택된 멤버의 서브트리 공유 정보 (우측 패널에 표시/관리용)
       const subTreeSharesForSelected = ref({ treeId: null, sharedEmails: [], sharePermissions: {}, primaryEmail: '' });
       const toast = reactive({ msg:'', type:'success', visible:false });
@@ -2932,6 +2935,122 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function importJSON(e){ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const d=JSON.parse(ev.target.result); if(!d.header||!d.members)throw new Error(); if(!confirm('현재 작업을 덮어쓸까요?'))return; restore(d); isDirty.value=false; showToastMsg('📥 불러오기 완료'); }catch{ showToastMsg('❌ 파일 형식 오류','error'); } }; reader.readAsText(file); e.target.value=''; }
 
+      // ── 다른 사람이 내보낸 트리(JSON) 파일을 선택된 노드 아래에 추가하거나, 선택된 노드(동일 인물)와 병합 ──
+      function openTreeMergeModal(){
+        if (!selectedMemberId.value || selectedMemberId.value === 'root') return showToastMsg('먼저 트리에서 노드를 선택하세요.', 'error');
+        treeMergeInput.mode = 'append';
+        treeMergeInput.assignStatus = '';
+        treeMergeInput.includeExtras = true;
+        treeMergeInput.fileName = '';
+        treeMergeInput.parsedData = null;
+        treeMergeInput.rootName = '';
+        treeMergeInput.memberCount = 0;
+        showTreeMergeModal.value = true;
+      }
+      function closeTreeMergeModal(){ showTreeMergeModal.value = false; }
+      function onTreeMergeFileSelected(e){
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const d = JSON.parse(ev.target.result);
+            if (!d.header || !Array.isArray(d.members) || !d.members.length) throw new Error('invalid');
+            const root = d.members.find(m => !m.parentId) || d.members[0];
+            treeMergeInput.parsedData = d;
+            treeMergeInput.fileName = file.name;
+            treeMergeInput.rootName = root ? root.name : '(이름 없음)';
+            treeMergeInput.memberCount = d.members.length;
+          } catch (err) {
+            showToastMsg('❌ 파일 형식을 읽을 수 없습니다. Family Tree에서 내보낸 JSON 파일인지 확인하세요.', 'error');
+            treeMergeInput.parsedData = null; treeMergeInput.fileName = ''; treeMergeInput.rootName = ''; treeMergeInput.memberCount = 0;
+          }
+        };
+        reader.readAsText(file);
+      }
+      function executeTreeMerge(){
+        const targetId = selectedMemberId.value;
+        const target = members.value.find(m => m.id === targetId);
+        const d = treeMergeInput.parsedData;
+        if (!target || !d) return showToastMsg('대상 노드 또는 불러올 파일이 없습니다.', 'error');
+        if (treeMergeInput.mode === 'append' && !treeMergeInput.assignStatus) {
+          return showToastMsg('가져온 인물에게 부여할 직급을 선택하세요.', 'error');
+        }
+        const modeLabel = treeMergeInput.mode === 'merge' ? `'${target.name}' 님과 병합` : `'${target.name}' 님 아래에 추가`;
+        if (!confirm(`'${treeMergeInput.rootName}' 트리(멤버 ${treeMergeInput.memberCount}명)를 ${modeLabel}하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+        // 1) 멤버 ID 재발급 (현재 트리와의 ID 충돌 방지)
+        const idMap = new Map();
+        const srcMembers = JSON.parse(JSON.stringify(d.members));
+        srcMembers.forEach(m => idMap.set(m.id, 'm' + Date.now() + Math.random().toString(36).slice(2, 8)));
+        const importedRootOldId = (srcMembers.find(m => !m.parentId) || srcMembers[0]).id;
+        const newRootId = idMap.get(importedRootOldId);
+
+        // 2) Recruit ID 재발급 (포함 옵션 켠 경우만)
+        const recruitIdMap = new Map();
+        const srcRecruits = treeMergeInput.includeExtras ? JSON.parse(JSON.stringify(d.recruits || [])) : [];
+        srcRecruits.forEach(r => recruitIdMap.set(r.id, 'r' + Date.now() + Math.random().toString(36).slice(2, 8)));
+
+        const remapped = srcMembers.map(m => {
+          const nm = {
+            mergedPeople: [], trainingDone: [], history: [], interactionHistory: [],
+            disposition: defaultDisposition(),
+            ...m,
+            id: idMap.get(m.id)
+          };
+          nm.parentId = m.parentId ? (idMap.get(m.parentId) || null) : null;
+          nm.recruitId = (m.recruitId && recruitIdMap.has(m.recruitId)) ? recruitIdMap.get(m.recruitId) : null;
+          return nm;
+        });
+        let remappedRecruits = srcRecruits.map(r => ({
+          ...r, id: recruitIdMap.get(r.id),
+          parentId: (r.parentId && idMap.has(r.parentId)) ? idMap.get(r.parentId) : target.id
+        }));
+
+        const importedRootNode = remapped.find(m => m.id === newRootId);
+
+        if (treeMergeInput.mode === 'append') {
+          // 새 자식 노드로 추가: 가져온 루트를 대상 노드 아래로 붙이고, root였던 상태를 실제 직급으로 교체
+          importedRootNode.parentId = target.id;
+          importedRootNode.status = treeMergeInput.assignStatus;
+          members.value = [...members.value, ...remapped];
+        } else {
+          // 병합: 대상 노드(id/parentId/status 유지)에 가져온 루트의 정보를 흡수하고, 하위 조직은 대상 노드 밑으로 편입
+          const oldName = importedRootNode.name;
+          ['email', 'memberCode', 'major', 'job', 'company', 'relation', 'birthDate', 'age', 'gender', 'photo'].forEach(k => {
+            if (!importedRootNode[k]) return;
+            if (k === 'photo' && target.photo) return; // 기존 사진이 있으면 유지
+            target[k] = importedRootNode[k];
+          });
+          const mergedHistory = (importedRootNode.history || []).map(h => ({ ...h, id: 'h' + Date.now() + Math.random().toString(36).slice(2, 7) }));
+          target.history = [...(target.history || []), ...mergedHistory];
+          const mergedInteractions = (importedRootNode.interactionHistory || []).map(h => ({ ...h, id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7) }));
+          const today = new Date();
+          const dstr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${String(today.getFullYear()).slice(2)}`;
+          target.interactionHistory = [...(target.interactionHistory || []), ...mergedInteractions,
+            { id: 'ih' + Date.now() + Math.random().toString(36).slice(2, 7), date: dstr, content: `🔗 '${oldName}' 님이 관리하던 트리 파일과 병합됨 (하위 ${remapped.length - 1}명 편입)` }];
+          if (importedRootNode.mergedPeople && importedRootNode.mergedPeople.length) {
+            const carried = importedRootNode.mergedPeople.map(p => ({ ...p, id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7) }));
+            target.mergedPeople = [...(target.mergedPeople || []), ...carried];
+          }
+          // 가져온 루트 자신은 대상 노드로 흡수되어 사라지고, 루트의 직속 자녀만 대상 노드 밑으로 재배치
+          const children = remapped.filter(m => m.id !== newRootId).map(m => m.parentId === newRootId ? { ...m, parentId: target.id } : m);
+          members.value = [...members.value, ...children];
+          // 가져온 루트가 흡수됐으므로, 그 루트를 가리키던 recruit 연결도 대상 노드 기준으로 정리
+          remappedRecruits = remappedRecruits.map(r => r.parentId === newRootId ? { ...r, parentId: target.id } : r);
+        }
+
+        if (treeMergeInput.includeExtras) {
+          if (remappedRecruits.length) recruits.value = [...recruits.value, ...remappedRecruits];
+          if (d.notes && d.notes.length) notes.value = [...notes.value, ...JSON.parse(JSON.stringify(d.notes)).filter(n => n && n.scope !== 'personal')];
+          if (d.appointments && d.appointments.length) appointments.value = [...appointments.value, ...JSON.parse(JSON.stringify(d.appointments))];
+        }
+
+        showToastMsg(`✅ '${treeMergeInput.rootName}' 트리를 ${treeMergeInput.mode === 'merge' ? '병합' : '추가'}했습니다.`);
+        showTreeMergeModal.value = false;
+      }
+
       function histInRange(h){
         if(!h.date) return true; const hTime = parseDateForSort(h.date); if(!hTime) return true;
         const startStr = header.periodStart; const endStr = header.periodEnd; if(!startStr && !endStr) return true;
@@ -3026,6 +3145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword, logout, fetchSavedTrees, createNewTree, loadTree, deleteTree, goToDashboard, saveToCloud,
         addShare, removeShare, changeShareRole, shareSubTree, openSubTreeShareModal, showSubTreeShareModal, subTreeShareInput,
         subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,
+        showTreeMergeModal, treeMergeInput, openTreeMergeModal, closeTreeMergeModal, onTreeMergeFileSelected, executeTreeMerge,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
         nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked, legendPanelWidth, legendPanelLocked,
