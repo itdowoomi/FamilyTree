@@ -1877,7 +1877,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="apt in tabUpcomingAppointments" :key="apt.id">
+              <tr v-for="apt in tabAllAppointmentsSorted" :key="apt.id">
                 <td>
                   <span class="appt-type-chip" :class="{meet: (apt.type||'이벤트')==='약속'}" style="transform:none;">{{ apt.type || '이벤트' }}</span>
                 </td>
@@ -1893,7 +1893,7 @@
                     @click="toggleApptConfirmed(apt)"
                     style="margin-right:3px;padding:2px 5px;"
                     :title="apt.confirmed ? '다시 디스플레이 패널에 표시합니다' : '확인 처리: 디스플레이 패널에서 숨깁니다'">{{ apt.confirmed ? '표시' : '확인' }}</button>
-                  <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:3px;padding:2px 5px;" title="완료 처리 - 참석자 히스토리에 기록됩니다">완료</button>
+                  <button class="btn-sm-primary" @click="completeAppointment(apt)" style="margin-right:3px;padding:2px 5px;" title="참석자(대상자+참석자 전원) 상담 기록으로 이관하고 목록에서 삭제합니다">📥 히스토리로 이관</button>
                   <button class="btn-sm-primary" @click="editAppointment(apt)" style="margin-right:3px;padding:2px 5px;">수정</button>
                   <button class="btn-sm-danger" @click="removeAppointment(apt.id)" style="padding:2px 5px;">삭제</button>
                 </td>
@@ -1901,7 +1901,7 @@
               </tr>
             </tbody>
           </table>
-          <div v-if="tabUpcomingAppointments.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">예정된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(과거 날짜의 약속은 자동으로 각 멤버의 히스토리로 이동됩니다.)</div>
+          <div v-if="tabAllAppointmentsSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">등록된 약속이 없습니다. 하단에서 새로운 약속을 추가하세요.<br>(날짜가 지나도 "📥 히스토리로 이관" 버튼을 누르기 전까지는 목록에 계속 표시됩니다.)</div>
         </div>
       </div>
 

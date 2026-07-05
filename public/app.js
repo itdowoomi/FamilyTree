@@ -1870,6 +1870,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return d >= today;
         }).sort((a,b) => new Date(a.date.replace(/[-./]/g, '/')) - new Date(b.date.replace(/[-./]/g, '/')));
       });
+      // 약속 관리 탭의 메인 목록: 날짜가 지나도 "히스토리로 이관" 하기 전까지는 계속 표시 (날짜 필터 없음)
+      const tabAllAppointmentsSorted = computed(() => {
+        return [...tabContext.value.appointments].sort((a,b) => new Date(a.date.replace(/[-./]/g, '/')) - new Date(b.date.replace(/[-./]/g, '/')));
+      });
       // 사이드바 디스플레이 패널에 보여줄 약속: 확인(confirmed)된 항목은 숨김
       const visibleSidebarAppointments = computed(() => {
         return tabUpcomingAppointments.value.filter(a => !a.confirmed);
@@ -2908,20 +2912,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           newAppt.attendees.push(name); newAppt.newAttendeeInput = '';
       }
-      function checkPastAppointments() {
-          const today = new Date(); today.setHours(0,0,0,0); let kept = []; let changed = false;
-          for(let apt of appointments.value) {
-              const aptDate = new Date(apt.date.replace(/[-./]/g, '/'));
-              if(aptDate < today) {
-                  const histDate = `${String(aptDate.getMonth()+1).padStart(2,'0')}/${String(aptDate.getDate()).padStart(2,'0')}/${String(aptDate.getFullYear()).slice(2)}`; const typeLabel = apt.type || '약속/행사';
-                  let extraBits = []; if(apt.time) extraBits.push(apt.endTime ? apt.time + '~' + apt.endTime : apt.time); if(apt.location) extraBits.push('@'+apt.location); const extraStr = extraBits.length ? ' ('+extraBits.join(' ')+')' : ''; const descStr = apt.description ? ' — ' + apt.description : ''; const content = `[${typeLabel}] ${apt.title}${extraStr}${descStr}`;
-                  if(apt.targetName) addHistoryToPerson(apt.targetName, histDate, content);
-                  apt.attendees.forEach(attName => addHistoryToPerson(attName, histDate, content));
-                  changed = true;
-              } else kept.push(apt);
-          }
-          if(changed) { appointments.value = kept; showToastMsg('지난 약속이 각 멤버 히스토리로 이관되었습니다.'); }
-      }
       function addHistoryToPerson(name, dateStr, content) {
           let m = members.value.find(x => x.name === name);
           if(m) { if(!m.interactionHistory) m.interactionHistory = []; m.interactionHistory.push({ id: 'ih'+Date.now()+Math.random(), date: dateStr, content: content }); m.interactionHistory = [...m.interactionHistory]; if(m.recruitId) { let r = recruits.value.find(x => x.id === m.recruitId); if(r) r.interactionHistory = [...m.interactionHistory]; } }
@@ -3213,7 +3203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
-        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
+        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabAllAppointmentsSorted, tabNotes,
         recruitPinColor, recruitPinTitle, togglePinForRecruit,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
