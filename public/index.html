@@ -602,8 +602,6 @@
     <div class="doc-header">
       <div class="doc-header-left">
         <button class="btn-back-dashboard" @click="goToDashboard">⬅️ 트리 목록으로</button>
-        <div>FD RUNNING PERIOD</div>
-        <div>{{ header.periodStart }} – {{ header.periodEnd }}</div>
         <div v-if="header.dd">DD <strong style="color:#fff">{{ header.dd }}</strong></div>
       </div>
       <div class="doc-header-center">
@@ -611,8 +609,8 @@
         <div class="doc-title">
           {{ rootMemberName || 'Tree Manager' }}
           <span style="font-size:13px;font-weight:400;opacity:.55">({{ rootDisplayCode }})</span>
+          <span v-if="rootMember && rootMember.status && rootMember.status!=='root'" class="doc-rank" style="margin-left:6px;vertical-align:middle;">{{ statusLabel(rootMember.status) }}</span>
         </div>
-        <div v-if="rootMember && rootMember.status && rootMember.status!=='root'" class="doc-rank">{{ statusLabel(rootMember.status) }}</div>
         <div class="upline-row" style="margin-top:4px">
           <div v-if="header.fd"  class="upline-chip"><span class="upline-label">FD</span> {{ header.fd }}</div>
           <div v-if="header.sfd" class="upline-chip"><span class="upline-label">SFD</span> {{ header.sfd }}</div>
@@ -620,7 +618,7 @@
         </div>
       </div>
       <div class="doc-header-right">
-        <div>As of {{ header.asOf || new Date().toLocaleDateString('ko-KR') }}</div>
+        <div style="white-space:nowrap;">{{ header.periodStart }} – {{ header.periodEnd }} <span style="opacity:.6;">· As of {{ header.asOf || new Date().toLocaleDateString('ko-KR') }}</span></div>
         <div class="save-status" :class="getSaveStatusClass()">
           <div class="save-dot"></div>
           <span>{{ getSaveStatusText() }}</span>
@@ -2163,7 +2161,7 @@
               화면 및 인쇄물에 범례 표시
             </label>
           </div>
-          <div v-if="legendConfig.show" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; border-top:1px solid var(--border); padding-top:10px; flex:1; overflow-y:auto; align-content:start;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; border-top:1px solid var(--border); padding-top:10px; flex:1; overflow-y:auto; align-content:start;">
             <div v-for="s in allStatuses" :key="s" style="display:flex;align-items:center;gap:6px;">
               <input type="checkbox" v-model="legendConfig.items[s].show" :id="'leg-'+s" style="accent-color:var(--navy);">
               <label :for="'leg-'+s" class="legend-box" :style="{background:nColor(s),borderColor:nStroke(s),cursor:'pointer',flexShrink:0}"></label>
