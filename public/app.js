@@ -2216,6 +2216,14 @@ document.addEventListener('DOMContentLoaded', () => {
       function nodeFrontPhoto(m){ if(!m) return ''; if(m.photo) return m.photo; const p=(m.mergedPeople||[]).find(x=>x.photo); return p?p.photo:''; }
       function nodeBackPhoto(m){ if(!m || !m.photo) return ''; const p=(m.mergedPeople||[]).find(x=>x.photo); return p?p.photo:''; }
       function nodePhotoCount(m){ return (nodeFrontPhoto(m)?1:0) + (nodeBackPhoto(m)?1:0); }
+      // 사진이 표기될 때 노드 상단(이름/뱃지) 영역의 높이 (확대된 원형 사진이 들어갈 공간을 확보)
+      function photoBandHeight(){ return Math.max(nodeFontSize.value + 14, 52); }
+      function nodeHeaderBand(m){
+        const base = nodeFontSize.value + 14;
+        if(!nodeDisplayConfig.value.showPhoto) return base;
+        if(!nodeFrontPhoto(m) && !nodeBackPhoto(m)) return base;
+        return photoBandHeight();
+      }
       function calcPeriod(dateStr,legacyPeriod){
         if(!dateStr) return legacyPeriod||''; let dStr = dateStr.trim(); if(dStr.length === 4 && !isNaN(dStr)) dStr += '-01'; 
         const p=dStr.split(/[-./]/); if(p.length<1) return legacyPeriod||'';
@@ -2240,7 +2248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       function nodeContentLines(m){
         const cfg = nodeDisplayConfig.value;
         const gap = nodeLineGap.value;
-        let y = nodeFontSize.value + 14; // 이름/뱃지 아래 구분선 위치와 동일
+        let y = nodeHeaderBand(m); // 이름/뱃지(또는 사진) 아래 구분선 위치와 동일
         const lines = [];
         const hasFin = cfg.showIssuePaid || cfg.showPending;
         if(hasFin){
@@ -2274,7 +2282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return lines;
       }
       function nodeH(m){
-        const base = Math.max(nodeBaseHeight.value, nodeFontSize.value + 14 + 10);
+        const base = Math.max(nodeBaseHeight.value, nodeHeaderBand(m) + 10);
         const lines = nodeContentLines(m);
         if(!lines.length) return base;
         return Math.max(base, lines[lines.length-1].y + 10);
@@ -3008,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', () => {
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
         teamTotal, selectedNodeTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
-        fmt, fmtS, parseDateForSort, calcAge, calcPeriod, onMemberPhotoSelected, removeMemberPhoto, nodeFrontPhoto, nodeBackPhoto, nodePhotoCount, sortedPointHistory, sortedInteractionHistory,
+        fmt, fmtS, parseDateForSort, calcAge, calcPeriod, onMemberPhotoSelected, removeMemberPhoto, nodeFrontPhoto, nodeBackPhoto, nodePhotoCount, photoBandHeight, nodeHeaderBand, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,

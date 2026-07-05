@@ -792,10 +792,10 @@
                  style="overflow:visible;display:block;shape-rendering:geometricPrecision;text-rendering:geometricPrecision">
               <defs>
                 <clipPath id="member-photo-clip-0">
-                  <circle :cx="nodeWidth-14" cy="13" r="11"/>
+                  <circle cx="26" :cy="photoBandHeight()/2" r="22"/>
                 </clipPath>
                 <clipPath id="member-photo-clip-1">
-                  <circle :cx="nodeWidth-30" cy="13" r="11"/>
+                  <circle cx="58" :cy="photoBandHeight()/2" r="22"/>
                 </clipPath>
               </defs>
               <g v-for="e in layout.edges" :key="'e-'+e.id">
@@ -807,21 +807,22 @@
                   :fill="nColor(m.status)" :stroke="selectedMemberId===m.id ? '#e74c3c' : nStroke(m.status)"
                   :stroke-width="selectedMemberId===m.id ? 3 : getRectStrokeWidth(m)"
                   :stroke-dasharray="getRectDash(m)"/>
-                <text class="node-name" :font-size="nodeFontSize+2"
-                  :x="nodeWidth/2" :y="nodeFontSize+8"
-                  text-anchor="middle" :fill="nTextColor(m.status)">{{ m.name }}</text>
-                <text v-if="nodeDisplayConfig.showRank && m.status&&m.status!=='root'" class="sa-badge-svg"
-                  :x="!nodeDisplayConfig.showPhoto ? nodeWidth-5 : (nodePhotoCount(m)>=2 ? nodeWidth-49 : (nodePhotoCount(m)===1 ? nodeWidth-33 : nodeWidth-5))" :y="nodeFontSize+7" text-anchor="end"
-                  :fill="nTextColor(m.status)" opacity="0.9" :font-size="nodeFontSize-1">{{ statusBadge(m.status) }}</text>
                 <template v-if="nodeDisplayConfig.showPhoto && nodeBackPhoto(m)">
-                  <circle :cx="nodeWidth-30" cy="13" r="11" fill="#fff" :stroke="nStroke(m.status)" stroke-width="1.5"/>
-                  <image :href="nodeBackPhoto(m)" :x="nodeWidth-41" y="2" width="22" height="22" clip-path="url(#member-photo-clip-1)" preserveAspectRatio="xMidYMid slice"/>
+                  <circle cx="58" :cy="photoBandHeight()/2" r="23" fill="#fff" :stroke="nStroke(m.status)" stroke-width="2"/>
+                  <image :href="nodeBackPhoto(m)" x="36" :y="photoBandHeight()/2-22" width="44" height="44" clip-path="url(#member-photo-clip-1)" preserveAspectRatio="xMidYMid slice"/>
                 </template>
                 <template v-if="nodeDisplayConfig.showPhoto && nodeFrontPhoto(m)">
-                  <circle :cx="nodeWidth-14" cy="13" r="12" fill="#fff" :stroke="nStroke(m.status)" stroke-width="1.5"/>
-                  <image :href="nodeFrontPhoto(m)" :x="nodeWidth-25" y="2" width="22" height="22" clip-path="url(#member-photo-clip-0)" preserveAspectRatio="xMidYMid slice"/>
+                  <circle cx="26" :cy="photoBandHeight()/2" r="24" fill="#fff" :stroke="nStroke(m.status)" stroke-width="2"/>
+                  <image :href="nodeFrontPhoto(m)" x="4" :y="photoBandHeight()/2-22" width="44" height="44" clip-path="url(#member-photo-clip-0)" preserveAspectRatio="xMidYMid slice"/>
                 </template>
-                <line :x1="6" :y1="nodeFontSize+14" :x2="nodeWidth-6" :y2="nodeFontSize+14"
+                <text class="node-name" :font-size="nodeFontSize+2"
+                  :x="nodeDisplayConfig.showPhoto && nodeFrontPhoto(m) ? 68 : nodeWidth/2"
+                  :y="nodeDisplayConfig.showPhoto && nodeFrontPhoto(m) ? nodeHeaderBand(m)/2+4 : nodeFontSize+8"
+                  :text-anchor="nodeDisplayConfig.showPhoto && nodeFrontPhoto(m) ? 'start' : 'middle'" :fill="nTextColor(m.status)">{{ m.name }}</text>
+                <text v-if="nodeDisplayConfig.showRank && m.status&&m.status!=='root'" class="sa-badge-svg"
+                  :x="nodeWidth-5" :y="nodeDisplayConfig.showPhoto && nodeFrontPhoto(m) ? nodeHeaderBand(m)/2+4 : nodeFontSize+7" text-anchor="end"
+                  :fill="nTextColor(m.status)" opacity="0.9" :font-size="nodeFontSize-1">{{ statusBadge(m.status) }}</text>
+                <line :x1="6" :y1="nodeHeaderBand(m)" :x2="nodeWidth-6" :y2="nodeHeaderBand(m)"
                   :stroke="nDivider(m.status)" stroke-width="0.8"/>
                 <template v-for="(lineObj,li) in nodeContentLines(m)" :key="li">
                   <line v-if="lineObj.variant==='divider'"
@@ -1999,7 +2000,7 @@
         <!-- 노드 표기 옵션: 트리 노드에 어떤 정보를 표시할지 체크박스로 선택 -->
         <div class="info-box" style="margin-top:12px;">
           <div class="info-box-title">🖼️ 노드 표기 옵션</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:12px;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px 8px;font-size:12px;">
             <label style="cursor:pointer;display:flex;align-items:center;gap:5px;">
               <input type="checkbox" v-model="nodeDisplayConfig.showRank" style="accent-color:var(--navy);"> 직급
             </label>
