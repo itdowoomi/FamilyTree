@@ -1583,6 +1583,7 @@
           <table class="member-table" style="font-size:12px;min-width:1150px;">
             <colgroup>
               <col style="width:110px">
+              <col style="width:40px">
               <col style="width:100px">
               <col style="width:90px">
               <col style="width:90px">
@@ -1600,6 +1601,7 @@
             <thead>
               <tr>
                 <th>이름</th>
+                <th style="text-align:center">Pin</th>
                 <th>작성자</th>
                 <th>전공</th>
                 <th>직업</th>
@@ -1618,6 +1620,7 @@
             <tbody v-for="r in tabRecruitsSorted" :key="r.id">
               <tr>
                 <td><input v-model.lazy="r.name" class="form-input" style="padding:2px 5px"></td>
+                <td style="text-align:center"><input type="checkbox" v-model="r.pinned" title="상단 고정" style="margin:0;cursor:pointer;"></td>
                 <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ r.createdBy || '-' }}</span></td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
                 <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>

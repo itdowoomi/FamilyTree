@@ -1791,7 +1791,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return all.sort((a, b) => parseDateForSort(b.date) - parseDateForSort(a.date)).slice(0, 10);
       });
-      const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>(b.score||0)-(a.score||0)));
+      const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>{
+        const pa = a.pinned ? 1 : 0, pb = b.pinned ? 1 : 0;
+        if(pa !== pb) return pb - pa; // 핀 고정된 항목을 최상단으로
+        return (b.score||0)-(a.score||0);
+      }));
       const tabNotes = computed(() => tabContext.value.notes || notes.value);
       const tabUpcomingAppointments = computed(() => {
         const today = new Date(); today.setHours(0,0,0,0);
@@ -2603,9 +2607,10 @@ document.addEventListener('DOMContentLoaded', () => {
           birthDate:newRecruit.birthDate,
           age:newRecruit.age,
           show:true,
-          interactionHistory:[], 
-          disposition: defaultDisposition(), 
-          createdBy, 
+          pinned:false,
+          interactionHistory:[],
+          disposition: defaultDisposition(),
+          createdBy,
           createdByEmail, 
           parentId,
           createdAt: now,
@@ -2826,7 +2831,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!('nfd' in header)) header.nfd = '';
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; const trainingDone = m.trainingDone || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople, trainingDone}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
-        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
+        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',pinned:false,...r, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         deletedAptIds.value = d.deletedAptIds || [];
         trainingTopics.value = d.trainingTopics || [];
