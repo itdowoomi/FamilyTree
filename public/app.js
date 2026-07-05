@@ -1915,6 +1915,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const pend = l.reduce((s,m)=> s + getMemberPendingScoped(m), 0);
         return { points, paid, pending:pend, total:paid+pend };
       });
+      // 사이드바 "합계" 박스: 트리에서 현재 선택/포커스된 노드(activeInfoMember) 한 명의 포인트/이슈페이드/펜딩/토탈
+      const selectedNodeTotal = computed(() => {
+        const m = activeInfoMember.value;
+        if(!m) return { points:0, paid:0, pending:0, total:0 };
+        return { points: mPtsSumScoped(m), paid: getMemberIssuePaidScoped(m), pending: getMemberPendingScoped(m), total: getRawMemberTotalScoped(m) };
+      });
 
       // ── 승급 기준 (Promotion Criteria) ──
       // STATUSES 배열 순서 = 직급 서열(선임→말단). 특정 상태의 "다음 승급 랭크"는 배열에서 바로 앞(더 상위) 항목.
@@ -1926,7 +1932,9 @@ document.addEventListener('DOMContentLoaded', () => {
       function ensurePromoCriteria(rank){
         if(!rank) return null;
         if(!promotionCriteria.value[rank]){
-          promotionCriteria.value = { ...promotionCriteria.value, [rank]: { requirements: [], points: 0 } };
+          promotionCriteria.value = { ...promotionCriteria.value, [rank]: { requirements: [], points: 0, customNote: '' } };
+        } else if(typeof promotionCriteria.value[rank].customNote !== 'string'){
+          promotionCriteria.value[rank].customNote = '';
         }
         return promotionCriteria.value[rank];
       }
@@ -1971,7 +1979,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = nextRankFor(m.status);
         if(!target) return { targetRank:null };
         const crit = promotionCriteria.value[target];
-        if(!crit || (!crit.requirements.length && !crit.points)) return { targetRank:target, noCriteria:true };
+        if(!crit || (!crit.requirements.length && !crit.points && !crit.customNote)) return { targetRank:target, noCriteria:true };
         const descendants = collectDescendants(m.id);
         const requirements = (crit.requirements||[]).map(r=>{
           const statuses = normalizeReqStatuses(r);
@@ -1984,6 +1992,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
           targetRank: target,
           requirements,
+          customNote: crit.customNote || '',
           points: { required: requiredPoints, actual: actualPoints, met: actualPoints>=requiredPoints, shortfall: Math.max(0, requiredPoints-actualPoints) }
         };
       });
@@ -2770,6 +2779,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if(crit && Array.isArray(crit.requirements)){
             crit.requirements = crit.requirements.map(r=> r.statuses ? r : { statuses: r.status?[r.status]:[], count:r.count });
           }
+          if(crit && typeof crit.customNote !== 'string') crit.customNote = '';
         });
         if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
       }
@@ -2895,7 +2905,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
-        teamTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
+        teamTotal, selectedNodeTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,

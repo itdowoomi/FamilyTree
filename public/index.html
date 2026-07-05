@@ -825,12 +825,36 @@
             </template>
           </div>
         </div>
-        <div class="financials" :style="{marginTop:getLegendMargin()}">
-          <div class="legend-title">전체 합계 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">{{ teamTotalScopeLabel }}</span></div>
-          <div class="fin-row"><span class="fin-label">Point</span><span class="fin-value">{{ fmt(teamTotal.points) }}</span></div>
-          <div class="fin-row"><span class="fin-label">Issue Paid</span><span class="fin-value">{{ fmt(teamTotal.paid) }}</span></div>
-          <div class="fin-row"><span class="fin-label">Pending</span><span class="fin-value">{{ fmt(teamTotal.pending) }}</span></div>
-          <div class="fin-row"><span class="fin-label fin-total">Total</span><span class="fin-value fin-total">{{ fmt(teamTotal.total) }}</span></div>
+
+        <!-- Next Promotion STEP: 트리에서 현재 선택/포커스된 노드의 다음 승급까지 필요한 조건 요약 -->
+        <div v-if="activeInfoMember" class="financials" :style="{marginTop:getLegendMargin()}">
+          <div class="legend-title">Next Promotion STEP</div>
+          <div v-if="!promotionProgress || !promotionProgress.targetRank" class="fin-row" style="font-size:10.5px;color:var(--muted);">{{ activeInfoMember.name }}: 다음 상위 직급 없음</div>
+          <div v-else-if="promotionProgress.noCriteria" class="fin-row" style="font-size:10.5px;color:var(--muted);">"{{ statusLabel(promotionProgress.targetRank) }}" 승급 기준 미설정</div>
+          <template v-else>
+            <div class="fin-row"><span class="fin-label" style="font-weight:700;color:var(--navy);">{{ activeInfoMember.name }} → {{ statusLabel(promotionProgress.targetRank) }}</span></div>
+            <div v-for="(r,ridx) in promotionProgress.requirements" :key="'nps'+ridx" class="fin-row">
+              <span class="fin-label">{{ r.label }}</span>
+              <span class="fin-value" :style="{color: r.met ? '#2d7a2d' : '#c0392b'}">{{ r.actual }}/{{ r.required }}</span>
+            </div>
+            <div v-if="promotionProgress.points && promotionProgress.points.required>0" class="fin-row">
+              <span class="fin-label">포인트</span>
+              <span class="fin-value" :style="{color: promotionProgress.points.met ? '#2d7a2d' : '#c0392b'}">{{ fmt(promotionProgress.points.actual) }}/{{ fmt(promotionProgress.points.required) }}</span>
+            </div>
+            <div v-if="promotionProgress.customNote" class="fin-row">
+              <span class="fin-label">기타 조건</span>
+              <span class="fin-value" style="color:var(--gold);">{{ promotionProgress.customNote }}</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- 합계: 트리에서 현재 선택/포커스된 노드 한 명의 포인트/이슈페이드/펜딩/토탈 -->
+        <div class="financials" :style="{marginTop: activeInfoMember ? '14px' : getLegendMargin()}">
+          <div class="legend-title">{{ activeInfoMember ? activeInfoMember.name + ' 합계' : '전체 합계' }} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">{{ teamTotalScopeLabel }}</span></div>
+          <div class="fin-row"><span class="fin-label">Point</span><span class="fin-value">{{ fmt(selectedNodeTotal.points) }}</span></div>
+          <div class="fin-row"><span class="fin-label">Issue Paid</span><span class="fin-value">{{ fmt(selectedNodeTotal.paid) }}</span></div>
+          <div class="fin-row"><span class="fin-label">Pending</span><span class="fin-value">{{ fmt(selectedNodeTotal.pending) }}</span></div>
+          <div class="fin-row"><span class="fin-label fin-total">Total</span><span class="fin-value fin-total">{{ fmt(selectedNodeTotal.total) }}</span></div>
         </div>
       </div>
 
@@ -1268,7 +1292,7 @@
               <col style="width:80px">
               <col style="width:40px">
               <col style="width:111px">
-              <col style="width:40px">
+              <col style="width:95px">
               <col style="width:110px">
               <col style="width:36px">
               <col style="width:36px">
@@ -2044,9 +2068,13 @@
                   <span>{{ r.label }} 하위 {{ r.actual }}/{{ r.required }}명</span>
                   <span :style="{color: r.met ? '#2d7a2d' : '#c0392b', fontWeight:700, fontSize:'10.5px'}">{{ r.met ? '✓ 충족' : ('부족 ' + r.shortfall + '명') }}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;" :style="promotionProgress.customNote ? 'border-bottom:1px dotted #e5e2dc;' : ''">
                   <span>포인트 (최근 {{ promotionWindowDays }}일) {{ fmt(promotionProgress.points.actual) }}/{{ fmt(promotionProgress.points.required) }}</span>
                   <span :style="{color: promotionProgress.points.met ? '#2d7a2d' : '#c0392b', fontWeight:700, fontSize:'10.5px'}">{{ promotionProgress.points.met ? '✓ 충족' : ('부족 ' + fmt(promotionProgress.points.shortfall)) }}</span>
+                </div>
+                <div v-if="promotionProgress.customNote" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
+                  <span>기타 조건</span>
+                  <span style="color:var(--gold);font-weight:700;font-size:10.5px;">{{ promotionProgress.customNote }}</span>
                 </div>
               </div>
             </template>
@@ -2083,6 +2111,11 @@
                 <label class="form-label">필요 포인트</label>
                 <input v-if="promotionCriteria[promoEditRank]" type="number" min="0" v-model.number="promotionCriteria[promoEditRank].points" class="form-input">
               </div>
+              <div class="form-row" style="margin-bottom:6px;">
+                <label class="form-label">기타 조건 (텍스트)</label>
+                <input v-if="promotionCriteria[promoEditRank]" type="text" v-model.lazy="promotionCriteria[promoEditRank].customNote" class="form-input" placeholder="예: 라이센스 취득">
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin:-4px 0 8px;">하위 조직 요건/포인트로 계산하기 어려운 조건(예: 본인의 라이센스 취득)은 텍스트로 입력해두면 "다음 승급까지"에 그대로 표기됩니다.</div>
               <div class="form-row" style="margin-bottom:0;">
                 <label class="form-label">포인트 집계 기간 (일)</label>
                 <input type="number" min="1" v-model.number="promotionWindowDays" class="form-input" style="max-width:100px;">
