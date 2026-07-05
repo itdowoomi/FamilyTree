@@ -144,7 +144,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .sa-badge-svg{font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 
 /* Sidebar */
-.sidebar{width:150px;border-left:1px solid var(--border);padding:11px 10px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;background:var(--cream);}
+.sidebar{width:175px;border-left:1px solid var(--border);padding:11px 10px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;background:var(--cream);}
 .sidebar-box{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:9px 10px;box-sizing:border-box;}
 .legend-title{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;word-break:keep-all;}
 .legend-items{display:flex;flex-direction:column;gap:4px;}
@@ -221,7 +221,7 @@ html,body{height:100%;overflow:hidden;background:var(--cream);}
 .member-table input.form-input,.member-table select.form-select{width:100%;padding:2px 4px;}
 
 /* ─── ADD FORM ─── */
-.add-form{width:460px;flex-shrink:0;align-self:stretch;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.add-form{width:460px;flex-shrink:0;align-self:stretch;background:var(--white);border-radius:6px;padding:10px;border:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0;}
 .add-form h4{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--navy);text-transform:uppercase;margin-bottom:9px;flex-shrink:0;}
 /* ─── SIDE HISTORY PANEL ─── */
 .side-hist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--navy);flex-shrink:0;}
@@ -385,9 +385,9 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 /* Appointment Registration Form */
 /* 창이 허용하면 더 넓어지고, 좁아져도 가로 스크롤 없이 줄어듦.
    basic(내용) 컬럼만 flex로 확장, 멤버/Recruit 컬럼은 고정 폭 유지. */
-.apt-form { flex: 0 0 auto; width: fit-content; min-width: 0; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow:hidden;}
+.apt-form { flex: 0 0 auto; width: fit-content; min-width: 0; background: var(--white); border-radius: 6px; padding: 9px 10px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow-y:auto; overflow-x:hidden;}
 .apt-form h4 { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--navy); text-transform: uppercase; margin-bottom: 7px; flex-shrink:0;}
-.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(187px, 1fr) 175px 175px; gap: 7px; min-height: 0; min-width: 0; }
+.apt-form-3col { flex:1; display: grid; grid-template-columns: minmax(187px, 1fr) 175px 175px; grid-template-rows: minmax(0,1fr); gap: 7px; min-height: 0; min-width: 0; }
 .apt-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 5px; overflow-y: auto; padding-right: 10px;}
 .apt-col.basic { gap: 5px; }
 .apt-type-switch{display:flex;gap:6px;align-items:center;padding:1px 0;}
@@ -421,9 +421,17 @@ input:disabled{background:#f0f0f0 !important;color:#aaa !important;cursor:not-al
 @page{margin:0;size:A4;}
 @media print{html,body{height:auto;overflow:visible;background:#fff;}}
 
-/* ─── 태블릿 대응 (예: 825×1318 세로 화면 등 좁은 화면) ─── */
+/* ─── 태블릿 대응 (예: 775~825×1318 세로 화면 등 좁은 화면) ─── */
+/* 주의: 각 패널(add-form/apt-form/info-col)은 데스크톱 폭을 기준으로 인라인 style에
+   고정 min-width를 갖고 있어, 인라인 스타일이 아래 클래스 규칙보다 우선 적용된다.
+   좁은 화면에서 실제로 줄어들도록 !important로 인라인 값을 무력화한다. */
 @media (max-width: 900px){
-  .add-form{ width:min(460px, 94vw); min-width:220px; }
+  .add-form{ width:min(460px, 94vw) !important; min-width:0 !important; flex-shrink:1 !important; }
+  /* 실적/교육 등 내부 고정 2단(250px+250~300px) 레이아웃을 갖는 패널은 더 넓은 폭이 필요함 */
+  .add-form.perf-2col-form{ width:min(600px, 96vw) !important; }
+  .apt-form{ width:100% !important; min-width:0 !important; }
+  .apt-form-3col{ grid-template-columns: minmax(140px,1fr) 128px 128px !important; }
+  .info-col{ min-width:0 !important; }
   .doc-header{ grid-template-columns: 1fr; text-align:center; row-gap:6px; padding:9px 12px 8px; }
   .doc-header-left{ align-items:center; }
   .doc-header-right{ align-items:center; }
