@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selectedSupportRequest = ref(null); // 현재 상세 보고 있는 tree 객체
 
       // ── App State ──
-      const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', periodEndAuto:false, asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
+      const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', periodEndAuto:false, asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dfd:'', nfd:'', efd:'HYEJEONG LEE' });
       const defaultDisposition = () => ({ relationScore: 15, friendScore: 7, market: 'S', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 30 });
       const defaultRoot = () => {
         // 로그인한 사용자 정보 기반으로 Root 멤버 생성 (하드코딩 개인정보 제거)
@@ -816,8 +816,9 @@ document.addEventListener('DOMContentLoaded', () => {
               rank: subRoot.status === 'root' ? header.rank : subRoot.status,
               fd: originalRoot ? originalRoot.name : header.fd,
               sfd: header.fd || header.sfd,
-              dd: header.sfd || header.dd,
-              efd: header.dd || header.efd
+              dfd: header.sfd || header.dfd,
+              nfd: header.dfd || header.nfd,
+              efd: header.nfd || header.efd
             };
 
             const updatedSubTreeData = {
@@ -1439,8 +1440,9 @@ document.addEventListener('DOMContentLoaded', () => {
             rank: subRoot.status === 'root' ? header.rank : subRoot.status,
             fd: originalRoot ? originalRoot.name : header.fd,
             sfd: header.fd || header.sfd,
-            dd: header.sfd || header.dd,
-            efd: header.dd || header.efd
+            dfd: header.sfd || header.dfd,
+            nfd: header.dfd || header.nfd,
+            efd: header.nfd || header.efd
           };
 
           const sharedTreeData = {
@@ -1630,7 +1632,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // "바로 위 상위가 FD가 아니라면 더 위로 올라가서 FD를 찾는다" 로직
       // 조상에 해당 직책이 없으면 트리의 header 값(= 최상위 소유자 기준)으로 대체.
       const selectedUpline = computed(() => {
-        const out = { fd: '', sfd: '', dd: '', efd: '' };
+        const out = { fd: '', sfd: '', dfd: '', nfd: '', efd: '' };
         const sid = selectedMemberId.value;
         if (!sid || sid === 'root') return out;
         const findNearest = (startId, status) => {
@@ -1645,7 +1647,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         out.fd  = findNearest(sid, 'FD')  || header.fd  || '';
         out.sfd = findNearest(sid, 'SFD') || header.sfd || '';
-        out.dd  = findNearest(sid, 'DD')  || header.dd  || '';
+        out.dfd = findNearest(sid, 'DFD') || header.dfd || '';
+        out.nfd = findNearest(sid, 'NFD') || header.nfd || '';
         out.efd = findNearest(sid, 'EFD') || header.efd || '';
         return out;
       });
@@ -1666,7 +1669,8 @@ document.addEventListener('DOMContentLoaded', () => {
           asOf: header.asOf || '',
           fd: up.fd,
           sfd: up.sfd,
-          dd: up.dd,
+          dfd: up.dfd,
+          nfd: up.nfd,
           efd: up.efd
         };
       });
@@ -1878,7 +1882,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const recruitNames = computed(() => recruits.value.map(r => r.name));
 
       const uplineMemberNames = computed(() => {
-          const names = [header.fd, header.sfd, header.dd, header.efd].map(n => (n || '').trim()).filter(Boolean);
+          const names = [header.fd, header.sfd, header.dfd, header.nfd, header.efd].map(n => (n || '').trim()).filter(Boolean);
           return [...new Set(names)].filter(n => !memberNames.value.includes(n));
       });
 
@@ -2631,7 +2635,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function getPersonTitle(name) {
           if (!name) return ''; const n = String(name).trim(); if (!n) return '';
-          if ((header.fd || '').trim() === n) return 'FD'; if ((header.sfd || '').trim() === n) return 'SFD'; if ((header.dd || '').trim() === n) return 'DD'; if ((header.efd || '').trim() === n) return 'EFD';
+          if ((header.fd || '').trim() === n) return 'FD'; if ((header.sfd || '').trim() === n) return 'SFD'; if ((header.dfd || '').trim() === n) return 'DFD'; if ((header.nfd || '').trim() === n) return 'NFD'; if ((header.efd || '').trim() === n) return 'EFD';
           const m = members.value.find(x => x.name === n); if (m) return m.status === 'root' ? '본인' : (m.status || ''); return '';
       }
       function apptPeopleList(apt) {
@@ -2799,6 +2803,9 @@ document.addEventListener('DOMContentLoaded', () => {
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
+        // 레거시 데이터 마이그레이션: 예전 필드명 'dd'(Division Director 오표기)를 'dfd'(District Field Director)로 이전
+        if(d.header && d.header.dd && !d.header.dfd){ header.dfd = d.header.dd; }
+        if(!('nfd' in header)) header.nfd = '';
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; const trainingDone = m.trainingDone || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople, trainingDone}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
         if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, interactionHistory: ih, disposition: disp}; });
@@ -2822,7 +2829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (printRootId.value !== '__actual_root__') {
             const subRoot = members.value.find(m => m.id === printRootId.value); if (!subRoot) return; const ids = new Set(); function col(id){ ids.add(id); members.value.filter(m=>m.parentId===id).forEach(m=>col(m.id)); } col(printRootId.value);
             const subMemberList = members.value.filter(m=>ids.has(m.id)).map(m=>m.id===printRootId.value ? {...m,parentId:null} : {...m}); const originalRoot = members.value.find(m=>!m.parentId);
-            const newHeader = {...header, id:'', rank:subRoot.status==='root'?'':subRoot.status, fd:originalRoot?originalRoot.name:header.fd, sfd:header.fd||header.sfd, dd:header.sfd||header.dd, efd:header.dd||header.efd};
+            const newHeader = {...header, id:'', rank:subRoot.status==='root'?'':subRoot.status, fd:originalRoot?originalRoot.name:header.fd, sfd:header.fd||header.sfd, dfd:header.sfd||header.dfd, nfd:header.dfd||header.nfd, efd:header.nfd||header.efd};
             const data = { header: newHeader, members: JSON.parse(JSON.stringify(subMemberList)), notes: JSON.parse(JSON.stringify(notes.value)), recruits: [], appointments: [], recruitPosition: recruitPosition.value, notesPosition: notesPosition.value, memberInfoPosition: memberInfoPosition.value, appointmentPosition: appointmentPosition.value, nodeWidth: nodeWidth.value, nodeBaseHeight: nodeBaseHeight.value, nodeFontSize: nodeFontSize.value, nodeLineGap: nodeLineGap.value, notePanelWidth: notePanelWidth.value, legendConfig: JSON.parse(JSON.stringify(legendConfig.value)), _subExportOf: originalRoot ? originalRoot.name : '', _subExportFrom: subRoot.name, _exportedAt: new Date().toLocaleString('ko-KR') };
             const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${subRoot.name.replace(/\s+/g,'_')}_subtree_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); showToastMsg(`📤 ${subRoot.name} 하위 그룹 내보내기 완료`);
         } else {
@@ -2832,7 +2839,7 @@ document.addEventListener('DOMContentLoaded', () => {
       function exportSubJSON(){
         if(!focusRootId.value){showToastMsg('포커스 모드에서만 사용 가능합니다','error');return;}
         const subRoot=members.value.find(m=>m.id===focusRootId.value); if(!subRoot)return; const subMemberList=focusedList.value.map(m=>m.id===focusRootId.value?{...m,parentId:null}:{...m}); const originalRoot=members.value.find(m=>!m.parentId);
-        const newHeader={...header,id:'',rank:subRoot.status==='root'?'':subRoot.status,fd:originalRoot?originalRoot.name:header.fd,sfd:header.fd||header.sfd,dd:header.sfd||header.dd,efd:header.dd||header.efd};
+        const newHeader={...header,id:'',rank:subRoot.status==='root'?'':subRoot.status,fd:originalRoot?originalRoot.name:header.fd,sfd:header.fd||header.sfd,dfd:header.sfd||header.dfd,nfd:header.dfd||header.nfd,efd:header.nfd||header.efd};
         const data={header:newHeader,members:JSON.parse(JSON.stringify(subMemberList)),notes:JSON.parse(JSON.stringify(notes.value)),recruits:[],appointments:[],recruitPosition:recruitPosition.value,notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value,nodeBaseHeight:nodeBaseHeight.value,nodeFontSize:nodeFontSize.value,nodeLineGap:nodeLineGap.value,notePanelWidth:notePanelWidth.value,legendConfig:JSON.parse(JSON.stringify(legendConfig.value)),_subExportOf:originalRoot?originalRoot.name:'',_subExportFrom:subRoot.name,_exportedAt:new Date().toLocaleString('ko-KR')};
         const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${subRoot.name.replace(/\s+/g,'_')}_subtree_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); showToastMsg(`📤 ${subRoot.name} 서브 내보내기 완료`);
       }
@@ -2851,7 +2858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sc={}; subMembers.forEach(m=>{sc[m.status]=(sc[m.status]||0)+1;}); const rm=rootMember.value, h=header;
         const printCodes=[h.id]; if(rm && rm.mergedPeople) rm.mergedPeople.forEach(p=>{ if(p.memberCode) printCodes.push(p.memberCode); });
         const printCodeStr = printCodes.filter(Boolean).join(', ');
-        const uplines=[]; if(h.fd)uplines.push(`<strong>FD</strong> ${h.fd}`); if(h.sfd)uplines.push(`<strong>SFD</strong> ${h.sfd}`); if(h.dd)uplines.push(`<strong>DD</strong> ${h.dd}`); if(h.efd)uplines.push(`<strong>EFD</strong> ${h.efd}`);
+        const uplines=[]; if(h.fd)uplines.push(`<strong>FD</strong> ${h.fd}`); if(h.sfd)uplines.push(`<strong>SFD</strong> ${h.sfd}`); if(h.dfd)uplines.push(`<strong>DFD</strong> ${h.dfd}`); if(h.nfd)uplines.push(`<strong>NFD</strong> ${h.nfd}`); if(h.efd)uplines.push(`<strong>EFD</strong> ${h.efd}`);
         let memberRows = ''; if (printIncludeMemberInfo.value) {
             memberRows=subMembers.map(m=>{
               const vis=(m.history||[]).filter(hh=>hh.show&&histInRange(hh)); if(!vis.length)return '';
