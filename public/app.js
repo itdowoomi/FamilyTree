@@ -94,6 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const header = reactive(defaultHeader());
+      // 기간 종료에 "today"를 입력하면 오늘 날짜로, 기간 시작은 자동으로 90일 전 날짜로 설정
+      function fmtMDY(d){ const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const yy=String(d.getFullYear()).slice(-2); return `${mm}/${dd}/${yy}`; }
+      watch(() => header.periodEnd, (val) => {
+        if(val && val.trim().toLowerCase() === 'today'){
+          const today = new Date();
+          const start = new Date(today.getTime() - 90*24*60*60*1000);
+          header.periodEnd = fmtMDY(today);
+          header.periodStart = fmtMDY(start);
+        }
+      });
       const members = ref([
         defaultRoot(),
         { id:'m1', recruitId: null, name:'김은숙', email:'', memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition(), trainingDone:[] }
@@ -2285,6 +2295,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       function openMergeModal() { mergeForm.sourceId = ''; mergeForm.targetId = ''; showMergeModal.value = true; }
       function closeMergeModal() { showMergeModal.value = false; }
+      // 배우자(합쳐진 인물)의 이메일을 트리 공동 관리자로 자동 등록 (이미 공유되어 있거나, 본인 계정이거나, 소유자가 아니면 건너뜀)
+      function autoShareEmailIfNeeded(rawEmail){
+        const email = (rawEmail || '').trim().toLowerCase();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+        if (currentUser.value && currentUser.value.email && email === currentUser.value.email.toLowerCase()) return;
+        const already = currentTreeMeta.value && (currentTreeMeta.value.sharedEmails || []).some(e => (e || '').toLowerCase() === email);
+        if (already) return;
+        if (!currentIsOwner.value) return; // 소유자만 공유 가능 (addShare 내부 정책과 동일)
+        addShare(email, 'editor').catch(err => console.warn('배우자 자동 공유 실패:', err));
+      }
+      // 배우자 통합 인물의 이메일 입력/수정 시(merge 이후에도) 자동으로 공동 관리자에 등록
+      function onMergedPersonEmailChange(p){ if(p && p.email) autoShareEmailIfNeeded(p.email); }
       function canMergeMembers(sourceId, targetId) {
         if (!sourceId || !targetId || sourceId === targetId) return false;
         const source = members.value.find(x => x.id === sourceId);
@@ -2375,18 +2397,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 13) 합쳐진 배우자의 이메일도 이 트리를 열람/관리할 수 있도록 자동 공유
         //     (배우자 통합된 경우, 두 사람 중 누구의 계정으로 로그인해도 같은 트리를 관리할 수 있어야 함)
-        const emailsToAutoShare = [...new Set(
-          [m.email, target.email, ...(m.mergedPeople || []).map(p => p.email), ...(target.mergedPeople || []).map(p => p.email)]
-            .map(e => (e || '').trim().toLowerCase())
-            .filter(e => e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))
-        )];
-        emailsToAutoShare.forEach(email => {
-          if (currentUser.value && currentUser.value.email && email === currentUser.value.email.toLowerCase()) return;
-          const already = currentTreeMeta.value && (currentTreeMeta.value.sharedEmails || []).some(e => (e || '').toLowerCase() === email);
-          if (already) return;
-          if (!currentIsOwner.value) return; // 소유자만 공유 가능 (addShare 내부 정책과 동일)
-          addShare(email, 'editor').catch(err => console.warn('배우자 자동 공유 실패:', err));
-        });
+        [m.email, target.email, ...(m.mergedPeople || []).map(p => p.email), ...(target.mergedPeople || []).map(p => p.email)]
+          .forEach(autoShareEmailIfNeeded);
 
         showToastMsg(`✅ '${oldName}' 님이 '${target.name}' 님과 합쳐졌습니다.`);
       }
@@ -2815,6 +2827,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(svgEl){ const clone=svgEl.cloneNode(true); clone.removeAttribute('width'); clone.removeAttribute('height'); clone.setAttribute('viewBox',`0 0 ${layout.value.totalWidth} ${layout.value.totalHeight}`); clone.style.cssText='width:100%;height:auto;display:block;'; svgHTML=clone.outerHTML; }
         const subMembers=members.value; const tt={paid:subMembers.reduce((s,m)=>s+getMemberIssuePaid(m),0),pending:subMembers.reduce((s,m)=>s+getMemberPending(m),0),total:subMembers.reduce((s,m)=>s+getMemberIssuePaid(m)+getMemberPending(m),0)};
         const sc={}; subMembers.forEach(m=>{sc[m.status]=(sc[m.status]||0)+1;}); const rm=rootMember.value, h=header;
+        const printCodes=[h.id]; if(rm && rm.mergedPeople) rm.mergedPeople.forEach(p=>{ if(p.memberCode) printCodes.push(p.memberCode); });
+        const printCodeStr = printCodes.filter(Boolean).join(', ');
         const uplines=[]; if(h.fd)uplines.push(`<strong>FD</strong> ${h.fd}`); if(h.sfd)uplines.push(`<strong>SFD</strong> ${h.sfd}`); if(h.dd)uplines.push(`<strong>DD</strong> ${h.dd}`); if(h.efd)uplines.push(`<strong>EFD</strong> ${h.efd}`);
         let memberRows = ''; if (printIncludeMemberInfo.value) {
             memberRows=subMembers.map(m=>{
@@ -2847,10 +2861,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let notesHTML=''; if (printIncludeNotes.value && notes.value.length) { notesHTML=notes.value.map((n,i)=>`<div class="pd-note-item"><span class="pd-note-num">${i+1}</span>${n.text}</div>`).join(''); }
         let filterLabel=''; if(h.periodStart || h.periodEnd) { filterLabel = `${h.periodStart||'시작'} ~ ${h.periodEnd||'계속'}`; }
         let legendHTML=''; if(legendConfig.value.show){ legendHTML=ALL_STATUSES.filter(s=>legendConfig.value.items[s].show && sc[s] > 0).map(s=>`<div class="pd-leg-item"><span class="pd-leg-box" style="background:${COLORS[s]}!important;border:1px solid ${STROKES[s]}!important"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${legendConfig.value.items[s].label}</span><span style="transform:scale(0.8);flex-shrink:0;">(${sc[s]})</span></div>`).join(''); }
-        let headerHTML=`<div class="pd-header"><div class="pd-header-left"><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;width:100%;">${legendHTML}</div></div><div class="pd-header-center"><div class="pd-name">${rm?rm.name:''} <span class="pd-id">(${h.id})</span></div>`;
+        let headerHTML=`<div class="pd-header"><div class="pd-header-left"><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;width:100%;">${legendHTML}</div></div><div class="pd-header-center"><div class="pd-name">${rm?rm.name:''} <span class="pd-id">(${printCodeStr})</span></div>`;
         if(rm && rm.status && rm.status!=='root')headerHTML+=`<div style="display:inline-block;margin:1px 0 2px 0;background:#1c2b4a;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;letter-spacing:1px">${statusLabel(rm.status)}</div>`;
         if(uplines.length)headerHTML+=`<div class="pd-upline">${uplines.join('&nbsp;|&nbsp;')}</div>`;
-        headerHTML+=`<div style="margin-top:3px;font-size:8px;color:#555;"><strong>PERIOD:</strong> ${h.periodStart} – ${h.periodEnd}</div></div><div class="pd-header-right"><div class="pd-date">As of ${h.asOf}</div><div class="pd-fin-row"><span class="pd-fin-label">Issue Paid</span><span class="pd-fin-val">${fmt(tt.paid)}</span></div><div class="pd-fin-row"><span class="pd-fin-label">Pending</span><span class="pd-fin-val">${fmt(tt.pending)}</span></div><div class="pd-fin-row pd-fin-total"><span>Total</span><span class="pd-fin-val">${fmt(tt.total)}</span></div></div></div>`;
+        headerHTML+=`<div style="margin-top:3px;font-size:8px;color:#555;"><strong>PERIOD:</strong> ${h.periodStart} – ${h.periodEnd}</div></div><div class="pd-header-right"><div class="pd-date">As of ${h.asOf || new Date().toLocaleDateString('ko-KR')}</div><div class="pd-fin-row"><span class="pd-fin-label">Issue Paid</span><span class="pd-fin-val">${fmt(tt.paid)}</span></div><div class="pd-fin-row"><span class="pd-fin-label">Pending</span><span class="pd-fin-val">${fmt(tt.pending)}</span></div><div class="pd-fin-row pd-fin-total"><span>Total</span><span class="pd-fin-val">${fmt(tt.total)}</span></div></div></div>`;
         let sideColHTML = ''; if (memberRows || recruitsHTML || appointmentsHTML || notesHTML) {
             sideColHTML += `<div class="pd-side-col">`;
             if(memberRows) sideColHTML += `<div class="pd-hist-section"><div class="pd-hist-section-title">📋 멤버 히스토리<span class="pd-hist-filter-label">${filterLabel}</span></div><div class="pd-hist-grid">${memberRows}</div></div>`;
@@ -2913,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,
         nodeDisplayConfig, promotionCriteria, promotionWindowDays, promoEditRank, newPromoReq, addPromoRequirement, removePromoRequirement, setPromoPoints, promotionProgress, nextRankFor,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
-        showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal,
+        showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal, onMergedPersonEmailChange,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,

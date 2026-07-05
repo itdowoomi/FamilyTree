@@ -329,7 +329,7 @@ html,body{height:100%;height:100dvh;overflow:hidden;background:var(--cream);}
 .mem-info-inline .mem-score-val{color:var(--gold);font-weight:700;}
 .mem-info-inline .mem-info-email{color:var(--navy);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.2px;}
 .mem-info-inline .mem-info-email:hover{text-decoration:underline;color:var(--navy-light);}
-.mem-info-edit-row{display:flex;align-items:center;gap:6px;margin-top:5px;padding:3px 0;}
+.mem-info-edit-row{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-top:5px;padding:3px 0;}
 .mem-info-edit-label{font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.3px;flex-shrink:0;min-width:50px;}
 .mem-info-edit-input{flex:1;font-size:10.5px;font-family:'JetBrains Mono',monospace;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:var(--text);}
 .mem-info-edit-input:focus{outline:none;border-color:var(--navy);}

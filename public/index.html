@@ -1940,7 +1940,11 @@
               </select>
             </div>
             <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
-            <div class="form-row"><label class="form-label">기간 종료</label><input v-model="header.periodEnd" class="form-input"></div>
+            <div class="form-row">
+              <label class="form-label">기간 종료</label>
+              <input v-model="header.periodEnd" class="form-input">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px;">예: "today" 입력 시 오늘 날짜로 설정되고, 기간 시작은 자동으로 90일 전으로 채워집니다.</div>
+            </div>
             <div class="form-row">
               <label class="form-label">전체 합계 표기 기준</label>
               <select v-model="pointSumMode" class="form-select">
@@ -2046,7 +2050,9 @@
           <div class="info-box-title">👤 {{ p.name || ('합쳐진 멤버 ' + (pi+2)) }} 님의 기본 정보 <span style="font-size:10px;color:#6b2d8a;font-weight:700;margin-left:6px;">🔗 배우자 통합 인물 {{ pi+2 }}</span></div>
           <div class="grid4">
             <div class="form-row grid4-half"><label class="form-label">이름</label><input v-model="p.name" class="form-input"></div>
-            <div class="form-row grid4-half"><label class="form-label">이메일</label><input type="email" v-model="p.email" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;"></div>
+            <div class="form-row grid4-half"><label class="form-label">이메일</label><input type="email" v-model="p.email" @change="onMergedPersonEmailChange(p)" class="form-input" placeholder="example@gmail.com" style="font-family:'JetBrains Mono',monospace;">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px;">배우자 통합 인물의 이메일을 입력하면 자동으로 공동 관리자에 등록되어 같은 트리를 함께 관리할 수 있습니다.</div>
+            </div>
             <div class="form-row"><label class="form-label">회원 ID</label><input v-model="p.memberCode" class="form-input" placeholder="예: SCA12345"></div>
             <div class="form-row"><label class="form-label">성별</label>
               <select v-model="p.gender" class="form-select"><option value="남">남</option><option value="여">여</option></select>
