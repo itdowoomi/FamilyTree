@@ -188,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const memberInfoPosition = ref('right');
       const appointmentPosition = ref('none');
       const tab = ref('memberInfo');
+      // 트리 데이터 용량(Firestore 문서 1개당 1MB 제한 대비 추정치) 확인
+      const treeSizeInfo = ref({ bytes: 0, checkedAt: null });
       const showShareModal = ref(false);
       const showSubTreeShareModal = ref(false);
       const shareInput = reactive({ email: '', role: 'editor' });
@@ -2865,6 +2867,24 @@ document.addEventListener('DOMContentLoaded', () => {
       function onNodeClick(m){ selectedMemberId.value = m.id; if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; } }
       function getRecruitMeta(r){ const ageStr=r.age?`${r.age}세`:''; return [r.major, r.job, r.company, r.relation,ageStr,calcPeriod(r.meetDate,r.period),r.gender].filter(Boolean).join(' | '); }
       function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendPanelWidth:legendPanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)), nodeDisplayConfig:JSON.parse(JSON.stringify(nodeDisplayConfig.value)), promotionCriteria:JSON.parse(JSON.stringify(promotionCriteria.value)), promotionWindowDays:promotionWindowDays.value }; }
+      // 현재 트리 데이터의 실제 저장 용량(UTF-8 바이트)을 측정. Firestore 문서 1개당 1MB(1,048,576바이트) 제한 대비 추정치로 사용.
+      function checkTreeSize(){
+        try {
+          const bytes = new TextEncoder().encode(JSON.stringify(snapshot())).length;
+          treeSizeInfo.value = { bytes, checkedAt: new Date() };
+        } catch (e) { console.error('[checkTreeSize] failed', e); }
+      }
+      const treeSizeKB = computed(() => (treeSizeInfo.value.bytes / 1024).toFixed(1));
+      const treeSizeLimitKB = 1024; // Firestore 문서 1개 제한 1MB = 1024KB
+      const treeSizePercent = computed(() => Math.min(100, (treeSizeInfo.value.bytes / (treeSizeLimitKB * 1024)) * 100));
+      const treeSizeLevel = computed(() => {
+        const p = treeSizePercent.value;
+        if (p >= 90) return 'danger';
+        if (p >= 70) return 'warn';
+        return 'ok';
+      });
+      // 기본 정보 탭으로 이동할 때마다 최신 용량으로 갱신 (매 입력마다 재계산하면 무거우므로 탭 전환/저장 시점에만 계산)
+      watch(tab, (v) => { if (v === 'header') checkTreeSize(); });
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
@@ -2890,6 +2910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
         if(header.periodEndAuto) applyAutoPeriodEnd(); // 저장된 값이 지난 날짜일 수 있으므로, 불러올 때마다 오늘 기준으로 재계산
+        checkTreeSize();
       }
       function exportJSON(){ 
         if (printRootId.value !== '__actual_root__') {
@@ -3017,6 +3038,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
         teamTotal, selectedNodeTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
         fmt, fmtS, parseDateForSort, calcAge, calcPeriod, onMemberPhotoSelected, removeMemberPhoto, nodeFrontPhoto, nodeBackPhoto, nodePhotoCount, photoBandHeight, nodeHeaderBand, sortedPointHistory, sortedInteractionHistory,
+        treeSizeInfo, treeSizeKB, treeSizeLimitKB, treeSizePercent, treeSizeLevel, checkTreeSize,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,

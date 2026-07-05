@@ -2125,6 +2125,26 @@
             <div class="form-row"><label class="form-label">나이</label><input type="number" v-model.number="p.age" class="form-input"></div>
           </div>
         </div>
+
+        <!-- 트리 데이터 용량 확인: Firestore 문서 1개(트리 1개)당 1MB 제한 대비 현재 사용량 추정치 -->
+        <div class="info-box" style="margin-top:12px;">
+          <div class="info-box-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span>💾 트리 데이터 용량</span>
+            <button class="btn btn-primary" style="font-size:10px;padding:3px 8px;" @click="checkTreeSize()">🔄 새로고침</button>
+          </div>
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+              <span>{{ treeSizeKB }} KB / {{ treeSizeLimitKB }} KB</span>
+              <span :style="{color: treeSizeLevel==='danger' ? '#c0392b' : (treeSizeLevel==='warn' ? '#b8860b' : '#2d7a2d'), fontWeight:700}">{{ treeSizePercent.toFixed(1) }}%</span>
+            </div>
+            <div style="width:100%;height:8px;background:#eef0f4;border-radius:4px;overflow:hidden;">
+              <div :style="{width: treeSizePercent + '%', height:'100%', background: treeSizeLevel==='danger' ? '#c0392b' : (treeSizeLevel==='warn' ? '#d4a017' : '#2d7a2d')}"></div>
+            </div>
+            <div v-if="treeSizeLevel==='danger'" style="font-size:10px;color:#c0392b;margin-top:6px;font-weight:600;">⚠️ 저장 용량 한계에 근접했습니다. 사진이 있는 멤버를 줄이거나 관리자에게 문의하세요.</div>
+            <div v-else-if="treeSizeLevel==='warn'" style="font-size:10px;color:#b8860b;margin-top:6px;">사진·이력 데이터가 계속 늘어나면 저장 용량 제한(1MB)에 다가갈 수 있습니다.</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:6px;">Firestore 문서 1개(트리 1개)당 1MB 제한 기준 추정치입니다.<template v-if="treeSizeInfo.checkedAt"> · 마지막 확인: {{ treeSizeInfo.checkedAt.toLocaleTimeString('ko-KR') }}</template></div>
+          </div>
+        </div>
        </div>
       </div>
 
