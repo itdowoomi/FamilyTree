@@ -129,9 +129,12 @@
         <div style="font-weight: 700; font-size: 14px;">새로운 트리 만들기</div>
       </div>
 
-      <div v-for="tree in savedTrees" :key="tree.id" class="tree-card" @click="loadTree(tree)">
-        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}</div>
+      <div v-for="tree in savedTrees" :key="tree.id" class="tree-card" :class="{'tree-card-shared': tree._coManaged}" @click="loadTree(tree)">
+        <div class="tree-card-title">{{ tree.name || '제목 없는 트리' }}
+          <span v-if="tree._coManaged" class="tree-card-role-chip">공동관리</span>
+        </div>
         <div class="tree-card-meta">
+          <span v-if="tree._coManaged">소유자: {{ tree.ownerEmail || '—' }}</span>
           <span>마지막 수정: {{ tree.updatedAt }}</span>
           <span>총 멤버 수: {{ tree.memberCount }}명</span>
           <span v-if="tree.sharedEmails && tree.sharedEmails.length" class="tree-card-shared-chip">🔗 {{ tree.sharedEmails.length }}명 공유중</span>
@@ -153,7 +156,7 @@
             </button>
           </template>
         </div>
-        <button class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
+        <button v-if="tree._owned" class="btn-delete-tree" @click.stop="deleteTree(tree.id, tree.name)" title="이 트리 삭제하기">✕</button>
       </div>
     </div>
 

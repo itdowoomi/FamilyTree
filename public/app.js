@@ -520,9 +520,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const email = (currentUser.value.email || '').toLowerCase();
           if (email) {
             const sharedSnap = await getDocs(query(col, where('sharedEmails', 'array-contains', email)));
-            sharedTrees.value = sharedSnap.docs
+            const sharedDocs = sharedSnap.docs
               .map(d => ({ id: d.id, ...d.data(), _owned: false }))
-              .filter(t => t.ownerId !== currentUser.value.uid)
+              .filter(t => t.ownerId !== currentUser.value.uid);
+            // 편집(공동 관리자) 권한으로 공유받은 트리는 "공유받은 트리"가 아니라 "내 트리 목록"에 표시
+            const coManaged = sharedDocs
+              .filter(t => (((t.sharePermissions || {})[email]) || {}).role === 'editor')
+              .map(t => ({ ...t, _coManaged: true }));
+            const viewOnly = sharedDocs
+              .filter(t => (((t.sharePermissions || {})[email]) || {}).role !== 'editor');
+            savedTrees.value = [...savedTrees.value, ...coManaged]
+              .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+            sharedTrees.value = viewOnly
               .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
           } else {
             sharedTrees.value = [];
