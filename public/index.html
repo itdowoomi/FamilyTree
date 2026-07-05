@@ -1694,7 +1694,10 @@
             <tbody v-for="r in tabRecruitsSorted" :key="r.id">
               <tr>
                 <td><input v-model.lazy="r.name" class="form-input" style="padding:2px 5px"></td>
-                <td style="text-align:center"><input type="checkbox" v-model="r.pinned" title="상단 고정" style="margin:0;cursor:pointer;"></td>
+                <td style="text-align:center">
+                  <button type="button" @click="togglePinForRecruit(r)" :title="recruitPinTitle(r)"
+                    :style="{width:'18px',height:'18px',border:'2px solid ' + (recruitPinColor(r) || '#ccc'),borderRadius:'4px',background:recruitPinColor(r) || '#fff',cursor:'pointer',padding:0}"></button>
+                </td>
                 <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ r.createdBy || '-' }}</span></td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
                 <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>

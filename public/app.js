@@ -1797,9 +1797,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return all.sort((a, b) => parseDateForSort(b.date) - parseDateForSort(a.date)).slice(0, 10);
       });
+      // ── Recruit 핀: 부부(배우자 통합) 팀이 각자 로그인해서 "내가 아는 사람"을 체크 ──
+      // 한 사람만 체크하면 그 사람 고유 색(파랑/초록), 둘 다 체크하면 빨강(둘 다 아는 사람).
+      // 정렬 우선순위는 지금 로그인한 사람 기준으로 "내 색"이 "상대 색"보다 위에 오도록 계산.
+      function recruitOwnerCoupleEmails(r){
+        const owner = members.value.find(m => m.id === r.parentId);
+        if(!owner) return { primary: '', secondary: '' };
+        const primary = (owner.email || '').toLowerCase();
+        const secondaryPerson = (owner.mergedPeople || [])[0];
+        const secondary = secondaryPerson ? (secondaryPerson.email || '').toLowerCase() : '';
+        return { primary, secondary };
+      }
+      function recruitPinState(r){
+        const pinnedBy = (r.pinnedBy || []).map(e => (e || '').toLowerCase()).filter(Boolean);
+        if(!pinnedBy.length) return 'none';
+        const { primary, secondary } = recruitOwnerCoupleEmails(r);
+        const hasPrimary = primary && pinnedBy.includes(primary);
+        const hasSecondary = secondary && pinnedBy.includes(secondary);
+        if(pinnedBy.length >= 2 || (hasPrimary && hasSecondary)) return 'red';
+        if(hasPrimary) return 'blue';
+        if(hasSecondary) return 'green';
+        return 'blue'; // 커플 이메일과 매칭되지 않는 다른 공동 관리자가 체크한 경우의 기본값
+      }
+      function recruitPinColor(r){
+        const state = recruitPinState(r);
+        if(state==='red') return '#e74c3c';
+        if(state==='green') return '#27ae60';
+        if(state==='blue') return '#2d6cdf';
+        return '';
+      }
+      function recruitPinMyColor(r){
+        const myEmail = ((currentUser.value && currentUser.value.email) || '').toLowerCase();
+        if(!myEmail) return '';
+        const { primary, secondary } = recruitOwnerCoupleEmails(r);
+        if(myEmail === primary) return 'blue';
+        if(myEmail === secondary) return 'green';
+        return '';
+      }
+      function recruitPinTitle(r){
+        const state = recruitPinState(r);
+        if(state==='none') return '클릭하면 내가 아는 사람으로 표시';
+        if(state==='red') return '둘 다 아는 사람';
+        const myColor = recruitPinMyColor(r);
+        if(myColor && state===myColor) return '나만 아는 사람';
+        return '상대방만 아는 사람';
+      }
+      function togglePinForRecruit(r){
+        const email = ((currentUser.value && currentUser.value.email) || '').toLowerCase();
+        if(!email) return;
+        const list = new Set((r.pinnedBy || []).map(e => (e || '').toLowerCase()).filter(Boolean));
+        if(list.has(email)) list.delete(email); else list.add(email);
+        r.pinnedBy = Array.from(list);
+      }
+      function recruitPinPriority(r){
+        const state = recruitPinState(r);
+        if(state==='none') return 0;
+        if(state==='red') return 3;
+        const myColor = recruitPinMyColor(r);
+        if(myColor && state===myColor) return 2; // 지금 로그인한 사람의 색이 상대방 색보다 위
+        return 1;
+      }
       const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>{
-        const pa = a.pinned ? 1 : 0, pb = b.pinned ? 1 : 0;
-        if(pa !== pb) return pb - pa; // 핀 고정된 항목을 최상단으로
+        const pa = recruitPinPriority(a), pb = recruitPinPriority(b);
+        if(pa !== pb) return pb - pa; // 핀 고정된 항목을 최상단으로 (빨강 > 내 색 > 상대 색 > 없음)
         return (b.score||0)-(a.score||0);
       }));
       const tabNotes = computed(() => tabContext.value.notes || notes.value);
@@ -2654,7 +2714,7 @@ document.addEventListener('DOMContentLoaded', () => {
           birthDate:newRecruit.birthDate,
           age:newRecruit.age,
           show:true,
-          pinned:false,
+          pinnedBy:[],
           interactionHistory:[],
           disposition: defaultDisposition(),
           createdBy,
@@ -2896,7 +2956,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!('nfd' in header)) header.nfd = '';
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; const trainingDone = m.trainingDone || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople, trainingDone}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
-        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',pinned:false,...r, interactionHistory: ih, disposition: disp}; });
+        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); let pinnedBy = Array.isArray(r.pinnedBy) ? r.pinnedBy : []; if(!pinnedBy.length && r.pinned){ const fallback = (currentUser.value && currentUser.value.email) || r.createdByEmail || ''; if(fallback) pinnedBy = [fallback]; } return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, pinnedBy, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         deletedAptIds.value = d.deletedAptIds || [];
         trainingTopics.value = d.trainingTopics || [];
@@ -3154,6 +3214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabNotes,
+        recruitPinColor, recruitPinTitle, togglePinForRecruit,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
         teamTotal, selectedNodeTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
