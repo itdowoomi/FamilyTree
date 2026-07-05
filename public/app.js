@@ -251,7 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showHistory: true,
         historyCount: 3,
         showIssuePaidHistory: false,
-        issuePaidHistoryCount: 3
+        issuePaidHistoryCount: 3,
+        showPhoto: false
       });
 
       // 승급 기준 설정: { [rank]: { requirements:[{statuses:[status,...],count}], points:Number } }
@@ -2184,6 +2185,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const today=new Date(); let age=today.getFullYear()-b.getFullYear();
         const mo=today.getMonth()-b.getMonth(); if(mo<0||(mo===0&&today.getDate()<b.getDate())) age--; return age>=0?age:0;
       }
+      // 멤버 사진 업로드: 파일을 정사각형으로 크롭 후 축소하여 base64로 저장 (Firestore 문서 용량 절약 + 원형 노드 표시에 최적)
+      function onMemberPhotoSelected(m, e){
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if(!m || !file) return;
+        if(!file.type.startsWith('image/')) { showToastMsg('이미지 파일만 업로드할 수 있습니다.', 'error'); return; }
+        if(file.size > 8*1024*1024){ showToastMsg('이미지 용량이 너무 큽니다 (8MB 이하로 선택해 주세요).', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const SIZE = 240;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE; canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+            const side = Math.min(img.width, img.height);
+            const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+            ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+            m.photo = canvas.toDataURL('image/jpeg', 0.82);
+            showToastMsg('📷 사진이 등록되었습니다.');
+          };
+          img.onerror = () => showToastMsg('이미지를 불러올 수 없습니다.', 'error');
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+      function removeMemberPhoto(m){ if(m) m.photo = ''; }
+      // 부부(배우자 통합) 노드의 사진 2장 표기: 본인 사진을 앞쪽, 배우자(mergedPeople 중 사진이 있는 첫 인물) 사진을 뒤쪽에 겹쳐 표시
+      function nodeFrontPhoto(m){ if(!m) return ''; if(m.photo) return m.photo; const p=(m.mergedPeople||[]).find(x=>x.photo); return p?p.photo:''; }
+      function nodeBackPhoto(m){ if(!m || !m.photo) return ''; const p=(m.mergedPeople||[]).find(x=>x.photo); return p?p.photo:''; }
+      function nodePhotoCount(m){ return (nodeFrontPhoto(m)?1:0) + (nodeBackPhoto(m)?1:0); }
       function calcPeriod(dateStr,legacyPeriod){
         if(!dateStr) return legacyPeriod||''; let dStr = dateStr.trim(); if(dStr.length === 4 && !isNaN(dStr)) dStr += '-01'; 
         const p=dStr.split(/[-./]/); if(p.length<1) return legacyPeriod||'';
@@ -2386,13 +2418,15 @@ document.addEventListener('DOMContentLoaded', () => {
           id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7),
           name: oldName, email: m.email || '', memberCode: m.memberCode || '',
           major: m.major || '', job: m.job || '', company: m.company || '',
-          relation: m.relation || '', birthDate: m.birthDate || '', age: m.age || '', gender: m.gender || '남'
+          relation: m.relation || '', birthDate: m.birthDate || '', age: m.age || '', gender: m.gender || '남',
+          photo: m.photo || ''
         };
         // 이미 합쳐져 있던 멤버(m)를 또 합치는 경우, m이 가지고 있던 사람들도 함께 승계
         target.mergedPeople = [...target.mergedPeople, ownPerson, ...(m.mergedPeople || [])];
 
-        // 3) 이메일 보존 (상위 멤버에 이메일이 없을 때만 승계)
+        // 3) 이메일/사진 보존 (상위 멤버에 값이 없을 때만 승계)
         if (!target.email && m.email) target.email = m.email;
+        if (!target.photo && m.photo) target.photo = m.photo;
 
         // 4) 하위 멤버 전체를 상위 멤버 밑으로 재배치 (서브 노드가 고스란히 따라 올라감)
         members.value.forEach(x => { if (x.parentId === m.id) x.parentId = target.id; });
@@ -2974,7 +3008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
         teamTotal, selectedNodeTotal, pointSumMode, pointSumYear, teamTotalScopeLabel, statusCounts, layout, panTransform, previewPageStyle, previewFrameStyle,
-        fmt, fmtS, parseDateForSort, calcAge, calcPeriod, sortedPointHistory, sortedInteractionHistory,
+        fmt, fmtS, parseDateForSort, calcAge, calcPeriod, onMemberPhotoSelected, removeMemberPhoto, nodeFrontPhoto, nodeBackPhoto, nodePhotoCount, sortedPointHistory, sortedInteractionHistory,
         getMemberIssuePaid, getMemberPending, mPtsSum, getMemberTotal, getIncomePercent, fmtApptDateShort, getPointHistPct,
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,
