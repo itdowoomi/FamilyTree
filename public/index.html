@@ -812,7 +812,7 @@
         </div>
       </div>
 
-      <div class="sidebar">
+      <div class="sidebar" :style="{width:legendPanelWidth+'px'}">
         <div v-if="legendConfig.show" class="sidebar-box">
           <div class="legend-title">Legend</div>
           <div class="legend-items">
@@ -828,7 +828,7 @@
 
         <!-- Next Promotion STEP: 트리에서 현재 선택/포커스된 노드의 다음 승급까지 필요한 조건 요약 -->
         <div v-if="activeInfoMember" class="financials sidebar-box" :style="{marginTop:getLegendMargin()}">
-          <div class="legend-title">Next Promotion STEP</div>
+          <div class="legend-title">Next Promotion</div>
           <div v-if="!promotionProgress || !promotionProgress.targetRank" class="fin-row" style="font-size:10.5px;color:var(--muted);">{{ activeInfoMember.name }}: 다음 상위 직급 없음</div>
           <div v-else-if="promotionProgress.noCriteria" class="fin-row" style="font-size:10.5px;color:var(--muted);">"{{ statusLabel(promotionProgress.targetRank) }}" 승급 기준 미설정</div>
           <template v-else>
@@ -1055,6 +1055,13 @@
           <input type="range" class="width-slider" v-model.number="notePanelWidth" min="120" max="400" step="5" :disabled="notePanelLocked">
           <input type="number" class="width-num" v-model.number="notePanelWidth" min="120" max="400" :disabled="notePanelLocked">
           <button class="lock-btn" @click="notePanelLocked=!notePanelLocked">L</button>
+        </div>
+        <div class="tab-actions-sep"></div>
+        <div class="width-ctrl" :class="{locked:legendPanelLocked}">
+          <span class="width-ctrl-label">레전드 폭</span>
+          <input type="range" class="width-slider" v-model.number="legendPanelWidth" min="120" max="320" step="5" :disabled="legendPanelLocked">
+          <input type="number" class="width-num" v-model.number="legendPanelWidth" min="120" max="320" :disabled="legendPanelLocked">
+          <button class="lock-btn" @click="legendPanelLocked=!legendPanelLocked">L</button>
         </div>
       </div>
     </div>

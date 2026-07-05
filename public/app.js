@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const nodeWidth = ref(155), nodeBaseHeight = ref(58), nodeFontSize = ref(10), nodeLineGap = ref(11);
       const widthLocked = ref(false), heightLocked = ref(false), fontLocked = ref(false), lineGapLocked = ref(false);
       const notePanelWidth = ref(210), notePanelLocked = ref(false);
+      const legendPanelWidth = ref(175), legendPanelLocked = ref(false);
       const zoomLevel = ref(1), panX = ref(0), panY = ref(0);
       let isPanning = false, panStartX = 0, panStartY = 0, panStartPX = 0, panStartPY = 0;
       const legendConfig = ref({ show:true, items:{} });
@@ -2761,7 +2762,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function onNodeClick(m){ selectedMemberId.value = m.id; if(memberInfoPosition.value === 'none') { memberInfoPosition.value = 'right'; } }
       function getRecruitMeta(r){ const ageStr=r.age?`${r.age}세`:''; return [r.major, r.job, r.company, r.relation,ageStr,calcPeriod(r.meetDate,r.period),r.gender].filter(Boolean).join(' | '); }
-      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)), nodeDisplayConfig:JSON.parse(JSON.stringify(nodeDisplayConfig.value)), promotionCriteria:JSON.parse(JSON.stringify(promotionCriteria.value)), promotionWindowDays:promotionWindowDays.value }; }
+      function snapshot(){ return { header:{...header}, members:JSON.parse(JSON.stringify(members.value)), notes:JSON.parse(JSON.stringify(notes.value)), recruits:JSON.parse(JSON.stringify(recruits.value)), appointments:JSON.parse(JSON.stringify(appointments.value)), deletedAptIds:JSON.parse(JSON.stringify(deletedAptIds.value)), trainingTopics:JSON.parse(JSON.stringify(trainingTopics.value)), recruitPosition:recruitPosition.value, notesPosition:notesPosition.value, memberInfoPosition:memberInfoPosition.value, appointmentPosition:appointmentPosition.value, nodeWidth:nodeWidth.value, nodeBaseHeight:nodeBaseHeight.value, nodeFontSize:nodeFontSize.value, nodeLineGap:nodeLineGap.value, notePanelWidth:notePanelWidth.value, legendPanelWidth:legendPanelWidth.value, legendConfig:JSON.parse(JSON.stringify(legendConfig.value)), nodeDisplayConfig:JSON.parse(JSON.stringify(nodeDisplayConfig.value)), promotionCriteria:JSON.parse(JSON.stringify(promotionCriteria.value)), promotionWindowDays:promotionWindowDays.value }; }
       function migrateHistory(h){ if(!h.type) h.type='History'; if(h.type==='Point') h.type='History'; if(h.amount===undefined){ if(h.type==='Issue Paid'||h.type==='Pending'){ h.amount=h.point||0; h.point=0; } else h.amount=0; } if(h.point===undefined) h.point=0; return h; }
       function restore(d){
         clearFocus(); Object.assign(header,d.header);
@@ -2771,7 +2772,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         deletedAptIds.value = d.deletedAptIds || [];
         trainingTopics.value = d.trainingTopics || [];
-        if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth;
+        if(d.recruitPosition) recruitPosition.value=d.recruitPosition; if(d.notesPosition) notesPosition.value=d.notesPosition; if(d.memberInfoPosition) memberInfoPosition.value=d.memberInfoPosition; if(d.appointmentPosition) appointmentPosition.value=d.appointmentPosition; if(d.nodeWidth) nodeWidth.value=d.nodeWidth; if(d.nodeBaseHeight) nodeBaseHeight.value=d.nodeBaseHeight; if(d.nodeFontSize) nodeFontSize.value=d.nodeFontSize; if(d.nodeLineGap) nodeLineGap.value=d.nodeLineGap; if(d.notePanelWidth) notePanelWidth.value=d.notePanelWidth; if(d.legendPanelWidth) legendPanelWidth.value=d.legendPanelWidth;
         if(d.legendConfig&&d.legendConfig.items){ legendConfig.value.show=d.legendConfig.show; for(let k in d.legendConfig.items){ if(legendConfig.value.items[k]) legendConfig.value.items[k]=d.legendConfig.items[k]; } }
         if(d.nodeDisplayConfig) nodeDisplayConfig.value = { ...nodeDisplayConfig.value, ...d.nodeDisplayConfig };
         promotionCriteria.value = d.promotionCriteria || {};
@@ -2873,7 +2874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSubTreeForSelectedMember();
       });
 
-      watch([header,members,notes,recruits,appointments,deletedAptIds,trainingTopics,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendConfig,nodeDisplayConfig,promotionCriteria,promotionWindowDays],()=>{
+      watch([header,members,notes,recruits,appointments,deletedAptIds,trainingTopics,recruitPosition,notesPosition,memberInfoPosition,appointmentPosition,nodeWidth,nodeBaseHeight,nodeFontSize,nodeLineGap,notePanelWidth,legendPanelWidth,legendConfig,nodeDisplayConfig,promotionCriteria,promotionWindowDays],()=>{
         if (applyingRemote) return;
         if (currentIsReadOnly.value) return;
         if(!isDashboard.value) {
@@ -2897,7 +2898,7 @@ document.addEventListener('DOMContentLoaded', () => {
         subTreeSharesForSelected, selectedMemberEffectiveEmail, removeSubTreeSharee, setSubTreeShareePrimary,
         header, members, notes, appointments, notesPosition, recruitPosition, memberInfoPosition, appointmentPosition, tab,
         toast, showPreview, isDirty, lastAutoSave, slots, showShareModal, shareInput, focusRootId, zoomLevel, panX, panY,
-        nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked,
+        nodeWidth, nodeBaseHeight, nodeFontSize, nodeLineGap, widthLocked, heightLocked, fontLocked, lineGapLocked, notePanelWidth, notePanelLocked, legendPanelWidth, legendPanelLocked,
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedTrainingId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
