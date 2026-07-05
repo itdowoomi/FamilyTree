@@ -1927,7 +1927,7 @@
         <div class="info-box">
           <div class="info-box-title">📄 문서 기본 정보</div>
           <div class="grid4">
-            <div class="form-row grid4-full"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
+            <!-- 1행: 직급(1/4) · 문서 타이틀(2/4) · 기준일(As of, 1/4) -->
             <div class="form-row">
               <label class="form-label">직급</label>
               <select v-if="selectedIsRootView && rootMember" v-model="rootMember.status" class="form-select">
@@ -1939,11 +1939,20 @@
                 <option v-for="s in availableStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
               </select>
             </div>
+            <div class="form-row grid4-half"><label class="form-label">문서 타이틀</label><input v-model="header.title" class="form-input" placeholder="예: 2026 Q2 네트워크 현황"></div>
+            <div class="form-row">
+              <label class="form-label">기준일 (As of)</label>
+              <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')" title="기준일은 비워두면 오늘이 됩니다. 출력 시 자료 제작 기준을 보기 위해 사용합니다.">
+            </div>
+            <!-- 2행: 기간 시작(1/4) · 기간 종료(1/4) · 전체 합계 표기 기준(1/4) · 집계 연도(1/4, 연도 합계일 때만) -->
             <div class="form-row"><label class="form-label">기간 시작</label><input v-model="header.periodStart" class="form-input"></div>
             <div class="form-row">
               <label class="form-label">기간 종료</label>
-              <input v-model="header.periodEnd" class="form-input">
-              <div style="font-size:10px;color:var(--muted);margin-top:3px;">예: "today" 입력 시 오늘 날짜로 설정되고, 기간 시작은 자동으로 90일 전으로 채워집니다.</div>
+              <input v-model="header.periodEnd" class="form-input" :disabled="header.periodEndAuto" title="예: 'today' 입력 시 오늘 날짜로 설정되고, 기간 시작은 자동으로 90일 전으로 채워집니다.">
+              <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-top:4px;cursor:pointer;">
+                <input type="checkbox" v-model="header.periodEndAuto" style="accent-color:var(--navy);margin:0;">
+                항상 오늘로 자동 설정
+              </label>
             </div>
             <div class="form-row">
               <label class="form-label">전체 합계 표기 기준</label>
@@ -1953,15 +1962,9 @@
                 <option value="all">전체 합계</option>
               </select>
             </div>
-            <div v-if="pointSumMode==='year'" class="form-row grid4-full">
-              <label class="form-label">집계 연도 (직접 입력 가능)</label>
-              <input type="number" v-model.number="pointSumYear" class="form-input" style="max-width:140px;" placeholder="예: 2026">
-              <div style="font-size:11px;color:var(--muted);margin-top:3px;">기본값은 올해입니다. 12월/1월 등 연도 경계에 걸친 실적은 연도를 직접 입력해 조회할 수 있습니다.</div>
-            </div>
-            <div class="form-row grid4-full">
-              <label class="form-label">기준일 (As of)</label>
-              <input v-model="header.asOf" class="form-input" :placeholder="new Date().toLocaleDateString('ko-KR')">
-              <div style="font-size:11px;color:var(--muted);margin-top:3px;grid-column:1/-1;">기준일은 비워두면 오늘이 됩니다. 출력시 자료 제작 기준을 보기 위해 사용합니다.</div>
+            <div v-if="pointSumMode==='year'" class="form-row">
+              <label class="form-label">집계 연도</label>
+              <input type="number" v-model.number="pointSumYear" class="form-input" placeholder="예: 2026" title="기본값은 올해입니다. 12월/1월 등 연도 경계에 걸친 실적은 연도를 직접 입력해 조회할 수 있습니다.">
             </div>
           </div>
         </div>

@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selectedSupportRequest = ref(null); // 현재 상세 보고 있는 tree 객체
 
       // ── App State ──
-      const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
+      const defaultHeader = () => ({ title:'FD RUNNING CHART', id:'SCA87396', rank:'New(Code-in)', periodStart:'04/01/26', periodEnd:'06/30/26', periodEndAuto:false, asOf:'03/06/2026', fd:'ESTHER YI', sfd:'PETER AND JEAN', dd:'', efd:'HYEJEONG LEE' });
       const defaultDisposition = () => ({ relationScore: 15, friendScore: 7, market: 'S', married: false, child: false, house: false, income: false, ambition: false, dissatisfied: false, pma: false, entrepreneur: false, prejudice: 30 });
       const defaultRoot = () => {
         // 로그인한 사용자 정보 기반으로 Root 멤버 생성 (하드코딩 개인정보 제거)
@@ -98,12 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
       function fmtMDY(d){ const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const yy=String(d.getFullYear()).slice(-2); return `${mm}/${dd}/${yy}`; }
       watch(() => header.periodEnd, (val) => {
         if(val && val.trim().toLowerCase() === 'today'){
-          const today = new Date();
-          const start = new Date(today.getTime() - 90*24*60*60*1000);
-          header.periodEnd = fmtMDY(today);
-          header.periodStart = fmtMDY(start);
+          applyAutoPeriodEnd();
         }
       });
+      // 기간 종료를 "항상 오늘 날짜"로 고정하는 옵션: 기간 시작은 그 기준으로 90일 전으로 함께 갱신됨
+      function applyAutoPeriodEnd(){
+        const today = new Date();
+        const start = new Date(today.getTime() - 90*24*60*60*1000);
+        header.periodEnd = fmtMDY(today);
+        header.periodStart = fmtMDY(start);
+      }
+      watch(() => header.periodEndAuto, (v) => { if(v) applyAutoPeriodEnd(); });
       const members = ref([
         defaultRoot(),
         { id:'m1', recruitId: null, name:'김은숙', email:'', memberCode:'', mergedPeople:[], major:'', job:'', company:'', status:'SA', parentId:'root', history:[], interactionHistory:[], issuePaid:0, pending:0, score:0, relation:'', age:'', meetDate:'', gender:'여', birthDate:'', disposition: defaultDisposition(), trainingDone:[] }
@@ -2307,6 +2312,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // 배우자 통합 인물의 이메일 입력/수정 시(merge 이후에도) 자동으로 공동 관리자에 등록
       function onMergedPersonEmailChange(p){ if(p && p.email) autoShareEmailIfNeeded(p.email); }
+      // 트리를 열 때마다(또는 데이터가 바뀔 때마다) 이미 입력되어 있는 배우자 통합 인물들의 이메일을
+      // 전부 훑어서 아직 공동 관리자로 등록되지 않았다면 등록한다. (이전에 이메일을 미리 입력해 둔 기존 트리도 소급 적용)
+      function syncAllMergedEmails(){
+        if (!currentIsOwner.value || !currentTreeMeta.value) return;
+        members.value.forEach(m => { (m.mergedPeople || []).forEach(p => { if (p.email) autoShareEmailIfNeeded(p.email); }); });
+      }
+      watch(currentTreeMeta, (v) => { if (v) syncAllMergedEmails(); });
       function canMergeMembers(sourceId, targetId) {
         if (!sourceId || !targetId || sourceId === targetId) return false;
         const source = members.value.find(x => x.id === sourceId);
@@ -2795,6 +2807,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if(crit && typeof crit.customNote !== 'string') crit.customNote = '';
         });
         if(d.promotionWindowDays) promotionWindowDays.value = d.promotionWindowDays;
+        if(header.periodEndAuto) applyAutoPeriodEnd(); // 저장된 값이 지난 날짜일 수 있으므로, 불러올 때마다 오늘 기준으로 재계산
       }
       function exportJSON(){ 
         if (printRootId.value !== '__actual_root__') {
