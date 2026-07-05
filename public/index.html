@@ -1296,7 +1296,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="h in sideHistMember.history" :key="h.id">
+                <tr v-for="h in sortedPointHistory(sideHistMember)" :key="h.id">
                   <td style="text-align:center"><input type="checkbox" class="show-check" v-model="h.show"></td>
                   <td><input class="history-date-input" style="width:100%;" v-model.lazy="h.date" placeholder="MM/DD/YY" @change="sideHistMember.history=[...sideHistMember.history]"></td>
                   <td>
@@ -1552,7 +1552,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="ih in sideInteractionMember.interactionHistory" :key="ih.id">
+                <tr v-for="ih in sortedInteractionHistory(sideInteractionMember)" :key="ih.id">
                   <td><input class="history-date-input" style="width:100%;" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onMemberInteractionChange(sideInteractionMember)"></td>
                   <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onMemberInteractionChange(sideInteractionMember)"></td>
                   <td style="text-align:center"><button class="btn-sm-danger" @click="removeInteractionItem(sideInteractionMember.id, ih.id)">✕</button></td>
@@ -1811,7 +1811,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="ih in r.interactionHistory" :key="ih.id">
+                        <tr v-for="ih in sortedInteractionHistory(r)" :key="ih.id">
                           <td><input class="history-date-input" v-model.lazy="ih.date" placeholder="MM/DD/YY" @change="onRecruitInteractionChange(r)"></td>
                           <td><input class="history-content-input" v-model.lazy="ih.content" placeholder="내용 입력" @change="onRecruitInteractionChange(r)"></td>
                           <td style="text-align:center"><button class="btn-sm-danger" @click="removeRecruitInteractionItem(r.id,ih.id)">✕</button></td>
