@@ -715,6 +715,18 @@
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
               </div>
+              <div v-else-if="selectedMember && selectedMember.id === 'root'" class="mem-info-edit-row" style="margin-top:8px;">
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="showShareModal=true" :disabled="!currentIsOwner" :title="currentIsOwner ? '트리 전체를 함께 관리할 공동 관리자를 추가합니다 (본인의 다른 계정도 가능)' : '소유자만 공동 관리자를 추가할 수 있습니다'">
+                      🤝 공동 관리자 추가
+                  </button>
+                  <div v-if="currentTreeMeta && currentTreeMeta.sharedEmails && currentTreeMeta.sharedEmails.length" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🤝 공동 관리자 ({{ currentTreeMeta.sharedEmails.length }})</div>
+                    <div v-for="em in currentTreeMeta.sharedEmails" :key="em" style="font-size:10.5px;color:var(--text);padding:2px 0;display:flex;justify-content:space-between;gap:6px;">
+                      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ em }}</span>
+                      <span style="color:var(--muted);flex-shrink:0;">{{ ((currentTreeMeta.sharePermissions||{})[em]||{}).role === 'viewer' ? '보기' : '편집' }}</span>
+                    </div>
+                  </div>
+              </div>
               <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
                   <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
                   <div v-for="em in subTreeSharesForSelected.sharedEmails" :key="em" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0;font-size:11px;">
@@ -940,6 +952,18 @@
                   <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="openSubTreeShareModal()" :disabled="!currentIsOwner" :title="currentIsOwner ? '이 멤버 이하의 서브 트리를 공유합니다' : '소유자만 서브 트리를 공유할 수 있습니다'">
                       🌳 {{ selectedMember.name }} 서브 트리 공유
                   </button>
+              </div>
+              <div v-else-if="selectedMember && selectedMember.id === 'root'" class="mem-info-edit-row" style="margin-top:8px;">
+                  <button class="btn btn-primary" style="width:100%;font-size:11px;padding:5px 10px;" @click="showShareModal=true" :disabled="!currentIsOwner" :title="currentIsOwner ? '트리 전체를 함께 관리할 공동 관리자를 추가합니다 (본인의 다른 계정도 가능)' : '소유자만 공동 관리자를 추가할 수 있습니다'">
+                      🤝 공동 관리자 추가
+                  </button>
+                  <div v-if="currentTreeMeta && currentTreeMeta.sharedEmails && currentTreeMeta.sharedEmails.length" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🤝 공동 관리자 ({{ currentTreeMeta.sharedEmails.length }})</div>
+                    <div v-for="em in currentTreeMeta.sharedEmails" :key="em" style="font-size:10.5px;color:var(--text);padding:2px 0;display:flex;justify-content:space-between;gap:6px;">
+                      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ em }}</span>
+                      <span style="color:var(--muted);flex-shrink:0;">{{ ((currentTreeMeta.sharePermissions||{})[em]||{}).role === 'viewer' ? '보기' : '편집' }}</span>
+                    </div>
+                  </div>
               </div>
               <div v-if="selectedMember && selectedMember.id !== 'root' && subTreeSharesForSelected.sharedEmails.length" class="subtree-share-list" style="margin-top:6px;background:#fafbfc;border:1px solid #e5e7ec;border-radius:6px;padding:6px 8px;">
                   <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🔗 공유받은 사람</div>
@@ -1723,19 +1747,21 @@
         </div>
       </div>
         <div class="add-form" style="width:230px;">
-        <h4>+ Recruit 추가</h4>
-        <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
-        <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
-          <select v-model="newRecruit.parentId" class="form-select">
-            <option value="">— 기본: 작성자 —</option>
-            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
+        <h4 style="flex-shrink:0;">+ Recruit 추가</h4>
+        <div style="overflow-y:auto;flex:1;min-height:0;padding-right:2px;">
+          <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
+          <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
+            <select v-model="newRecruit.parentId" class="form-select">
+              <option value="">— 기본: 작성자 —</option>
+              <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+          </div>
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><label class="form-label">직장</label><input v-model="newRecruit.company" class="form-input" placeholder="예: 삼성전자"></div>
+            <div><label class="form-label">관계</label><input v-model="newRecruit.relation" class="form-input" placeholder="예: 친구"></div>
+          </div>
+          <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
         </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div><label class="form-label">직장</label><input v-model="newRecruit.company" class="form-input" placeholder="예: 삼성전자"></div>
-          <div><label class="form-label">관계</label><input v-model="newRecruit.relation" class="form-input" placeholder="예: 친구"></div>
-        </div>
-        <button class="btn btn-gold" style="width:100%" @click="addRecruit()">추가</button>
       </div>
     </div>
 
@@ -2181,8 +2207,8 @@
         </div>
       </div>
       <div class="add-form" style="width: 30%; min-width: 280px; max-width: 500px; display: flex; flex-direction: column;">
-        <h4>+ 메모 추가</h4>
-        <div class="form-row">
+        <h4 style="flex-shrink:0;">+ 메모 추가</h4>
+        <div class="form-row" style="flex-shrink:0;">
           <label class="form-label">공개 범위</label>
           <div style="display:flex;gap:10px;font-size:12px;flex-wrap:wrap;">
             <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
@@ -2199,8 +2225,10 @@
             </label>
           </div>
         </div>
-        <div class="form-row" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><label class="form-label">내용</label><textarea v-model="newNote.text" class="form-textarea" style="flex: 1; resize: none;" rows="3" placeholder="액션 아이템 입력" @keydown.ctrl.enter="addNote()"></textarea></div>
-        <button class="btn btn-primary" style="margin-top: 6px;" @click="addNote()">추가</button>
+        <div style="flex:1;display:flex;flex-direction:column;min-height:60px;overflow-y:auto;padding-right:2px;">
+          <div class="form-row" style="flex: 1; display: flex; flex-direction: column; min-height:80px;"><label class="form-label">내용</label><textarea v-model="newNote.text" class="form-textarea" style="flex: 1; resize: none;" rows="3" placeholder="액션 아이템 입력" @keydown.ctrl.enter="addNote()"></textarea></div>
+          <button class="btn btn-primary" style="margin-top: 6px;flex-shrink:0;" @click="addNote()">추가</button>
+        </div>
       </div>
     </div>
 

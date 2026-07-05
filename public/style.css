@@ -6,8 +6,12 @@
   --border:#d6d2c8;--muted:#8a8680;
   --text:#1a1917;--danger:#c0392b;
 }
-html,body{height:100%;overflow:hidden;background:var(--cream);}
-#app{display:flex;flex-direction:column;height:100vh;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
+html,body{height:100%;height:100dvh;overflow:hidden;background:var(--cream);}
+/* 100vh는 모바일/태블릿 브라우저에서 주소창·하단 내비게이션 바가 표시/숨김될 때
+   실제 보이는 영역과 어긋나, 화면 맨 아래쪽 콘텐츠(버튼 등)가 브라우저 UI에 가려
+   스크롤을 끝까지 내려도 보이지 않는 원인이 된다. dvh(동적 뷰포트 높이)를 지원하는
+   브라우저에서는 이를 정확히 반영하도록 fallback으로 함께 지정한다. */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
 
 /* ─── OVERLAYS (LOGIN & DASHBOARD) ─── */
 .full-overlay { position: fixed; inset: 0; background: var(--cream); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
