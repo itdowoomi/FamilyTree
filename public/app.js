@@ -1945,11 +1945,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(m.mergedPeople && m.mergedPeople.length) return (m.name||'').split(',')[0].trim();
         return m.name || '';
       }
-      // 상위 멤버 선택용: 부부인 경우 두 사람을 각각의 옵션으로 분리해서 보여준다.
+      // 상위 멤버 선택용: 포커스 여부와 상관없이 트리의 모든 멤버 중에서 고를 수 있어야 하며,
+      // 부부(배우자 통합)인 경우 두 사람을 각각의 옵션으로 분리해서 보여준다.
       // (트리 상의 소속 멤버는 동일 - memberId. 개인 이름은 Recruit 작성자 표기에 사용)
       const parentPersonOptions = computed(() => {
         const list = [];
-        for(const m of currentMembers.value){
+        for(const m of members.value){
           if(m.mergedPeople && m.mergedPeople.length){
             list.push({ key: m.id+'::0', memberId: m.id, name: memberPrimaryName(m) });
             m.mergedPeople.forEach((p, idx) => {
