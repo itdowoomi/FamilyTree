@@ -1857,9 +1857,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if(myColor && state===myColor) return 2; // 지금 로그인한 사람의 색이 상대방 색보다 위
         return 1;
       }
-      const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].sort((a,b)=>{
+      const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].filter(r => !r.recruitPending).sort((a,b)=>{
         const pa = recruitPinPriority(a), pb = recruitPinPriority(b);
         if(pa !== pb) return pb - pa; // 핀 고정된 항목을 최상단으로 (빨강 > 내 색 > 상대 색 > 없음)
+        return (b.score||0)-(a.score||0);
+      }));
+      // 펜딩 리스트 탭: 펜딩 처리된 리크루트만, Recruit 탭과 동일한 정렬 기준
+      const tabPendingRecruitsSorted = computed(() => [...tabContext.value.recruits].filter(r => r.recruitPending).sort((a,b)=>{
+        const pa = recruitPinPriority(a), pb = recruitPinPriority(b);
+        if(pa !== pb) return pb - pa;
         return (b.score||0)-(a.score||0);
       }));
       const tabNotes = computed(() => tabContext.value.notes || notes.value);
@@ -1946,7 +1952,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return linkedMember && focusedMemberIds.value.has(linkedMember.id);
           });
         }
-        
+
+        // 펜딩 처리된 리크루트는 트리/인쇄용 목록에서 제외 (펜딩 리스트 탭에서만 표시)
+        filtered = filtered.filter(r => !r.recruitPending);
+
         return [...filtered].sort((a,b)=>(b.score||0)-(a.score||0));
       });
       const visibleRecruits = computed(() => recruitsSortedAll.value.filter(r=>r.show));
@@ -2719,6 +2728,7 @@ document.addEventListener('DOMContentLoaded', () => {
           age:newRecruit.age,
           show:true,
           pinnedBy:[],
+          recruitPending:false,
           interactionHistory:[],
           disposition: defaultDisposition(),
           createdBy,
@@ -2729,6 +2739,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }; 
         recruits.value.push(newR);
         newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
+      }
+      function moveRecruitToPending(r){
+        r.recruitPending = true;
+        r.pendingAt = new Date().toISOString();
+        showToastMsg(`${r.name}님을 펜딩 리스트로 이동했습니다.`);
+      }
+      function restoreRecruitFromPending(r){
+        r.recruitPending = false;
+        showToastMsg(`${r.name}님을 Recruit 리스트로 복귀했습니다.`);
       }
       function removeRecruit(id){
         // Potential/Serious 멤버와 연결된 Recruit 삭제 시 연결된 멤버도 함께 삭제 (양방향 동기화)
@@ -3203,7 +3222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
         legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
-        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabUpcomingAppointments, tabAllAppointmentsSorted, tabNotes,
+        recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabPendingRecruitsSorted, tabUpcomingAppointments, tabAllAppointmentsSorted, tabNotes,
         recruitPinColor, recruitPinTitle, togglePinForRecruit,
         meMember, meName, meSubtreeIds, meSubtreeNames,
         selectedUpline, viewHeader, selectedIsRootView, activeInfoMember, rootDisplayCode,
@@ -3216,7 +3235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nodeDisplayConfig, promotionCriteria, promotionWindowDays, promoEditRank, newPromoReq, addPromoRequirement, removePromoRequirement, setPromoPoints, promotionProgress, nextRankFor,
         addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal, onMergedPersonEmailChange,
-        calcDisposition, addRecruit, removeRecruit, promoteRecruit, onScoreChange,
+        calcDisposition, addRecruit, removeRecruit, promoteRecruit, moveRecruitToPending, restoreRecruitFromPending, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,
         addAppointment, removeAppointment, completeAppointment, editAppointment, cancelEditAppt, handleTargetNameChange, addAttendeeByName, getPersonTitle, apptPeopleList,
         toggleApptConfirmed, apptDisplayTitle, apptDisplaySubtitle, visibleSidebarAppointments,
