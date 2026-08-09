@@ -1946,15 +1946,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return m.name || '';
       }
       // 상위 멤버 선택용: 포커스 여부와 상관없이 트리의 모든 멤버 중에서 고를 수 있어야 하며,
-      // 부부(배우자 통합)인 경우 두 사람을 각각의 옵션으로 분리해서 보여준다.
-      // (트리 상의 소속 멤버는 동일 - memberId. 개인 이름은 Recruit 작성자 표기에 사용)
+      // 부부(배우자 통합)인 경우 [부부 이름 모두] 옵션과 [각자 이름] 옵션을 함께 보여준다.
+      // (트리 상의 소속 멤버는 동일 - memberId. 개인/부부 이름은 Recruit 상위 멤버 표기에 사용)
       const parentPersonOptions = computed(() => {
         const list = [];
         for(const m of members.value){
           if(m.mergedPeople && m.mergedPeople.length){
-            list.push({ key: m.id+'::0', memberId: m.id, name: memberPrimaryName(m) });
+            list.push({ key: m.id+'::all', memberId: m.id, name: m.name || '' }); // 부부 모두
+            list.push({ key: m.id+'::0', memberId: m.id, name: memberPrimaryName(m) }); // 본인만
             m.mergedPeople.forEach((p, idx) => {
-              list.push({ key: m.id+'::'+(idx+1), memberId: m.id, name: (p.name||'').trim() || `배우자${idx+1}` });
+              list.push({ key: m.id+'::'+(idx+1), memberId: m.id, name: (p.name||'').trim() || `배우자${idx+1}` }); // 배우자만
             });
           } else {
             list.push({ key: m.id+'::0', memberId: m.id, name: m.name || '' });
@@ -1962,6 +1963,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return list;
       });
+      // 리크루트 행의 '상위 멤버' 셀렉트가 현재 선택 상태를 반영하도록 r.parentId/r.createdBy로부터 옵션 key를 역산
+      function recruitParentKey(r){
+        if(!r || !r.parentId) return '';
+        const owner = members.value.find(m => m.id === r.parentId);
+        if(!owner) return '';
+        if(!owner.mergedPeople || !owner.mergedPeople.length) return owner.id+'::0';
+        if(r.createdBy === owner.name) return owner.id+'::all';
+        if(r.createdBy === memberPrimaryName(owner)) return owner.id+'::0';
+        const idx = (owner.mergedPeople||[]).findIndex(p => p.name === r.createdBy);
+        if(idx !== -1) return owner.id+'::'+(idx+1);
+        return owner.id+'::all'; // 기존 작성자 텍스트가 옵션과 매칭되지 않는 경우 기본값
+      }
+      // 리크루트 행에서 상위 멤버(작성자)를 직접 변경 - parentId와 createdBy를 함께 갱신
+      function onRecruitParentSelect(r, key){
+        const opt = parentPersonOptions.value.find(p => p.key === key);
+        if(!opt) return;
+        r.parentId = opt.memberId;
+        r.createdBy = opt.name;
+      }
       
       // 포커스된 서브트리에 속한 리크루트만 필터링
       const recruitsSortedAll = computed(() => {
@@ -3248,7 +3268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedTrainingId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
-        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments, parentPersonOptions,
+        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments, parentPersonOptions, recruitParentKey, onRecruitParentSelect,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabPendingRecruitsSorted, tabUpcomingAppointments, tabAllAppointmentsSorted, tabNotes,
         recruitPinColor, recruitPinTitle, togglePinForRecruit,
         meMember, meName, meSubtreeIds, meSubtreeNames,

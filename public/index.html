@@ -1655,11 +1655,11 @@
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeRecruit"> 인쇄 포함</label>
         </div>
         <div style="flex:1;overflow:auto;min-height:0;padding-right:10px;">
-          <table class="member-table" style="font-size:12px;min-width:1200px;">
+          <table class="member-table" style="font-size:12px;min-width:1235px;">
             <colgroup>
               <col style="width:110px">
               <col style="width:40px">
-              <col style="width:100px">
+              <col style="width:135px">
               <col style="width:90px">
               <col style="width:90px">
               <col style="width:90px">
@@ -1677,7 +1677,7 @@
               <tr>
                 <th>이름</th>
                 <th style="text-align:center">Pin</th>
-                <th>작성자</th>
+                <th>상위 멤버</th>
                 <th>전공</th>
                 <th>직업</th>
                 <th>직장</th>
@@ -1699,7 +1699,11 @@
                   <button type="button" @click="togglePinForRecruit(r)" :title="recruitPinTitle(r)"
                     :style="{width:'18px',height:'18px',border:'2px solid ' + (recruitPinColor(r) || '#ccc'),borderRadius:'4px',background:recruitPinColor(r) || '#fff',cursor:'pointer',padding:0}"></button>
                 </td>
-                <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ r.createdBy || '-' }}</span></td>
+                <td>
+                  <select class="form-select" style="padding:2px 3px;font-size:10px;" :value="recruitParentKey(r)" @change="onRecruitParentSelect(r, $event.target.value)">
+                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
+                  </select>
+                </td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
                 <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
                 <td><input v-model.lazy="r.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
@@ -1860,11 +1864,11 @@
           <span style="font-size:11px;color:var(--muted);">Recruit 탭에서 '펜딩' 처리된 항목이 모입니다. '복귀'를 누르면 Recruit 리스트로 다시 돌아갑니다.</span>
         </div>
         <div style="flex:1;overflow:auto;min-height:0;padding-right:10px;">
-          <table class="member-table" style="font-size:12px;min-width:1200px;">
+          <table class="member-table" style="font-size:12px;min-width:1235px;">
             <colgroup>
               <col style="width:110px">
               <col style="width:40px">
-              <col style="width:100px">
+              <col style="width:135px">
               <col style="width:90px">
               <col style="width:90px">
               <col style="width:90px">
@@ -1882,7 +1886,7 @@
               <tr>
                 <th>이름</th>
                 <th style="text-align:center">Pin</th>
-                <th>작성자</th>
+                <th>상위 멤버</th>
                 <th>전공</th>
                 <th>직업</th>
                 <th>직장</th>
@@ -1904,7 +1908,11 @@
                   <button type="button" @click="togglePinForRecruit(r)" :title="recruitPinTitle(r)"
                     :style="{width:'18px',height:'18px',border:'2px solid ' + (recruitPinColor(r) || '#ccc'),borderRadius:'4px',background:recruitPinColor(r) || '#fff',cursor:'pointer',padding:0}"></button>
                 </td>
-                <td><span style="font-size:10px;color:var(--muted);font-family:monospace;">{{ r.createdBy || '-' }}</span></td>
+                <td>
+                  <select class="form-select" style="padding:2px 3px;font-size:10px;" :value="recruitParentKey(r)" @change="onRecruitParentSelect(r, $event.target.value)">
+                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
+                  </select>
+                </td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
                 <td><input v-model.lazy="r.job" class="form-input" style="padding:2px 5px" placeholder="직업"></td>
                 <td><input v-model.lazy="r.company" class="form-input" style="padding:2px 5px" placeholder="직장"></td>
