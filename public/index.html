@@ -530,7 +530,7 @@
         <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
         <div class="form-row"><label class="form-label">상위</label>
           <select v-model="nm.parentId" class="form-select">
-            <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+            <option v-for="p in parentPersonOptions" :key="p.key" :value="p.memberId">{{ p.name }}</option>
           </select>
         </div>
         <div class="form-row"><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
@@ -1839,9 +1839,9 @@
         <div style="overflow-y:auto;flex:1;min-height:0;padding-right:2px;">
           <div class="form-row"><label class="form-label">이름</label><input v-model="newRecruit.name" class="form-input" placeholder="이름" @keyup.enter="addRecruit()"></div>
           <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
-            <select v-model="newRecruit.parentId" class="form-select">
+            <select v-model="newRecruit.parentPersonKey" class="form-select">
               <option value="">— 기본: 작성자 —</option>
-              <option v-for="p in currentMembers" :key="p.id" :value="p.id">{{ p.name }}</option>
+              <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
             </select>
           </div>
           <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">

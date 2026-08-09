@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const printIncludeMemberInfo = ref(true);
       const printIncludePointHistory = ref(true);
       
-      const newRecruit = reactive({ name:'', email:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', parentId:'' });
+      const newRecruit = reactive({ name:'', email:'', major:'', job:'', company:'', relation:'', meetDate:'', period:'', gender:'남', score:50, birthDate:'', age:'', parentPersonKey:'' });
       const focusRootId = ref(null);
       
       const expandedMemberId = ref(null);
@@ -1939,6 +1939,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const rootMemberName = computed(() => rootMember.value ? rootMember.value.name : '');
       const rootMemberEmail = computed(() => rootMember.value ? (rootMember.value.email || '') : '');
       const currentMembers = computed(() => focusRootId.value ? focusedList.value : members.value);
+      // 부부(배우자 통합) 멤버의 이름에서 본인(첫 번째) 개인 이름만 추출. 예) "방동혁, 김은숙" → "방동혁"
+      function memberPrimaryName(m){
+        if(!m) return '';
+        if(m.mergedPeople && m.mergedPeople.length) return (m.name||'').split(',')[0].trim();
+        return m.name || '';
+      }
+      // 상위 멤버 선택용: 부부인 경우 두 사람을 각각의 옵션으로 분리해서 보여준다.
+      // (트리 상의 소속 멤버는 동일 - memberId. 개인 이름은 Recruit 작성자 표기에 사용)
+      const parentPersonOptions = computed(() => {
+        const list = [];
+        for(const m of currentMembers.value){
+          if(m.mergedPeople && m.mergedPeople.length){
+            list.push({ key: m.id+'::0', memberId: m.id, name: memberPrimaryName(m) });
+            m.mergedPeople.forEach((p, idx) => {
+              list.push({ key: m.id+'::'+(idx+1), memberId: m.id, name: (p.name||'').trim() || `배우자${idx+1}` });
+            });
+          } else {
+            list.push({ key: m.id+'::0', memberId: m.id, name: m.name || '' });
+          }
+        }
+        return list;
+      });
       
       // 포커스된 서브트리에 속한 리크루트만 필터링
       const recruitsSortedAll = computed(() => {
@@ -2702,15 +2724,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       function addRecruit(){
         if(!newRecruit.name.trim()) return;
-        const createdBy = newRecruit.parentId
-          ? members.value.find(m => m.id === newRecruit.parentId)?.name || meName.value || ''
+        // 상위 멤버 선택 시, 부부라도 실제로 고른 개인 이름을 작성자로 기록 (트리 소속은 memberId로 동일)
+        const selectedPerson = newRecruit.parentPersonKey
+          ? parentPersonOptions.value.find(p => p.key === newRecruit.parentPersonKey)
+          : null;
+        const createdBy = selectedPerson
+          ? (selectedPerson.name || meName.value || '')
           : meName.value || (selectedMemberId.value && selectedMemberId.value !== 'root'
               ? members.value.find(m => m.id === selectedMemberId.value)?.name
               : rootMember.value?.name || '');
         const createdByEmail = (currentUser.value?.email || '').toLowerCase();
         // parentId: 선택 시 우선, 아니면 작성자(본인) 멤버, 아니면 트리 루트
         const fallbackParentId = (meMember.value && meMember.value.id) || (members.value.find(m => !m.parentId)?.id) || 'root';
-        const parentId = newRecruit.parentId || fallbackParentId;
+        const parentId = (selectedPerson ? selectedPerson.memberId : '') || fallbackParentId;
         const now = new Date().toISOString();
         const newR={
           id:'r'+Date.now(),
@@ -2738,7 +2764,7 @@ document.addEventListener('DOMContentLoaded', () => {
           updatedAt: now
         }; 
         recruits.value.push(newR);
-        newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentId='';
+        newRecruit.name=''; newRecruit.email=''; newRecruit.major=''; newRecruit.job=''; newRecruit.company=''; newRecruit.relation=''; newRecruit.meetDate=''; newRecruit.gender='남'; newRecruit.score=50; newRecruit.birthDate=''; newRecruit.age=''; newRecruit.parentPersonKey='';
       }
       function moveRecruitToPending(r){
         r.recruitPending = true;
@@ -3221,7 +3247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recruits, newRecruit, expandedMemberId, expandedInteractionId, expandedDispositionId, expandedTrainingId, expandedRecruitInteractionId, expandedRecruitDispositionId, editingApptId,
         trainingTopics, newTrainingTopic, newTrainingGroup, addTrainingTopic, addTrainingGroup, removeTrainingTopic, removeTrainingGroup, trainingUnits, moveTrainingUnitUp, moveTrainingUnitDown, isTrainingDone, toggleTrainingDone, getTrainingDoneCount, toggleTrainingPanel, sideTrainingMember, showAddMemberModal,
         selectedMemberId, selectedMember, newHist, newInteraction, newRecruitInteraction, newAppt, nm, printLandscape, showSizePanel, printRootId, newNote, noteScopeLabel,
-        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments,
+        legendConfig, allStatuses:ALL_STATUSES, availableStatuses, statusLabel, memberNames, recruitNames, allPersonNames, apptMemberNames, uplineMemberNames, upcomingAppointments, parentPersonOptions,
         recruitsSortedAll, visibleRecruits, focusedList, rootMember, rootMemberName, rootMemberEmail, currentMembers, tabMembers, sideHistMember, sideInteractionMember, sideDispositionMember, recentTeamHistory, recentTeamInteractions, tabRecruitsSorted, tabPendingRecruitsSorted, tabUpcomingAppointments, tabAllAppointmentsSorted, tabNotes,
         recruitPinColor, recruitPinTitle, togglePinForRecruit,
         meMember, meName, meSubtreeIds, meSubtreeNames,
