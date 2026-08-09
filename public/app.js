@@ -1800,75 +1800,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return all.sort((a, b) => parseDateForSort(b.date) - parseDateForSort(a.date)).slice(0, 10);
       });
-      // ── Recruit 핀: 부부(배우자 통합) 팀이 각자 로그인해서 "내가 아는 사람"을 체크 ──
-      // 한 사람만 체크하면 그 사람 고유 색(파랑/초록), 둘 다 체크하면 빨강(둘 다 아는 사람).
-      // 정렬 우선순위는 지금 로그인한 사람 기준으로 "내 색"이 "상대 색"보다 위에 오도록 계산.
-      function recruitOwnerCoupleEmails(r){
-        const owner = members.value.find(m => m.id === r.parentId);
-        if(!owner) return { primary: '', secondary: '' };
-        const primary = (owner.email || '').toLowerCase();
-        const secondaryPerson = (owner.mergedPeople || [])[0];
-        const secondary = secondaryPerson ? (secondaryPerson.email || '').toLowerCase() : '';
-        return { primary, secondary };
-      }
-      function recruitPinState(r){
-        const pinnedBy = (r.pinnedBy || []).map(e => (e || '').toLowerCase()).filter(Boolean);
-        if(!pinnedBy.length) return 'none';
-        const { primary, secondary } = recruitOwnerCoupleEmails(r);
-        const hasPrimary = primary && pinnedBy.includes(primary);
-        const hasSecondary = secondary && pinnedBy.includes(secondary);
-        if(pinnedBy.length >= 2 || (hasPrimary && hasSecondary)) return 'red';
-        if(hasPrimary) return 'blue';
-        if(hasSecondary) return 'green';
-        return 'blue'; // 커플 이메일과 매칭되지 않는 다른 공동 관리자가 체크한 경우의 기본값
+      // ── Recruit 핀: 수동 4단계 우선순위 토글 버튼 ──
+      // 상위 멤버를 부부/개인 각각으로 선택할 수 있게 되면서, 굳이 로그인한 사람의 이메일로 색을 자동
+      // 구분할 필요가 없어졌다. 이제는 클릭할 때마다 흰색(4순위, 기본) → 빨강(1순위) → 파랑(2순위) →
+      // 초록(3순위) → 흰색(4순위)... 순으로 돌아가는 단순 토글이며, 1순위가 목록 맨 위, 4순위가 맨 아래로 정렬된다.
+      function recruitPinRank(r){
+        const rank = r.pinRank;
+        return (rank>=1 && rank<=4) ? rank : 4; // 미설정 시 기본값 = 4순위(흰색)
       }
       function recruitPinColor(r){
-        const state = recruitPinState(r);
-        if(state==='red') return '#e74c3c';
-        if(state==='green') return '#27ae60';
-        if(state==='blue') return '#2d6cdf';
-        return '';
-      }
-      function recruitPinMyColor(r){
-        const myEmail = ((currentUser.value && currentUser.value.email) || '').toLowerCase();
-        if(!myEmail) return '';
-        const { primary, secondary } = recruitOwnerCoupleEmails(r);
-        if(myEmail === primary) return 'blue';
-        if(myEmail === secondary) return 'green';
-        return '';
+        const rank = recruitPinRank(r);
+        if(rank===1) return '#e74c3c'; // 빨강 - 1순위
+        if(rank===2) return '#2d6cdf'; // 파랑 - 2순위
+        if(rank===3) return '#27ae60'; // 초록 - 3순위
+        return ''; // 흰색 - 4순위
       }
       function recruitPinTitle(r){
-        const state = recruitPinState(r);
-        if(state==='none') return '클릭하면 내가 아는 사람으로 표시';
-        if(state==='red') return '둘 다 아는 사람';
-        const myColor = recruitPinMyColor(r);
-        if(myColor && state===myColor) return '나만 아는 사람';
-        return '상대방만 아는 사람';
+        return `${recruitPinRank(r)}순위 (클릭하면 다음 순위로 변경)`;
       }
       function togglePinForRecruit(r){
-        const email = ((currentUser.value && currentUser.value.email) || '').toLowerCase();
-        if(!email) return;
-        const list = new Set((r.pinnedBy || []).map(e => (e || '').toLowerCase()).filter(Boolean));
-        if(list.has(email)) list.delete(email); else list.add(email);
-        r.pinnedBy = Array.from(list);
-      }
-      function recruitPinPriority(r){
-        const state = recruitPinState(r);
-        if(state==='none') return 0;
-        if(state==='red') return 3;
-        const myColor = recruitPinMyColor(r);
-        if(myColor && state===myColor) return 2; // 지금 로그인한 사람의 색이 상대방 색보다 위
-        return 1;
+        const cur = recruitPinRank(r);
+        r.pinRank = cur % 4 + 1; // 4(흰)→1(빨강)→2(파랑)→3(초록)→4(흰)...
       }
       const tabRecruitsSorted = computed(() => [...tabContext.value.recruits].filter(r => !r.recruitPending).sort((a,b)=>{
-        const pa = recruitPinPriority(a), pb = recruitPinPriority(b);
-        if(pa !== pb) return pb - pa; // 핀 고정된 항목을 최상단으로 (빨강 > 내 색 > 상대 색 > 없음)
+        const ra = recruitPinRank(a), rb = recruitPinRank(b);
+        if(ra !== rb) return ra - rb; // 1순위(빨강)가 맨 위, 4순위(흰색)가 맨 아래
         return (b.score||0)-(a.score||0);
       }));
       // 펜딩 리스트 탭: 펜딩 처리된 리크루트만, Recruit 탭과 동일한 정렬 기준
       const tabPendingRecruitsSorted = computed(() => [...tabContext.value.recruits].filter(r => r.recruitPending).sort((a,b)=>{
-        const pa = recruitPinPriority(a), pb = recruitPinPriority(b);
-        if(pa !== pb) return pb - pa;
+        const ra = recruitPinRank(a), rb = recruitPinRank(b);
+        if(ra !== rb) return ra - rb;
         return (b.score||0)-(a.score||0);
       }));
       const tabNotes = computed(() => tabContext.value.notes || notes.value);
@@ -2806,7 +2768,7 @@ document.addEventListener('DOMContentLoaded', () => {
           birthDate:newRecruit.birthDate,
           age:newRecruit.age,
           show:true,
-          pinnedBy:[],
+          pinRank:4,
           recruitPending:false,
           interactionHistory:[],
           disposition: defaultDisposition(),
@@ -3044,7 +3006,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!('nfd' in header)) header.nfd = '';
         members.value=(d.members||[]).map(m=>{ const history=(m.history||[]).map(h=>migrateHistory({...h})); const interactionHistory = m.interactionHistory || []; let st = m.status; if(st === 'New' || st === 'Code-in') st = 'New(Code-in)'; const disp = m.disposition ? JSON.parse(JSON.stringify(m.disposition)) : defaultDisposition(); const mergedPeople = m.mergedPeople || []; const trainingDone = m.trainingDone || []; return {birthDate:'',age:'',meetDate:'',major:'',job:'',company:'',relation:'',gender:'남',email:'',memberCode:'',issuePaid:0,pending:0,score:0, interactionHistory, recruitId:null, ...m, status:st, history, disposition: disp, mergedPeople, trainingDone}; });
         notes.value=(d.notes||[]).map(n=>typeof n==='string'?{text:n, scope:'all', createdBy:''}:{scope:'all', createdBy:'', ...n});
-        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition(); let pinnedBy = Array.isArray(r.pinnedBy) ? r.pinnedBy : []; if(!pinnedBy.length && r.pinned){ const fallback = (currentUser.value && currentUser.value.email) || r.createdByEmail || ''; if(fallback) pinnedBy = [fallback]; } return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, pinnedBy, interactionHistory: ih, disposition: disp}; });
+        if(d.recruits) recruits.value = d.recruits.map(r => { let ih = r.interactionHistory || []; if (r.history && r.history.length > 0 && ih.length === 0) { ih = r.history.map(h => typeof h === 'string' ? {id:'ih'+Math.random(), date:'', content:h} : h); } const disp = r.disposition ? JSON.parse(JSON.stringify(r.disposition)) : defaultDisposition();
+          // 레거시 마이그레이션: 예전 다중 이메일 체크형 핀(pinnedBy/pinned)을 새 4단계 우선순위(pinRank)로 이전.
+          // 새 포맷의 pinRank(1~4)가 이미 있으면 그대로 쓰고, 없으면 예전에 핀이 찍혀 있던 항목을 1순위(빨강)로 승격시켜 유실 방지.
+          let pinRank = (r.pinRank>=1 && r.pinRank<=4) ? r.pinRank : undefined;
+          if(pinRank===undefined){ const legacyPinned = (Array.isArray(r.pinnedBy) && r.pinnedBy.length) || r.pinned; if(legacyPinned) pinRank = 1; }
+          return {relation:'',meetDate:'',major:'',job:'',company:'',period:'',gender:'남',birthDate:'',age:'',email:'',createdBy:'',parentId:'',...r, pinRank, interactionHistory: ih, disposition: disp}; });
         if(d.appointments) appointments.value = d.appointments.map(a => ({ type: '이벤트', time: '', endTime: '', location: '', description: '', attendees: [], targetName: '', createdBy: '', confirmed: false, ...a }));
         deletedAptIds.value = d.deletedAptIds || [];
         trainingTopics.value = d.trainingTopics || [];
