@@ -1770,7 +1770,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
 
-      const tabMembers = computed(() => tabContext.value.members);
+      const tabMembers = computed(() => tabContext.value.members.filter(m => !m.memberPending));
+      // 펜딩 리스트 탭: 펜딩 처리된 멤버만, 최근 펜딩순
+      const tabPendingMembersSorted = computed(() => [...tabContext.value.members].filter(m => m.memberPending)
+        .sort((a,b) => new Date(b.pendingAt||0) - new Date(a.pendingAt||0)));
       const sideHistMember = computed(() => expandedMemberId.value ? (tabMembers.value.find(m => m.id === expandedMemberId.value) || null) : null);
       const sideInteractionMember = computed(() => expandedInteractionId.value ? (tabMembers.value.find(m => m.id === expandedInteractionId.value) || null) : null);
       const sideDispositionMember = computed(() => expandedDispositionId.value ? (tabMembers.value.find(m => m.id === expandedDispositionId.value) || null) : null);
@@ -1926,7 +1929,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const visibleFocusedList = computed(() => {
         const list = focusedList.value;
         const idMap = {}; list.forEach(m=>idMap[m.id]=m);
-        const hiddenIds = new Set(list.filter(m=>m.parentId && !isStatusVisible(m.status)).map(m=>m.id));
+        // 펜딩 처리된 멤버는 도표에서 숨기고, 하위 멤버는 상위(조부모)로 자동 재연결해서 표시한다.
+        // (원본 members.value의 parentId는 건드리지 않으므로 펜딩 해제 시 원래 구조 그대로 복귀)
+        const hiddenIds = new Set(list.filter(m=>m.parentId && (!isStatusVisible(m.status) || m.memberPending)).map(m=>m.id));
         if(!hiddenIds.size) return list;
         return list.filter(m=>!hiddenIds.has(m.id)).map(m=>{
           if(!m.parentId || !hiddenIds.has(m.parentId)) return m;
@@ -1951,14 +1956,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const parentPersonOptions = computed(() => {
         const list = [];
         for(const m of members.value){
+          // 펜딩 멤버라도 이미 그 밑에 연결된 Recruit/멤버가 있으면 선택 콤보가 비어 보이므로 제외하지 않고,
+          // 대신 콤보 표시용 label에만 (펜딩) 표시를 붙인다 (저장되는 name은 항상 깨끗한 이름).
+          const suffix = m.memberPending ? ' (펜딩)' : '';
           if(m.mergedPeople && m.mergedPeople.length){
-            list.push({ key: m.id+'::all', memberId: m.id, name: m.name || '' }); // 부부 모두
-            list.push({ key: m.id+'::0', memberId: m.id, name: memberPrimaryName(m) }); // 본인만
+            const allName = m.name || '', primaryName = memberPrimaryName(m);
+            list.push({ key: m.id+'::all', memberId: m.id, name: allName, label: allName+suffix }); // 부부 모두
+            list.push({ key: m.id+'::0', memberId: m.id, name: primaryName, label: primaryName+suffix }); // 본인만
             m.mergedPeople.forEach((p, idx) => {
-              list.push({ key: m.id+'::'+(idx+1), memberId: m.id, name: (p.name||'').trim() || `배우자${idx+1}` }); // 배우자만
+              const spouseName = (p.name||'').trim() || `배우자${idx+1}`;
+              list.push({ key: m.id+'::'+(idx+1), memberId: m.id, name: spouseName, label: spouseName+suffix }); // 배우자만
             });
           } else {
-            list.push({ key: m.id+'::0', memberId: m.id, name: m.name || '' });
+            const nm = m.name || '';
+            list.push({ key: m.id+'::0', memberId: m.id, name: nm, label: nm+suffix });
           }
         }
         return list;
@@ -2474,6 +2485,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null; if(expandedTrainingId.value===id) expandedTrainingId.value=null;
         if (hadLinkedRecruit) showToastMsg(`[${m.name}]님이 멤버와 Recruit 리스트에서 모두 삭제되었습니다.`);
       }
+      // 장기 미활동 멤버를 삭제하지 않고 '펜딩'으로 분리: 도표/멤버 목록에서는 숨기고(하위는 상위로 자동 재연결되어 계속 표시)
+      // 펜딩 리스트 탭으로 이동. 원본 데이터의 parentId는 그대로 두므로 복귀 시 원래 위치/구조가 그대로 돌아온다.
+      function moveMemberToPending(id){
+        const m = members.value.find(x=>x.id===id);
+        if(!m || !m.parentId){ showToastMsg('최상위 멤버는 펜딩 처리할 수 없습니다.', 'error'); return; }
+        if(focusRootId.value===id) clearFocus();
+        if(selectedMemberId.value===id) selectedMemberId.value='root';
+        if(expandedMemberId.value===id) expandedMemberId.value=null; if(expandedInteractionId.value===id) expandedInteractionId.value=null; if(expandedDispositionId.value===id) expandedDispositionId.value=null; if(expandedTrainingId.value===id) expandedTrainingId.value=null;
+        m.memberPending = true;
+        m.pendingAt = new Date().toISOString();
+        showToastMsg(`[${m.name}]님을 펜딩 리스트로 이동했습니다. (하위 멤버는 상위로 재연결되어 도표에 계속 표시됩니다)`);
+      }
+      function restoreMemberFromPending(id){
+        const m = members.value.find(x=>x.id===id);
+        if(!m) return;
+        m.memberPending = false;
+        showToastMsg(`[${m.name}]님을 멤버 목록으로 복귀했습니다.`);
+      }
       // ── 배우자 통합 (멤버 합치기) ──
       // 특정 직급 조건에 상관없이, 사용자가 직접 "합칠 멤버"와 "합쳐질 상위 멤버"를 골라
       // 하나의 노드로 합친다. 합쳐지는 멤버의 하위 멤버는 모두 상위 멤버 밑으로 이동한다.
@@ -2624,7 +2653,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const excludeIds=new Set([ex]); const chMap={}; members.value.forEach(m=>chMap[m.id]=[]);
         members.value.forEach(m=>{ if(m.parentId&&chMap[m.parentId]) chMap[m.parentId].push(m.id); });
         function getDesc(id){ (chMap[id]||[]).forEach(cid=>{excludeIds.add(cid);getDesc(cid);}); } getDesc(ex);
-        return members.value.filter(m=>!excludeIds.has(m.id));
+        // 펜딩 처리된 멤버라도 '현재 이 멤버가 이미 그 밑에 있는' 경우까지 목록에서 지워버리면
+        // 상위 선택 콤보가 값 없이 비어 보이므로, 대상(ex)의 현재 상위는 펜딩이어도 항상 포함시킨다.
+        const currentParentId = (members.value.find(m=>m.id===ex)||{}).parentId;
+        return members.value.filter(m=>!excludeIds.has(m.id) && (!m.memberPending || m.id===currentParentId));
       }
       function toggleHistoryPanel(id){ expandedMemberId.value = expandedMemberId.value===id ? null : id; newHist.date=''; newHist.content=''; newHist.point=null; newHist.amount=null; newHist.type='History'; }
       function toggleInteractionPanel(id){ expandedDispositionId.value = null; expandedTrainingId.value = null; expandedInteractionId.value = expandedInteractionId.value===id ? null : id; newInteraction.date=''; newInteraction.content=''; }
@@ -3280,7 +3312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mPtsSumScoped, getMemberIssuePaidScoped, getMemberPendingScoped, getMemberTotalScoped, getIncomePercentScoped, perfMemberHistoryEntries, perfTeamHistoryEntries,
         updateRootMemberName, updateRootMemberEmail, setFocus, clearFocus, toggleFocus, nodeContentLines, nodeH,
         nodeDisplayConfig, promotionCriteria, promotionWindowDays, promoEditRank, newPromoReq, addPromoRequirement, removePromoRequirement, setPromoPoints, promotionProgress, nextRankFor,
-        addMember, removeMember, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
+        addMember, removeMember, moveMemberToPending, restoreMemberFromPending, tabPendingMembersSorted, toggleHistoryPanel, toggleInteractionPanel, toggleDispositionPanel, toggleRecruitInteractionPanel, toggleRecruitDispositionPanel, addHistoryItem, removeHistoryItem, addInteractionItem, removeInteractionItem, parentOpts,
         showMergeModal, mergeForm, mergeSourceOptions, mergeTargetOptions, openMergeModal, closeMergeModal, canMergeMembers, mergeTwoMembers, confirmMergeFromModal, onMergedPersonEmailChange,
         calcDisposition, addRecruit, removeRecruit, promoteRecruit, moveRecruitToPending, restoreRecruitFromPending, onScoreChange,
         addRecruitInteractionItem, removeRecruitInteractionItem, onRecruitInteractionChange, onMemberInteractionChange,

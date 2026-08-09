@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Network Tree Manager (Cloud)</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=20260809">
+  <link rel="stylesheet" href="style.css?v=20260809c">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -530,7 +530,7 @@
         <div class="form-row"><label class="form-label">이름</label><input v-model="nm.name" class="form-input" placeholder="이름" @keyup.enter="addMember()"></div>
         <div class="form-row"><label class="form-label">상위</label>
           <select v-model="nm.parentId" class="form-select">
-            <option v-for="p in parentPersonOptions" :key="p.key" :value="p.memberId">{{ p.name }}</option>
+            <option v-for="p in parentPersonOptions" :key="p.key" :value="p.memberId">{{ p.label }}</option>
           </select>
         </div>
         <div class="form-row"><label class="form-label">직장</label><input v-model="nm.company" class="form-input" placeholder="예: 삼성전자"></div>
@@ -1093,7 +1093,7 @@
         <button class="tab-btn" :class="{active:tab==='appointments'}" @click="tab='appointments'">📅 약속 관리</button>
         <button class="tab-btn" :class="{active:tab==='notes'}"   @click="tab='notes'">📝 메모/액션</button>
         <button class="tab-btn" :class="{active:tab==='header'}"  @click="tab='header'">📋 기본 정보</button>
-        <button class="tab-btn" :class="{active:tab==='pendingList'}" @click="tab='pendingList'">⏳ 펜딩 리스트<span v-if="tabPendingRecruitsSorted.length" style="margin-left:4px;opacity:.75;">({{ tabPendingRecruitsSorted.length }})</span></button>
+        <button class="tab-btn" :class="{active:tab==='pendingList'}" @click="tab='pendingList'">⏳ 펜딩 리스트<span v-if="tabPendingRecruitsSorted.length + tabPendingMembersSorted.length" style="margin-left:4px;opacity:.75;">({{ tabPendingRecruitsSorted.length + tabPendingMembersSorted.length }})</span></button>
         <div class="tab-actions">
           <button class="tbar-btn" :class="getTbarClass(showSizePanel)" @click="showSizePanel=!showSizePanel" title="폰트 및 크기 설정">
             크기설정 <span style="font-size:9px;opacity:.7">{{ showSizePanel ? '▲' : '▼' }}</span>
@@ -1185,7 +1185,7 @@
             <col style="width:78px">
             <col style="width:70px">
             <col style="width:62px">
-            <col style="width:52px">
+            <col style="width:110px">
           </colgroup>
           <thead>
             <tr>
@@ -1246,7 +1246,10 @@
                 </button>
               </td>
               <td style="text-align:center">
-                <button v-if="m.parentId!==null" class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                <template v-if="m.parentId!==null">
+                  <button class="btn-sm-warn" style="margin-right:4px;" @click="moveMemberToPending(m.id)" title="장기 미활동 멤버를 펜딩 리스트로 이동 (도표에서 숨김)">펜딩</button>
+                  <button class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -1390,7 +1393,7 @@
           <label class="pos-radio"><input type="checkbox" v-model="printIncludeMemberInfo"> 인쇄 포함 (멤버 히스토리)</label>
         </div>
         <div style="flex:1;overflow:auto;min-height:0;padding-right:10px;">
-          <table class="member-table" style="font-size:12px;min-width:900px;">
+          <table class="member-table" style="font-size:12px;min-width:970px;">
             <colgroup>
               <col style="width:75px">
               <col style="width:75px">
@@ -1406,7 +1409,7 @@
               <col style="width:46px">
               <col style="width:48px">
               <col style="width:52px">
-              <col style="width:32px">
+              <col style="width:100px">
             </colgroup>
             <thead>
               <tr>
@@ -1474,7 +1477,10 @@
                   <button class="btn-hist-toggle" :class="{active:expandedInteractionId===m.id}" @click="toggleInteractionPanel(m.id)" style="padding:6px 2px;font-size:11px;width:100%;">📋{{ m.interactionHistory ? m.interactionHistory.length : 0 }}</button>
                 </td>
                 <td style="text-align:center;padding:3px 0;">
-                  <button v-if="m.parentId!==null" class="btn-sm-danger" style="padding:2px 3px;font-size:10px;" @click="removeMember(m.id)">삭제</button>
+                  <template v-if="m.parentId!==null">
+                    <button class="btn-sm-warn" style="padding:2px 3px;font-size:10px;margin-right:2px;" @click="moveMemberToPending(m.id)" title="장기 미활동 멤버를 펜딩 리스트로 이동 (도표에서 숨김)">펜딩</button>
+                    <button class="btn-sm-danger" style="padding:2px 3px;font-size:10px;" @click="removeMember(m.id)">삭제</button>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -1701,7 +1707,7 @@
                 </td>
                 <td>
                   <select class="form-select" style="padding:2px 3px;font-size:10px;" :value="recruitParentKey(r)" @change="onRecruitParentSelect(r, $event.target.value)">
-                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
+                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.label }}</option>
                   </select>
                 </td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
@@ -1845,7 +1851,7 @@
           <div class="form-row"><label class="form-label">상위 멤버 (선택)</label>
             <select v-model="newRecruit.parentPersonKey" class="form-select">
               <option value="">— 기본: 작성자 —</option>
-              <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
+              <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.label }}</option>
             </select>
           </div>
           <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -1860,7 +1866,7 @@
     <div v-if="tab==='pendingList'" class="tab-content">
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-right:4px;">
         <div class="notes-pos-bar" style="flex-shrink:0;">
-          <span class="notes-pos-label">⏳ 펜딩 리스트</span>
+          <span class="notes-pos-label">⏳ 펜딩 리크루트</span>
           <span style="font-size:11px;color:var(--muted);">Recruit 탭에서 '펜딩' 처리된 항목이 모입니다. '복귀'를 누르면 Recruit 리스트로 다시 돌아갑니다.</span>
         </div>
         <div style="flex:1;overflow:auto;min-height:0;padding-right:10px;">
@@ -1910,7 +1916,7 @@
                 </td>
                 <td>
                   <select class="form-select" style="padding:2px 3px;font-size:10px;" :value="recruitParentKey(r)" @change="onRecruitParentSelect(r, $event.target.value)">
-                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.name }}</option>
+                    <option v-for="p in parentPersonOptions" :key="p.key" :value="p.key">{{ p.label }}</option>
                   </select>
                 </td>
                 <td><input v-model.lazy="r.major" class="form-input" style="padding:2px 5px" placeholder="전공"></td>
@@ -2044,7 +2050,51 @@
               </tr>
             </tbody>
           </table>
-          <div v-if="tabPendingRecruitsSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">펜딩 리스트가 비어 있습니다.</div>
+          <div v-if="tabPendingRecruitsSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">펜딩 리크루트가 없습니다.</div>
+        </div>
+
+        <div class="notes-pos-bar" style="flex-shrink:0;margin-top:10px;">
+          <span class="notes-pos-label">⏳ 펜딩 멤버</span>
+          <span style="font-size:11px;color:var(--muted);">멤버 관리/멤버 정보 탭에서 '펜딩' 처리된 멤버가 모입니다. 도표에서는 숨겨지고 하위 멤버는 상위로 재연결되어 계속 표시되며, '복귀'를 누르면 원래 위치 그대로 돌아옵니다.</span>
+        </div>
+        <div style="flex:1;overflow:auto;min-height:0;padding-right:10px;">
+          <table class="member-table" style="font-size:12px;min-width:900px;">
+            <colgroup>
+              <col style="width:120px">
+              <col style="width:120px">
+              <col style="width:150px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:90px">
+              <col style="width:130px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>이름</th>
+                <th>Stage (직급)</th>
+                <th>상위(원래 위치)</th>
+                <th style="text-align:right;padding-right:6px">Pts 🔒</th>
+                <th style="text-align:right;padding-right:6px">Issued 🔒</th>
+                <th style="text-align:right;padding-right:6px">Pending 🔒</th>
+                <th style="text-align:center">작업</th>
+              </tr>
+            </thead>
+            <tbody v-for="m in tabPendingMembersSorted" :key="m.id">
+              <tr>
+                <td style="font-size:11px;font-weight:600;color:var(--navy);">{{ m.name }}</td>
+                <td style="font-size:11px;">{{ statusLabel(m.status) }}</td>
+                <td style="font-size:11px;color:var(--muted);">{{ (members.find(x=>x.id===m.parentId)||{}).name || '-' }}</td>
+                <td><input type="text" :value="fmt(mPtsSumScoped(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+                <td><input type="text" :value="fmt(getMemberIssuePaidScoped(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+                <td><input type="text" :value="fmt(getMemberPendingScoped(m))" class="form-input" style="background:#f1f3f5;cursor:not-allowed;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;" readonly></td>
+                <td style="text-align:center">
+                  <button class="btn-sm-warn" style="margin-right:4px;" @click="restoreMemberFromPending(m.id)" title="원래 위치로 복귀">복귀</button>
+                  <button class="btn-sm-danger" @click="removeMember(m.id)">삭제</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="tabPendingMembersSorted.length===0" style="padding:18px;text-align:center;color:var(--muted);font-size:13px">펜딩 멤버가 없습니다.</div>
         </div>
       </div>
     </div>
@@ -2589,6 +2639,6 @@
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script type="module" src="app.js?v=20260809"></script>
+<script type="module" src="app.js?v=20260809c"></script>
 </body>
 </html>
